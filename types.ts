@@ -71,6 +71,7 @@ export type GeneratedContent = {
         faqHtml: string;
         referencesHtml: string; // SOTA: Verified References
     };
+    isFullSurgicalRewrite?: boolean;
 };
 
 export interface SiteInfo {

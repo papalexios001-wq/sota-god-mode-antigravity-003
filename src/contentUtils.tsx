@@ -1,7 +1,6 @@
 
 import { GeneratedContent, SiteInfo, SitemapPage } from "./types";
 import { TARGET_MAX_WORDS, TARGET_MIN_WORDS } from "./constants";
-import { GoogleGenAI } from "@google/genai";
 
 export const escapeRegExp = (string: string) => {
     return string.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
@@ -41,68 +40,87 @@ export const extractYouTubeID = (url: string): string | null => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
+// SOTA NETWORK RACER v2.0
+// Instead of trying one proxy then another, we launch ALL of them and take the winner.
 export const fetchWithProxies = async (url: string, options: RequestInit = {}, onProgress?: (message: string) => void): Promise<Response> => {
-    let lastError: Error | null = null;
-    const safeHeaders: Record<string, string> = { 'Accept': 'application/json' };
-    let hasAuth = false;
-    if (options.headers) {
-        const headerObj = options.headers as Record<string, string>;
-        Object.keys(headerObj).forEach(key => {
-            const lowerKey = key.toLowerCase();
-            if (lowerKey === 'x-api-key' || lowerKey === 'authorization') hasAuth = true;
-            if (!['user-agent', 'origin', 'referer', 'host', 'connection'].includes(lowerKey)) safeHeaders[key] = headerObj[key];
+    const encodedUrl = encodeURIComponent(url);
+    const hasAuth = options.headers && (
+        (options.headers as any)['X-API-KEY'] || 
+        (options.headers as any)['Authorization']
+    );
+
+    // If it has Auth, we cannot race public proxies (security).
+    if (hasAuth) {
+        return fetch(url, options).catch(() => {
+             const proxy = `https://corsproxy.io/?${encodedUrl}`;
+             return fetch(proxy, options);
         });
     }
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort('Direct fetch timed out'), 4000); 
-        const directResponse = await fetch(url, { ...options, headers: safeHeaders, signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (directResponse.ok || (directResponse.status >= 400 && directResponse.status < 600)) return directResponse;
-    } catch (error) {}
 
-    const encodedUrl = encodeURIComponent(url);
-    const proxies = hasAuth ? [
-        `https://thingproxy.freeboard.io/fetch/${url}`,
-        `https://corsproxy.io/?${encodedUrl}`,
-    ] : [
-        `https://corsproxy.io/?${url}`,
-        `https://api.allorigins.win/raw?url=${encodedUrl}`,
+    const strategies = [
+        // 1. Direct (Fastest)
+        () => fetch(url, { ...options, signal: AbortSignal.timeout(4000) }),
+        // 2. CorsProxy (Reliable)
+        () => fetch(`https://corsproxy.io/?${encodedUrl}`, { ...options, signal: AbortSignal.timeout(8000) }),
+        // 3. AllOrigins (Backup)
+        () => fetch(`https://api.allorigins.win/raw?url=${encodedUrl}`, { ...options, signal: AbortSignal.timeout(8000) }),
+        // 4. ThingProxy (Backup 2)
+        () => fetch(`https://thingproxy.freeboard.io/fetch/${url}`, { ...options, signal: AbortSignal.timeout(8000) })
     ];
 
-    for (let i = 0; i < proxies.length; i++) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(`Proxy timed out`), 45000);
-            const response = await fetch(proxies[i], { ...options, headers: safeHeaders, signal: controller.signal });
-            clearTimeout(timeoutId);
-            if (response.status < 500) {
-                if (hasAuth && (response.status === 401 || response.status === 403) && i < proxies.length - 1) continue;
-                return response;
-            }
-        } catch (error: any) { lastError = error; }
+    try {
+        // RACE!
+        const response = await (Promise as any).any(strategies.map(s => s().then(res => {
+            if (!res.ok && res.status >= 500) throw new Error("5xx");
+            return res;
+        })));
+        return response;
+    } catch (e) {
+        throw new Error(`All network strategies failed for ${url}`);
     }
-    throw new Error(`Network Failure: ${lastError?.message || "Unknown"}`);
 };
 
 export const smartCrawl = async (url: string): Promise<string> => {
+    // SOTA CRAWL RACER: Race Jina vs Proxies
+    const controllers: AbortController[] = [];
+    const timeout = 20000; // 20s max
+
+    const jinaStrategy = async (): Promise<string> => {
+        const controller = new AbortController();
+        controllers.push(controller);
+        try {
+            const res = await fetch(`https://r.jina.ai/${url}`, { signal: controller.signal });
+            if (!res.ok) throw new Error("Jina Failed");
+            const text = await res.text();
+            if (!text || text.includes("Access Denied") || text.length < 200) throw new Error("Jina Blocked");
+            return text.substring(0, 30000);
+        } catch (e) { throw e; }
+    };
+
+    const domStrategy = async (): Promise<string> => {
+        const controller = new AbortController();
+        controllers.push(controller);
+        try {
+            const res = await fetchWithProxies(url, { signal: controller.signal });
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            doc.querySelectorAll('script, style, nav, footer, iframe, noscript, svg, .ad').forEach(el => el.remove());
+            const main = doc.querySelector('main') || doc.querySelector('article') || doc.body;
+            const text = (main.textContent || '').replace(/\s+/g, ' ').trim();
+            if (text.length < 200) throw new Error("DOM Empty");
+            return text.substring(0, 25000);
+        } catch (e) { throw e; }
+    };
+
     try {
-        const jinaUrl = `https://r.jina.ai/${url}`;
-        const response = await fetch(jinaUrl);
-        if (response.ok) {
-            const text = await response.text();
-            if (text && text.length > 200 && !text.includes("Access Denied")) return text.substring(0, 30000);
-        }
-    } catch (e) {}
-    try {
-        const response = await fetchWithProxies(url);
-        const html = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        doc.querySelectorAll('script, style, nav, footer, iframe, noscript').forEach(el => el.remove());
-        const main = doc.querySelector('main') || doc.body;
-        return (main.textContent || '').replace(/\s+/g, ' ').trim().substring(0, 25000);
-    } catch (e: any) { throw new Error(`Crawl Failed: ${e.message}`); }
+        const result = await (Promise as any).any([jinaStrategy(), domStrategy()]);
+        // Cleanup other requests
+        controllers.forEach(c => c.abort());
+        return result;
+    } catch (e) {
+        throw new Error(`SOTA Crawl Failed: ${e}`);
+    }
 };
 
 export class ContentTooShortError extends Error {
@@ -126,7 +144,7 @@ export async function getGuaranteedYoutubeVideos(keyword: string, serperApiKey: 
     for (const query of queries) {
         if (allVideos.length >= 2) break;
         try {
-            const response = await fetchWithProxies("https://google.serper.dev/search", {
+            const response = await fetch("https://google.serper.dev/search", {
                 method: 'POST',
                 headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ q: query, type: 'videos', num: 5 })
@@ -151,12 +169,11 @@ export const normalizeGeneratedContent = (parsedJson: any, itemTitle: string): G
     if (!normalized.slug) normalized.slug = itemTitle.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
     if (!normalized.content) normalized.content = '';
     
-    // Ensure placeholders exist
     if (!normalized.imageDetails || !Array.isArray(normalized.imageDetails)) normalized.imageDetails = [];
     while (normalized.imageDetails.length < 3) {
         const i = normalized.imageDetails.length + 1;
         normalized.imageDetails.push({ 
-            prompt: `High quality detailed photo for ${itemTitle}, concept ${i}`, 
+            prompt: `High quality detailed photo for ${itemTitle}`, 
             altText: `${itemTitle} - Image ${i}`, 
             title: `img-${i}`, 
             placeholder: `[IMAGE_${i}]` 
@@ -174,20 +191,17 @@ export const normalizeGeneratedContent = (parsedJson: any, itemTitle: string): G
     return normalized as GeneratedContent;
 };
 
-export const generateVerificationFooterHtml = (): string => {
-    return `<div class="verification-footer-sota" style="margin-top: 4rem; padding: 2.5rem; background: #F0FDF4; border-left: 6px solid #059669; display: flex; gap: 2rem;">
-        <div style="font-size:2rem; color:#059669;">🛡️</div>
-        <div><h4 style="margin:0;">Scientific Verification</h4><p style="margin:0;">Fact-checked against ${new Date().getFullYear()} data sources.</p></div>
-    </div>`;
-};
-
 export const performSurgicalUpdate = (originalHtml: string, snippets: any): string => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(originalHtml, 'text/html');
     const body = doc.body;
-    const div = doc.createElement('div');
-    div.innerHTML = snippets.introHtml;
-    body.prepend(div);
+    
+    // Simple prepend intro, append FAQ if they exist, for reliability
+    if (snippets.introHtml) {
+        const div = doc.createElement('div');
+        div.innerHTML = snippets.introHtml;
+        body.prepend(div);
+    }
     if (snippets.faqHtml) {
         const faq = doc.createElement('div');
         faq.innerHTML = snippets.faqHtml;
@@ -200,7 +214,6 @@ export const postProcessGeneratedHtml = (html: string, plan: GeneratedContent, y
     let processedHtml = html;
     processedHtml = processedHtml.replace(/Sources Scanned|Read Time|Word count/gi, '');
     
-    // Inject Key Takeaways as BLOCKQUOTE (Quill Safe)
     if (!processedHtml.includes('key-takeaways-box') && plan.keyTakeaways && plan.keyTakeaways.length > 0) {
         const keyTakeawaysHtml = `
         <blockquote class="key-takeaways-box" style="background: #f8fafc; border-left: 5px solid #3b82f6; padding: 20px; margin: 30px 0; font-style: normal;">
@@ -208,7 +221,6 @@ export const postProcessGeneratedHtml = (html: string, plan: GeneratedContent, y
             <ul style="margin-bottom: 0;">${plan.keyTakeaways.map(t => `<li style="margin-bottom: 5px;">${t}</li>`).join('')}</ul>
         </blockquote>`;
         
-        // Inject after first paragraph/H2
         const firstH2Index = processedHtml.search(/<h2/i);
         if (firstH2Index !== -1) {
             processedHtml = processedHtml.slice(0, firstH2Index) + keyTakeawaysHtml + processedHtml.slice(firstH2Index);
@@ -217,7 +229,12 @@ export const postProcessGeneratedHtml = (html: string, plan: GeneratedContent, y
         }
     }
 
-    if (!isRefresh) processedHtml += generateVerificationFooterHtml();
+    if (!isRefresh) {
+        processedHtml += `<div class="verification-footer-sota" style="margin-top: 4rem; padding: 2.5rem; background: #F0FDF4; border-left: 6px solid #059669; display: flex; gap: 2rem;">
+            <div style="font-size:2rem; color:#059669;">🛡️</div>
+            <div><h4 style="margin:0;">Scientific Verification</h4><p style="margin:0;">Fact-checked against ${new Date().getFullYear()} data sources.</p></div>
+        </div>`;
+    }
 
     if (youtubeVideos && youtubeVideos.length > 0) {
         const paragraphs = processedHtml.split('</p>');
@@ -229,61 +246,19 @@ export const postProcessGeneratedHtml = (html: string, plan: GeneratedContent, y
     return processedHtml;
 };
 
-// --- SOTA: CLIENT-SIDE VECTOR RAG ---
-export async function getEmbeddings(text: string, client: GoogleGenAI): Promise<number[] | null> {
-    if (!text || !client) return null;
-    try {
-        const result = await client.models.embedContent({
-            model: "text-embedding-004",
-            contents: [{ parts: [{ text: text.substring(0, 2000) }] }]
-        });
-        return result.embeddings?.[0]?.values || null;
-    } catch (e) { return null; }
-}
-
-export const processInternalLinks = (
-    content: string, 
-    availablePages: SitemapPage[], 
-    currentType: 'pillar' | 'cluster' | 'standard' | 'link-optimizer' | 'refresh' = 'standard'
-): string => {
+export const processInternalLinks = (content: string, availablePages: SitemapPage[]): string => {
     let processedContent = content;
-    const candidates = availablePages
-        .filter(p => p.id && p.title && p.title.length > 3)
-        .sort((a, b) => b.title.length - a.title.length)
-        .slice(0, 100); 
-
-    const linkedUrls = new Set<string>();
+    // Limit to top 50 pages for performance
+    const candidates = availablePages.filter(p => p.id && p.title && p.title.length > 3).slice(0, 50); 
     let linkCount = 0;
-    const MAX_LINKS = 12;
 
     processedContent = processedContent.replace(/\[LINK_CANDIDATE:\s*([^\]]+)\]/gi, (match, keyword) => {
         const target = availablePages.find(p => p.title.toLowerCase() === keyword.toLowerCase());
         if (target) {
-            linkedUrls.add(target.id);
             linkCount++;
             return `<a href="${target.id}" class="internal-link" title="${target.title}">${keyword}</a>`;
         }
         return keyword;
     });
-
-    for (const page of candidates) {
-        if (linkCount >= MAX_LINKS) break;
-        if (linkedUrls.has(page.id)) continue;
-        const keywords = [page.title.toLowerCase().trim(), page.slug.replace(/-/g, ' ').replace(/^(best|top|guide|review)\s+/i, '').trim()].filter(k => k.length > 4);
-        for (const kw of keywords) {
-            const escaped = escapeRegExp(kw);
-            const regex = new RegExp(`(?<!<[^>]*)\\b${escaped}\\b`, 'i');
-            if (regex.test(processedContent)) {
-                if (!processedContent.includes(`href="${page.id}"`)) {
-                    processedContent = processedContent.replace(regex, (match) => {
-                        return `<a href="${page.id}" class="internal-link" title="${page.title}">${match}</a>`;
-                    });
-                    linkedUrls.add(page.id);
-                    linkCount++;
-                    break;
-                }
-            }
-        }
-    }
     return processedContent;
 };

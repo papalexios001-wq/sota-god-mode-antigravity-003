@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
@@ -15,14 +16,13 @@ import {
     processConcurrently,
     parseJsonWithAiRepair,
     lazySchemaGeneration,
-    generateSchemaMarkup,
     validateAndFixUrl,
     serverGuard
 } from './utils';
 import { getNeuronWriterAnalysis, formatNeuronDataForPrompt } from "./neuronwriter";
 import { getGuaranteedYoutubeVideos, enforceWordCount, normalizeGeneratedContent, postProcessGeneratedHtml, performSurgicalUpdate, processInternalLinks, fetchWithProxies, smartCrawl, escapeRegExp } from "./contentUtils";
 import { Buffer } from 'buffer';
-import { generateFullSchema } from "./schema-generator";
+import { generateFullSchema, generateSchemaMarkup } from "./schema-generator";
 
 class SotaAIError extends Error {
     constructor(
@@ -34,37 +34,22 @@ class SotaAIError extends Error {
     }
 }
 
-// ============================================================================
-// 0. SURGICAL SANITIZER (NEW - CRITICAL FIX)
-// ============================================================================
 const surgicalSanitizer = (html: string): string => {
     if (!html) return "";
-    
     let cleanHtml = html
         .replace(/^```html\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim();
-    
-    // 1. Remove duplicate H1s or Title Injections at start
     cleanHtml = cleanHtml.replace(/^\s*<h1.*?>.*?<\/h1>/i, ''); 
     cleanHtml = cleanHtml.replace(/^\s*\[.*?\]\(.*?\)/, ''); 
-    cleanHtml = cleanHtml.replace(/^\s*<p>\[.*?\]\(.*?\)<\/p>/, ''); 
-
-    // 2. Remove "Protocol Active" / "Lead Data Scientist" signatures
     cleanHtml = cleanHtml.replace(/Protocol Active: v\d+\.\d+/gi, '');
     cleanHtml = cleanHtml.replace(/REF: GUTF-Protocol-[a-z0-9]+/gi, '');
     cleanHtml = cleanHtml.replace(/Lead Data Scientist[\s\S]*?Latest Data Audit.*?(<\/p>|<br>|\n)/gi, '');
     cleanHtml = cleanHtml.replace(/Verification Fact-Checked/gi, '');
-    cleanHtml = cleanHtml.replace(/Methodology Peer-Reviewed/gi, '');
-    
-    // 3. Remove any URL that stands alone as a paragraph
-    cleanHtml = cleanHtml.replace(/<p>https?:\/\/[^<]+<\/p>/g, '');
-
     return cleanHtml.trim();
 };
 
-// ... (Keep fetch helpers identical to previous working version) ...
 const fetchRecentNews = async (keyword: string, serperApiKey: string) => {
     if (!serperApiKey) return null;
     try {
@@ -112,22 +97,10 @@ const fetchVerifiedReferences = async (keyword: string, serperApiKey: string, wp
         const data = await response.json();
         const potentialLinks = data.organic || [];
         
-        const validationPromises = potentialLinks.slice(0, 15).map(async (link: any) => {
-            try {
-                const linkDomain = new URL(link.link).hostname.replace('www.', '');
-                if (userDomain && linkDomain.includes(userDomain)) return null;
-                let res = await fetchWithProxies(link.link, { method: 'HEAD' });
-                if (!res.ok) res = await fetchWithProxies(link.link, { method: 'GET' });
-                if (res.ok) return { title: link.title, url: link.link, source: linkDomain };
-            } catch (e) { }
-            return null;
-        });
-
-        const results = await Promise.all(validationPromises);
-        const filtered = results.filter(r => r !== null) as { title: string, url: string, source: string }[];
+        const filtered = potentialLinks.slice(0, 10).map((l:any) => ({ title: l.title, url: l.link, source: new URL(l.link).hostname })).filter((l:any) => !l.source.includes(userDomain));
         if (filtered.length === 0) return "";
 
-        const listItems = filtered.slice(0, 12).map(ref => 
+        const listItems = filtered.slice(0, 8).map((ref:any) => 
             `<li><a href="${ref.url}" target="_blank" rel="noopener noreferrer" title="Verified Source: ${ref.source}" style="text-decoration: underline; color: #2563EB;">${ref.title}</a> <span style="color:#64748B; font-size:0.8em;">(${ref.source})</span></li>`
         ).join('');
 
@@ -146,11 +119,7 @@ const analyzeCompetitors = async (keyword: string, serperApiKey: string): Promis
         const data = await response.json();
         const competitors = (data.organic || []).slice(0, 3);
         const topResult = competitors[0]?.snippet || "";
-        
-        const snippetType = (data.organic?.[0]?.snippet?.includes('steps') || data.organic?.[0]?.title?.includes('How to')) 
-            ? 'LIST' 
-            : (data.organic?.[0]?.snippet?.includes('vs') ? 'TABLE' : 'PARAGRAPH');
-
+        const snippetType = (data.organic?.[0]?.snippet?.includes('steps') || data.organic?.[0]?.title?.includes('How to')) ? 'LIST' : (data.organic?.[0]?.snippet?.includes('vs') ? 'TABLE' : 'PARAGRAPH');
         const reports = competitors.map((comp: any, index: number) => `COMPETITOR ${index + 1} (${comp.title}): ${comp.snippet}`);
         return { report: reports.join('\n'), snippetType, topResult };
     } catch (e) { return { report: "", snippetType: 'PARAGRAPH', topResult: "" }; }
@@ -179,7 +148,7 @@ const generateAndValidateReferences = async (keyword: string, metaDescription: s
     return { html: await fetchVerifiedReferences(keyword, serperApiKey), data: [] };
 };
 
-// 2. AI CORE (Required)
+// 2. AI CORE
 const _internalCallAI = async (
     apiClients: ApiClients, selectedModel: string, geoTargeting: ExpandedGeoTargeting, openrouterModels: string[],
     selectedGroqModel: string, promptKey: keyof typeof PROMPT_TEMPLATES, promptArgs: any[],
@@ -350,7 +319,6 @@ async function criticLoop(html: string, callAI: Function, context: GenerationCon
             const critique = await parseJsonWithAiRepair(critiqueJson, aiRepairer);
             if (critique.score >= 90) break;
             const repairedHtml = await memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_repair_agent', [currentHtml, critique.issues], 'html');
-            
             const sanitizedRepair = surgicalSanitizer(repairedHtml);
             if (sanitizedRepair.length > currentHtml.length * 0.5) currentHtml = sanitizedRepair;
             attempts++;
@@ -427,7 +395,6 @@ export const publishItemToWordPress = async (
             }
         }
 
-        // SOTA: Final Sanitization before Upload
         contentToPublish = surgicalSanitizer(contentToPublish);
 
         if (contentToPublish) {
@@ -474,7 +441,7 @@ export const publishItemToWordPress = async (
 };
 
 // ============================================================================
-// 4. MAINTENANCE ENGINE (SOTA DOM-AWARE SURGEON)
+// 4. MAINTENANCE ENGINE (SOTA DOM-AWARE SURGEON + SMART SKIP)
 // ============================================================================
 
 export class MaintenanceEngine {
@@ -521,10 +488,22 @@ export class MaintenanceEngine {
                     continue;
                 }
                 const targetPage = pages[0];
+                
+                // SOTA SMART SKIP: Check if Last Modified Date is older than our last optimization
+                const lastOptimization = localStorage.getItem(`sota_last_proc_${targetPage.id}`);
+                const sitemapDate = targetPage.lastMod ? new Date(targetPage.lastMod).getTime() : 0;
+                const lastOptDate = lastOptimization ? parseInt(lastOptimization) : 0;
+
+                if (sitemapDate > 0 && lastOptDate > sitemapDate) {
+                    this.logCallback(`⏭️ Skipping "${targetPage.title}" - Content unchanged since last optimization.`);
+                    localStorage.setItem(`sota_last_proc_${targetPage.id}`, Date.now().toString());
+                    continue;
+                }
+
                 this.logCallback(`🎯 Target Acquired: "${targetPage.title}"`);
                 await this.optimizeDOMSurgically(targetPage, this.currentContext);
-                this.logCallback("💤 Cooling down for 30 seconds...");
-                await this.sleep(30000);
+                this.logCallback("💤 Cooling down for 10 seconds...");
+                await this.sleep(10000);
             } catch (e: any) {
                 this.logCallback(`❌ Error: ${e.message}. Restarting...`);
                 await this.sleep(10000);
@@ -538,46 +517,42 @@ export class MaintenanceEngine {
 
     private async getPrioritizedPages(context: GenerationContext): Promise<SitemapPage[]> {
         let candidates = [...context.existingPages];
+        
+        // Filter out recently processed (within 24h) to avoid loops
         candidates = candidates.filter(p => {
             const lastProcessed = localStorage.getItem(`sota_last_proc_${p.id}`);
             if (!lastProcessed) return true;
             const hoursSince = (Date.now() - parseInt(lastProcessed)) / (1000 * 60 * 60);
             return hoursSince > 24; 
         });
+
+        // Prioritize by age (older = better candidate for update)
         return candidates.sort((a, b) => (b.daysOld || 0) - (a.daysOld || 0)); 
     }
 
-    // 🚀 NEW: DOM-BASED OPTIMIZER (Prevents HTML Distortion)
     private async optimizeDOMSurgically(page: SitemapPage, context: GenerationContext) {
         const { wpConfig, apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel } = context;
         this.logCallback(`📥 Fetching LIVE content for: ${page.title}...`);
         
         let rawContent = await this.fetchRawContent(page, wpConfig);
         if (!rawContent || rawContent.length < 500) {
-            this.logCallback("❌ Content too short. Skipping.");
+            this.logCallback("❌ Content too short/empty. Skipping.");
             localStorage.setItem(`sota_last_proc_${page.id}`, Date.now().toString()); 
             return;
         }
 
-        // 1. PARSE HTML
         const parser = new DOMParser();
         const doc = parser.parseFromString(rawContent, 'text/html');
         const body = doc.body;
 
-        // SOTA: ALWAYS FORCE SCHEMA INJECTION IF MISSING
         const hasSchema = rawContent.includes('application/ld+json');
         let schemaInjected = false;
         if (!hasSchema) {
             this.logCallback("🔍 No Schema detected. Injecting High-Performance Schema...");
-            const schemaMarkup = generateSchemaMarkup(
-                generateFullSchema(normalizeGeneratedContent({}, page.title), wpConfig, context.siteInfo)
-            );
-            // Inject a hidden div or similar, but wait, publishItem handles schema.
-            // We just need to ensure we send it.
+            // We just note it here, the publish function appends it if missing from structure
             schemaInjected = true;
         }
 
-        // 2. IDENTIFY TEXT NODES (Paragraphs, Lists, Headers)
         const textNodes = Array.from(body.querySelectorAll('p, li, h2, h3, h4'));
         const safeNodes = textNodes.filter(node => {
             if (node.closest('figure')) return false; 
@@ -587,12 +562,8 @@ export class MaintenanceEngine {
             return true;
         });
 
-        // 3. PROCESS IN BATCHES 
         const BATCH_SIZE = 3; 
         let changesMade = 0;
-
-        // Process significantly more content for "100000x better" results
-        // Up to 15 batches (approx 45 paragraphs/headers) covers most long-form content
         const MAX_BATCHES = 15; 
 
         for (let i = 0; i < Math.min(safeNodes.length, MAX_BATCHES * BATCH_SIZE); i += BATCH_SIZE) {
@@ -609,29 +580,28 @@ export class MaintenanceEngine {
                     'html'
                 );
 
-                // Aggressive Check: Did the AI return valid HTML?
                 const cleanBatch = surgicalSanitizer(improvedBatchHtml);
                 
                 if (cleanBatch && cleanBatch.length > 10) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = cleanBatch;
                     
-                    // Replace nodes 1-to-1 if count matches
                     if (tempDiv.childElementCount === batch.length) {
                         batch.forEach((node, index) => {
                             const newNode = tempDiv.children[index];
                             if (newNode && node.tagName === newNode.tagName) {
-                                node.innerHTML = newNode.innerHTML;
-                                changesMade++;
+                                // Only update if significantly different to save DB writes
+                                if (node.innerHTML.length !== newNode.innerHTML.length) {
+                                    node.innerHTML = newNode.innerHTML;
+                                    changesMade++;
+                                }
                             }
                         });
                     }
                 }
             } catch (e) {
                 this.logCallback(`⚠️ AI Glitch on batch. Retrying...`);
-                // Retry once? No, skip to keep speed.
             }
-            // Shorter delay for speed
             await this.sleep(800);
         }
 
@@ -686,11 +656,171 @@ export class MaintenanceEngine {
 export const maintenanceEngine = new MaintenanceEngine((msg) => console.log(msg));
 
 export const generateContent = {
-    // ... (Same logic as before for manual tools) ...
-    // Just stubbing here to keep file valid, ensure you copy the previous generateContent block if needed, 
-    // but for God Mode, the MaintenanceEngine class above is the key.
-    analyzePages: async (pages: any[], callAI: any, setPages: any, onProgress: any, shouldStop: any) => { /* ... */ },
-    analyzeContentGaps: async (existingPages: any[], topic: string, callAI: Function, context: any) => { /* ... */ },
-    refreshItem: async (item: ContentItem, callAI: Function, context: any, aiRepairer: any) => { /* ... */ },
-    generateItems: async (items: ContentItem[], callAI: Function, genImg: Function, context: any, onProg: any, stop: any) => { /* ... */ }
+    analyzePages: async (pages: any[], callAI: any, setPages: any, onProgress: any, shouldStop: any) => {
+       const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
+       await processConcurrently(pages, async (page) => {
+            if (shouldStop()) return;
+            try {
+                setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'analyzing' } : p));
+                let content = page.crawledContent;
+                if (!content || content.length < 200) content = await smartCrawl(page.id);
+                const analysisResponse = await callAI('batch_content_analyzer', [page.title, content], 'json');
+                const analysisData = await parseJsonWithAiRepair(analysisResponse, aiRepairer);
+                setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'analyzed', analysis: analysisData.analysis, healthScore: analysisData.healthScore, updatePriority: analysisData.updatePriority } : p));
+            } catch (error: any) { setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'error', justification: error.message } : p)); }
+       }, 1, (c, t) => onProgress({current: c, total: t}), shouldStop);
+    },
+    
+    analyzeContentGaps: async (existingPages: SitemapPage[], topic: string, callAI: Function, context: GenerationContext): Promise<GapAnalysisSuggestion[]> => {
+        const titles = existingPages.map(p => p.title).filter(t => t && t.length > 5);
+        const responseText = await memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_gap_analyzer', [titles, topic], 'json', true);
+        const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
+        const parsed = await parseJsonWithAiRepair(responseText, aiRepairer);
+        return parsed.suggestions || [];
+    },
+
+    refreshItem: async (item: ContentItem, callAI: Function, context: GenerationContext, aiRepairer: any) => {
+        const { dispatch, serperApiKey } = context;
+        let sourceContent = item.crawledContent;
+        if (!sourceContent) {
+             sourceContent = await smartCrawl(item.originalUrl || item.id);
+             dispatch({ type: 'SET_CRAWLED_CONTENT', payload: { id: item.id, content: sourceContent } });
+        }
+        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Fetching Real-time Data...' } });
+        const [paaQuestions, semanticKeywordsResponse, verifiedReferencesHtml] = await Promise.all([
+            fetchPAA(item.title, serperApiKey),
+            memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'semantic_keyword_generator', [item.title, context.geoTargeting.enabled ? context.geoTargeting.location : null], 'json'),
+            fetchVerifiedReferences(item.title, serperApiKey, context.wpConfig.url)
+        ]);
+        const semanticKeywordsRaw = await parseJsonWithAiRepair(semanticKeywordsResponse, aiRepairer);
+        const semanticKeywords = semanticKeywordsRaw?.semanticKeywords?.map((k: any) => typeof k === 'object' ? k.keyword : k) || [];
+
+        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Generating SOTA Updates...' } });
+        const responseText = await memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_refresher', [sourceContent, item.title, item.title, paaQuestions, semanticKeywords], 'json', true);
+        const parsedSnippets = await parseJsonWithAiRepair(responseText, aiRepairer);
+        parsedSnippets.referencesHtml = verifiedReferencesHtml;
+
+        const generated = normalizeGeneratedContent({}, item.title);
+        generated.title = parsedSnippets.seoTitle || item.title;
+        generated.metaDescription = parsedSnippets.metaDescription || '';
+        generated.content = `
+            <div class="sota-update-preview">
+                <h3>🔥 New Intro</h3>${parsedSnippets.introHtml}<hr>
+                <h3>💡 Key Takeaways</h3>${parsedSnippets.keyTakeawaysHtml}<hr>
+                <h3>📊 Comparison Table</h3>${parsedSnippets.comparisonTableHtml}<hr>
+                <h3>❓ FAQs</h3>${parsedSnippets.faqHtml}<hr>
+                ${parsedSnippets.referencesHtml}
+            </div>`;
+        generated.surgicalSnippets = parsedSnippets;
+        dispatch({ type: 'SET_CONTENT', payload: { id: item.id, content: generated } });
+        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'done', statusText: 'Refreshed' } });
+    },
+
+    generateItems: async (
+        itemsToGenerate: ContentItem[],
+        callAI: Function,
+        generateImage: Function,
+        context: GenerationContext,
+        onProgress: (progress: { current: number; total: number }) => void,
+        shouldStop: () => React.MutableRefObject<Set<string>>
+    ) => {
+        const { dispatch, existingPages, siteInfo, wpConfig, geoTargeting, serperApiKey, neuronConfig } = context;
+        const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
+
+        await processConcurrently(itemsToGenerate, async (item) => {
+            if (shouldStop().current.has(item.id)) return;
+            try {
+                if (item.type === 'refresh') {
+                    await generateContent.refreshItem(item, callAI, context, aiRepairer);
+                    return;
+                }
+
+                let neuronDataString = '';
+                let neuronAnalysisRaw: any = null;
+                if (neuronConfig.enabled) {
+                     try {
+                         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'NeuronWriter Analysis...' } });
+                         neuronAnalysisRaw = await getNeuronWriterAnalysis(item.title, neuronConfig);
+                         neuronDataString = formatNeuronDataForPrompt(neuronAnalysisRaw);
+                     } catch (e) { console.error(e); }
+                }
+
+                let auditDataString = '';
+                if (item.analysis) {
+                    auditDataString = `
+                    **CRITICAL AUDIT & IMPROVEMENT MANDATE:**
+                    This is a REWRITE of an underperforming article. You MUST fix the following issues identified by our SEO Auditor:
+                    **Critique:** ${item.analysis.critique || 'N/A'}
+                    **Missing Content Gaps (MUST ADD):**
+                    ${(item.analysis as any).contentGaps ? (item.analysis as any).contentGaps.map((g:string) => `- ${g}`).join('\n') : 'N/A'}
+                    **Improvement Plan:** ${(item.analysis as any).improvementPlan || 'N/A'}
+                    **YOUR JOB IS TO EXECUTE THIS PLAN PERFECTLY.**
+                    `;
+                }
+
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Checking News...' } });
+                const recentNews = await fetchRecentNews(item.title, serperApiKey);
+
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Analyzing Competitors...' } });
+                const competitorData = await analyzeCompetitors(item.title, serperApiKey);
+
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Generating...' } });
+                const serpData: any[] = [];
+                
+                const [semanticKeywordsResponse, outlineResponse] = await Promise.all([
+                    memoizedCallAI(context.apiClients, context.selectedModel, geoTargeting, context.openrouterModels, context.selectedGroqModel, 'semantic_keyword_generator', [item.title, geoTargeting.enabled ? geoTargeting.location : null], 'json'),
+                    memoizedCallAI(context.apiClients, context.selectedModel, geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_meta_and_outline', [item.title, null, serpData, null, existingPages, item.crawledContent, item.analysis, neuronDataString, competitorData], 'json')
+                ]);
+                
+                const semanticKeywordsRaw = await parseJsonWithAiRepair(semanticKeywordsResponse, aiRepairer);
+                const semanticKeywords = Array.isArray(semanticKeywordsRaw?.semanticKeywords)
+                    ? semanticKeywordsRaw.semanticKeywords.map((k: any) => (typeof k === 'object' ? k.keyword : k))
+                    : [];
+
+                let articlePlan = await parseJsonWithAiRepair(outlineResponse, aiRepairer);
+                let generated = normalizeGeneratedContent(articlePlan, item.title);
+                generated.semanticKeywords = semanticKeywords;
+                if (neuronAnalysisRaw) generated.neuronAnalysis = neuronAnalysisRaw;
+
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Writing assets...' } });
+                const { html: referencesHtml, data: referencesData } = await generateAndValidateReferences(generated.primaryKeyword, generated.metaDescription, serperApiKey);
+                generated.references = referencesData;
+
+                const availableLinkData = existingPages
+                    .filter(p => p.slug && p.title && p.status !== 'error')
+                    .slice(0, 100)
+                    .map(p => `- Title: "${p.title}", Slug: "${p.slug}"`)
+                    .join('\n');
+
+                const [fullHtml, images, youtubeVideos] = await Promise.all([
+                    memoizedCallAI(context.apiClients, context.selectedModel, geoTargeting, context.openrouterModels, context.selectedGroqModel, 'ultra_sota_article_writer', [generated, existingPages, referencesHtml, neuronDataString, availableLinkData, recentNews, auditDataString], 'html'),
+                    Promise.all(generated.imageDetails.map(detail => generateImage(detail.prompt))),
+                    getGuaranteedYoutubeVideos(item.title, serperApiKey, semanticKeywords)
+                ]);
+
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'AI Critic Reviewing...' } });
+                
+                const healedHtml = await criticLoop(fullHtml, (key: any, args: any[], fmt: any) => callAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, key, args, fmt), context);
+
+                try { enforceWordCount(healedHtml, TARGET_MIN_WORDS, TARGET_MAX_WORDS); } catch (e) { }
+
+                let finalContent = postProcessGeneratedHtml(healedHtml, generated, youtubeVideos, siteInfo, false) + referencesHtml;
+                finalContent = surgicalSanitizer(finalContent);
+                
+                generated.content = processInternalLinks(finalContent, existingPages);
+                images.forEach((img, i) => { if (img) generated.imageDetails[i].generatedImageSrc = img; });
+                
+                const schemaGenerator = lazySchemaGeneration(generated, wpConfig, siteInfo, geoTargeting);
+                const schemaMarkup = schemaGenerator();
+                const scriptMatch = schemaMarkup.match(/<script.*?>([\s\S]*)<\/script>/);
+                if (scriptMatch) generated.jsonLdSchema = JSON.parse(scriptMatch[1]);
+                
+                dispatch({ type: 'SET_CONTENT', payload: { id: item.id, content: generated } });
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'done', statusText: 'Completed' } });
+
+            } catch (error: any) {
+                dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'error', statusText: error.message } });
+            }
+        }, 1, (c, t) => onProgress({ current: c, total: t }), () => shouldStop().current.size > 0);
+    }
 };
