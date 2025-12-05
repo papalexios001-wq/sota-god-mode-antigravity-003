@@ -648,14 +648,16 @@ Return HTML starting with <h2>Conclusion</h2> followed by 2-3 paragraphs.
 2. **Hook**: Follow with surprising stat, bold claim, or provocative question
 3. **Pain Point**: Address what the reader struggles with
 4. **Promise**: Preview what they'll learn
-5. **Length**: 200-300 words
+5. **Length**: 150-200 words MAXIMUM (NEVER exceed 200 words - count carefully!)
 6. **Keyword Usage**: Include primary keyword 3-4 times naturally
 7. **Featured Snippet**: First paragraph should have <strong> bold definition (40-60 words)
 8. **Entity Recognition**: Include related entities and semantic keywords
 9. **Voice Search**: Answer conversational "how", "what", "why" questions clearly
 10. **E-E-A-T Signals**: Include credibility markers (studies, data, expert consensus)
 
-**OUTPUT:** Complete intro HTML (2-3 paragraphs) that directly answers search intent FIRST.`,
+**CRITICAL CONSTRAINT:** Keep total intro to 200 words MAX. Be concise and punchy.
+
+**OUTPUT:** Complete intro HTML (2-3 paragraphs) that directly answers search intent FIRST. MAX 200 WORDS.`,
 
         userPrompt: (oldIntro: string, title: string, content: string) => `
 **ARTICLE TITLE:** ${title}
@@ -671,8 +673,9 @@ ${content.substring(0, 2000)}
 2. Be 10x more engaging and SEO/GEO/AEO-optimized for ${TARGET_YEAR}
 3. Use ALEX HORMOZI style: short, punchy, no fluff, data-driven
 4. Optimize for AI overviews, featured snippets, and voice search
+5. CRITICAL: Keep to 150-200 words MAXIMUM (never exceed 200 words!)
 
-Return HTML paragraphs (no H1, no wrappers). START with a direct answer to the implied search query.
+Return HTML paragraphs (no H1, no wrappers). START with a direct answer to the implied search query. KEEP IT UNDER 200 WORDS.
 `
     },
 
