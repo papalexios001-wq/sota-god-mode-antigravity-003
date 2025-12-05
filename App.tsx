@@ -124,6 +124,8 @@ const App = () => {
     const [isGodMode, setIsGodMode] = useState(() => localStorage.getItem('sota_god_mode') === 'true');
     const [godModeLogs, setGodModeLogs] = useState<string[]>([]);
     const [optimizedHistory, setOptimizedHistory] = useState<OptimizedLog[]>([]);
+    const [wpDiagnostics, setWpDiagnostics] = useState<any>(null);
+    const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
     useEffect(() => { mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose', fontFamily: 'Inter' }); }, []);
     useEffect(() => { if (selectedItemForReview?.generatedContent) setTimeout(() => { mermaid.run({ nodes: document.querySelectorAll('.mermaid') as any }); }, 500); }, [selectedItemForReview]);
@@ -223,8 +225,73 @@ const App = () => {
         let filtered = [...existingPages];
         if (hubStatusFilter !== 'All') filtered = filtered.filter(page => page.updatePriority === hubStatusFilter);
         if (hubSearchFilter) filtered = filtered.filter(page => page.title.toLowerCase().includes(hubSearchFilter.toLowerCase()) || page.id.toLowerCase().includes(hubSearchFilter.toLowerCase()));
-        return filtered; 
+        return filtered;
     }, [existingPages, hubSearchFilter, hubStatusFilter, hubSortConfig]);
+
+    const runWordPressDiagnostics = useCallback(async () => {
+        if (!wpConfig.url || !wpConfig.username || !wpPassword) {
+            alert('Please configure WordPress credentials first');
+            return;
+        }
+
+        setIsRunningDiagnostics(true);
+        setWpDiagnostics({ status: 'running', posts: [], postTypes: [], error: null });
+
+        try {
+            const authHeader = `Basic ${btoa(`${wpConfig.username}:${wpPassword}`)}`;
+            const baseUrl = wpConfig.url.replace(/\/+$/, '');
+
+            const results: any = {
+                status: 'success',
+                posts: [],
+                postTypes: [],
+                customPostTypes: [],
+                error: null
+            };
+
+            console.log('[WP Diagnostics] Testing REST API access...');
+
+            try {
+                const postsRes = await fetchWordPressWithRetry(`${baseUrl}/wp-json/wp/v2/posts?per_page=20&status=any&_fields=id,slug,title,status`, {
+                    method: 'GET',
+                    headers: { 'Authorization': authHeader }
+                });
+                const postsData = await postsRes.json();
+                results.posts = Array.isArray(postsData) ? postsData : [];
+                console.log('[WP Diagnostics] Posts found:', results.posts.length);
+            } catch (e: any) {
+                console.error('[WP Diagnostics] Failed to fetch posts:', e);
+                results.error = `Failed to fetch posts: ${e.message}`;
+            }
+
+            try {
+                const typesRes = await fetchWordPressWithRetry(`${baseUrl}/wp-json/wp/v2/types`, {
+                    method: 'GET',
+                    headers: { 'Authorization': authHeader }
+                });
+                const typesData = await typesRes.json();
+                results.postTypes = Object.keys(typesData || {});
+                results.customPostTypes = Object.entries(typesData || {})
+                    .filter(([key, value]: any) => !['post', 'page', 'attachment'].includes(key))
+                    .map(([key, value]: any) => ({ slug: key, name: value.name, rest_base: value.rest_base }));
+                console.log('[WP Diagnostics] Post types found:', results.postTypes);
+            } catch (e: any) {
+                console.error('[WP Diagnostics] Failed to fetch post types:', e);
+            }
+
+            setWpDiagnostics(results);
+        } catch (error: any) {
+            console.error('[WP Diagnostics] Error:', error);
+            setWpDiagnostics({
+                status: 'error',
+                posts: [],
+                postTypes: [],
+                error: error.message
+            });
+        } finally {
+            setIsRunningDiagnostics(false);
+        }
+    }, [wpConfig, wpPassword]);
 
     const filteredAndSortedItems = useMemo(() => {
         let sorted = items.filter(Boolean);
@@ -554,20 +621,150 @@ const App = () => {
                                         </div>
 
                                         {isGodMode && (
-                                            <div className="god-mode-dashboard" style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
-                                                <div className="god-mode-logs" style={{
-                                                    background: '#020617', padding: '1rem', borderRadius: '8px', 
-                                                    fontFamily: 'monospace', fontSize: '0.8rem', height: '200px', overflowY: 'auto',
-                                                    border: '1px solid #1e293b', boxShadow: 'inset 0 2px 4px 0 rgba(0,0,0,0.5)'
-                                                }}>
-                                                    <div style={{color: '#64748B', borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem', marginBottom: '0.5rem'}}>SYSTEM LOGS</div>
-                                                    {godModeLogs.map((log, i) => (
-                                                        <div key={i} style={{marginBottom: '4px', color: log.includes('Error') ? '#EF4444' : log.includes('✅') ? '#10B981' : '#94A3B8'}}>
-                                                            <span style={{opacity: 0.5}}>[{new Date().toLocaleTimeString()}]</span> {log}
-                                                        </div>
-                                                    ))}
-                                                    {godModeLogs.length === 0 && <div style={{color: '#64748B'}}>Initializing engine... waiting for tasks...</div>}
+                                            <>
+                                                <div style={{marginBottom: '1rem', display: 'flex', gap: '0.5rem'}}>
+                                                    <button
+                                                        onClick={runWordPressDiagnostics}
+                                                        disabled={isRunningDiagnostics}
+                                                        style={{
+                                                            padding: '0.5rem 1rem',
+                                                            background: '#1e293b',
+                                                            color: '#10B981',
+                                                            border: '1px solid #334155',
+                                                            borderRadius: '6px',
+                                                            cursor: isRunningDiagnostics ? 'not-allowed' : 'pointer',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 500
+                                                        }}
+                                                    >
+                                                        {isRunningDiagnostics ? '🔄 Running...' : '🔍 Debug WordPress API'}
+                                                    </button>
+                                                    {wpDiagnostics && (
+                                                        <button
+                                                            onClick={() => setWpDiagnostics(null)}
+                                                            style={{
+                                                                padding: '0.5rem 1rem',
+                                                                background: '#1e293b',
+                                                                color: '#64748B',
+                                                                border: '1px solid #334155',
+                                                                borderRadius: '6px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.85rem'
+                                                            }}
+                                                        >
+                                                            ✕ Close Diagnostics
+                                                        </button>
+                                                    )}
                                                 </div>
+
+                                                {wpDiagnostics && (
+                                                    <div style={{
+                                                        background: '#020617',
+                                                        padding: '1rem',
+                                                        borderRadius: '8px',
+                                                        border: '1px solid #1e293b',
+                                                        marginBottom: '1rem',
+                                                        maxHeight: '400px',
+                                                        overflowY: 'auto'
+                                                    }}>
+                                                        <div style={{color: '#10B981', fontWeight: 'bold', marginBottom: '1rem'}}>
+                                                            🔍 WordPress API Diagnostics
+                                                        </div>
+
+                                                        {wpDiagnostics.error && (
+                                                            <div style={{background: '#DC2626', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', color: 'white'}}>
+                                                                <strong>Error:</strong> {wpDiagnostics.error}
+                                                            </div>
+                                                        )}
+
+                                                        <div style={{marginBottom: '1rem'}}>
+                                                            <div style={{color: '#94A3B8', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600}}>
+                                                                POST TYPES AVAILABLE:
+                                                            </div>
+                                                            <div style={{display: 'flex', flexWrap: 'wrap', gap: '0.5rem'}}>
+                                                                {wpDiagnostics.postTypes?.map((type: string) => (
+                                                                    <span key={type} style={{
+                                                                        background: '#1e293b',
+                                                                        padding: '0.25rem 0.5rem',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '0.75rem',
+                                                                        color: '#10B981'
+                                                                    }}>
+                                                                        {type}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        {wpDiagnostics.customPostTypes?.length > 0 && (
+                                                            <div style={{marginBottom: '1rem'}}>
+                                                                <div style={{color: '#F59E0B', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600}}>
+                                                                    CUSTOM POST TYPES:
+                                                                </div>
+                                                                {wpDiagnostics.customPostTypes.map((cpt: any) => (
+                                                                    <div key={cpt.slug} style={{
+                                                                        background: '#1e293b',
+                                                                        padding: '0.5rem',
+                                                                        borderRadius: '4px',
+                                                                        marginBottom: '0.5rem',
+                                                                        fontSize: '0.75rem'
+                                                                    }}>
+                                                                        <strong style={{color: '#F59E0B'}}>{cpt.name}</strong>
+                                                                        <span style={{color: '#64748B'}}> (slug: {cpt.slug}, REST: {cpt.rest_base})</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        <div>
+                                                            <div style={{color: '#94A3B8', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600}}>
+                                                                RECENT POSTS (Last 20):
+                                                            </div>
+                                                            {wpDiagnostics.posts?.length === 0 ? (
+                                                                <div style={{color: '#DC2626', fontSize: '0.85rem', padding: '0.5rem', fontStyle: 'italic'}}>
+                                                                    No posts found. Check REST API permissions.
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{fontSize: '0.75rem', fontFamily: 'monospace'}}>
+                                                                    {wpDiagnostics.posts?.map((post: any) => (
+                                                                        <div key={post.id} style={{
+                                                                            background: '#1e293b',
+                                                                            padding: '0.5rem',
+                                                                            borderRadius: '4px',
+                                                                            marginBottom: '0.5rem',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between'
+                                                                        }}>
+                                                                            <div style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                                                                                <span style={{color: '#10B981'}}>ID:{post.id}</span>
+                                                                                <span style={{color: '#64748B', margin: '0 0.5rem'}}>|</span>
+                                                                                <span style={{color: '#E2E8F0'}}>{post.title?.rendered || post.title}</span>
+                                                                            </div>
+                                                                            <div style={{marginLeft: '1rem', whiteSpace: 'nowrap'}}>
+                                                                                <span style={{color: '#60A5FA'}}>slug: {post.slug}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="god-mode-dashboard" style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
+                                                    <div className="god-mode-logs" style={{
+                                                        background: '#020617', padding: '1rem', borderRadius: '8px',
+                                                        fontFamily: 'monospace', fontSize: '0.8rem', height: '200px', overflowY: 'auto',
+                                                        border: '1px solid #1e293b', boxShadow: 'inset 0 2px 4px 0 rgba(0,0,0,0.5)'
+                                                    }}>
+                                                        <div style={{color: '#64748B', borderBottom: '1px solid #1e293b', paddingBottom: '0.5rem', marginBottom: '0.5rem'}}>SYSTEM LOGS</div>
+                                                        {godModeLogs.map((log, i) => (
+                                                            <div key={i} style={{marginBottom: '4px', color: log.includes('Error') ? '#EF4444' : log.includes('✅') ? '#10B981' : '#94A3B8'}}>
+                                                                <span style={{opacity: 0.5}}>[{new Date().toLocaleTimeString()}]</span> {log}
+                                                            </div>
+                                                        ))}
+                                                        {godModeLogs.length === 0 && <div style={{color: '#64748B'}}>Initializing engine... waiting for tasks...</div>}
+                                                    </div>
 
                                                 <div className="optimized-list" style={{
                                                     background: '#020617', padding: '1rem', borderRadius: '8px', 
@@ -593,7 +790,8 @@ const App = () => {
                                                         ))
                                                     )}
                                                 </div>
-                                            </div>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
 
