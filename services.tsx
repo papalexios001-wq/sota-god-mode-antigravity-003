@@ -790,6 +790,10 @@ export class MaintenanceEngine {
 
         this.logCallback(`⚡ UPDATE NEEDED: ${needsUpdate.reason}`);
 
+        // 🔒 CRITICAL: Mark as processing IMMEDIATELY to prevent duplicate selection
+        localStorage.setItem(`sota_last_proc_${page.id}`, Date.now().toString());
+        this.logCallback(`🔒 LOCKED: Page marked as processing to prevent duplicates`);
+
         // 1.5 ULTRA GOD MODE: AGGRESSIVE SHORTCODE & GARBAGE CLEANUP
         this.logCallback(`🧹 CLEANING: Removing shortcodes and broken elements...`);
         let cleanupCount = 0;
