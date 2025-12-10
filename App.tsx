@@ -7,10 +7,11 @@ import { PROMPT_TEMPLATES } from './prompts';
 import { AI_MODELS } from './constants';
 import { itemsReducer } from './state';
 import { callAI, generateContent, generateImageWithFallback, publishItemToWordPress, maintenanceEngine } from './services';
-import { 
+import {
     AppFooter, AnalysisModal, BulkPublishModal, ReviewModal, SidebarNav, SkeletonLoader, ApiKeyInput, CheckIcon, XIcon, WordPressEndpointInstructions
 } from './components';
-import { 
+import { LandingPage } from './LandingPage';
+import {
     SitemapPage, ContentItem, GeneratedContent, SiteInfo, ExpandedGeoTargeting, ApiClients, WpConfig, NeuronConfig, GapAnalysisSuggestion, GenerationContext
 } from './types';
 import { callAiWithRetry, debounce, fetchWordPressWithRetry, sanitizeTitle, extractSlugFromUrl, parseJsonWithAiRepair, isNullish, isValidSortKey, processConcurrently } from './utils';
@@ -53,6 +54,10 @@ export class SotaErrorBoundary extends React.Component<ErrorBoundaryProps, Error
 interface OptimizedLog { title: string; url: string; timestamp: string; }
 
 const App = () => {
+    const [showLanding, setShowLanding] = useState(() => {
+        const hasSeenLanding = localStorage.getItem('hasSeenLanding');
+        return hasSeenLanding !== 'true';
+    });
     const [activeView, setActiveView] = useState('setup');
     const [apiKeys, setApiKeys] = useState(() => {
         const saved = localStorage.getItem('apiKeys');
@@ -340,6 +345,15 @@ const App = () => {
     const handleGenerateSelected = () => { stopGenerationRef.current.clear(); const itemsToGenerate = items.filter(item => selectedItems.has(item.id)); if (itemsToGenerate.length > 0) startGeneration(itemsToGenerate); };
     const handleStopGeneration = (itemId: string | null = null) => { if (itemId) { stopGenerationRef.current.add(itemId); dispatch({ type: 'UPDATE_STATUS', payload: { id: itemId, status: 'idle', statusText: 'Stopped' } }); } else { items.forEach(item => { if (item.status === 'generating') { stopGenerationRef.current.add(item.id); dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'idle', statusText: 'Stopped' } }); } }); setIsGenerating(false); } };
     const analyzableForRewrite = useMemo(() => existingPages.filter(p => selectedHubPages.has(p.id) && p.analysis).length, [selectedHubPages, existingPages]);
+
+    const handleEnterApp = () => {
+        localStorage.setItem('hasSeenLanding', 'true');
+        setShowLanding(false);
+    };
+
+    if (showLanding) {
+        return <LandingPage onEnterApp={handleEnterApp} />;
+    }
 
     return (
         <div className="app-container">
