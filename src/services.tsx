@@ -35,6 +35,14 @@ class SotaAIError extends Error {
     }
 }
 
+// 🔥 ENTERPRISE HOTFIX: Strip hardcoded LLM-generated references before sanitizing
+const stripLLMGeneratedReferences = (html: string): string => {
+      if (!html) return html;
+      // Remove hardcoded References & Further Reading section
+      const refPattern = /<h[2-3][^>]*>\s*References\s*&\s*Further\s*Reading\s*<\/h[2-3]>[\s\S]*?(<\/div>\s*$|$)/i;
+      return html.replace(refPattern, '');
+    };
+
 const surgicalSanitizer = (html: string): string => {
     if (!html) return "";
     let cleanHtml = html
@@ -1090,6 +1098,9 @@ export const generateContent = {
                 try { enforceWordCount(healedHtml, TARGET_MIN_WORDS, TARGET_MAX_WORDS); } catch (e) { }
 
                 let finalContent = postProcessGeneratedHtml(healedHtml, generated, youtubeVideos, siteInfo, false) + referencesHtml;
+                
+// 🔥 CRITICAL HOTFIX: Strip LLM-generated hardcoded references BEFORE sanitizer
+                finalContent = stripLLMGeneratedReferences(finalContent);
                 finalContent = surgicalSanitizer(finalContent);
                 
                 generated.content = processInternalLinks(finalContent, existingPages);
