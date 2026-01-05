@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+900
+    import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import React, { useState, useMemo, useEffect, useCallback, useReducer, useRef, Component, ErrorInfo } from 'react';
@@ -11,10 +12,14 @@ import {
     AppFooter, AnalysisModal, BulkPublishModal, ReviewModal, SidebarNav, SkeletonLoader, ApiKeyInput, CheckIcon, XIcon, WordPressEndpointInstructions
 } from './components';
 import { LandingPage } from './LandingPage';
+import { 845
+845
+} from './src/GodModeURLInput';
 import {
     SitemapPage, ContentItem, GeneratedContent, SiteInfo, ExpandedGeoTargeting, ApiClients, WpConfig, NeuronConfig, GapAnalysisSuggestion, GenerationContext
 } from './types';
-import { callAiWithRetry, debounce, fetchWordPressWithRetry, sanitizeTitle, extractSlugFromUrl, parseJsonWithAiRepair, isNullish, isValidSortKey, processConcurrently } from './utils';
+import { callAiWithRetry, debounce, fetchWor14
+        dPressWithRetry, sanitizeTitle, extractSlugFromUrl, parseJsonWithAiRepair, isNullish, isValidSortKey, processConcurrently } from './utils';
 import { fetchWithProxies, smartCrawl } from './contentUtils';
 import { listNeuronProjects, NeuronProject } from './neuronwriter';
 // @ts-ignore
@@ -126,7 +131,8 @@ const App = () => {
     const [isBulkAutoPublishing, setIsBulkAutoPublishing] = useState(false);
     const [bulkAutoPublishProgress, setBulkAutoPublishProgress] = useState({ current: 0, total: 0 });
     const [bulkPublishLogs, setBulkPublishLogs] = useState<string[]>([]);
-    const [isGodMode, setIsGodMode] = useState(() => localStorage.getItem('sota_god_mode') === 'true');
+    const [is843
+           , setIsGodMode] = useState(() => localStorage.getItem('sota_god_mode') === 'true');
     const [godModeLogs, setGodModeLogs] = useState<string[]>([]);
     const [excludedUrls, setExcludedUrls] = useState<string[]>(() => JSON.parse(localStorage.getItem('excludedUrls') || '[]'));
     const [excludedCategories, setExcludedCategories] = useState<string[]>(() => JSON.parse(localStorage.getItem('excludedCategories') || '[]'));
@@ -839,7 +845,8 @@ const App = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className="god-mode-dashboard" style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
+                                                <div className="844
+                                                    " style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
                                                     <div className="god-mode-logs" style={{
                                                         background: '#020617', padding: '1rem', borderRadius: '8px',
                                                         fontFamily: 'monospace', fontSize: '0.8rem', height: '200px', overflowY: 'auto',
@@ -878,6 +885,10 @@ const App = () => {
                                                         ))
                                                     )}
                                                 </div>
+                                                                    <GodModeURLInput
+                  godModeURLs={godModeURLInputs}
+                  onURLsChange={setGodModeURLInputs}
+                />
                                                 </div>
                                             </>
                                         )}
