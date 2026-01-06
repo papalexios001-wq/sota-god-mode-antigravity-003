@@ -39,24 +39,24 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // ============================================================================
 const surgicalSanitizer = (html: string): string => {
     if (!html) return "";
-    
+
     let cleanHtml = html
         .replace(/^```html\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```\s*$/i, '')
         .trim();
-    
+
     // Remove duplicate H1s or Title Injections
-    cleanHtml = cleanHtml.replace(/^\s*<h1.*?>.*?<\/h1>/i, ''); 
+    cleanHtml = cleanHtml.replace(/^\s*<h1.*?>.*?<\/h1>/i, '');
     cleanHtml = cleanHtml.replace(/^\s*Title:.*?(\n|<br>)/i, '');
-    
+
     // Remove Signatures / Meta garbage
     cleanHtml = cleanHtml.replace(/Protocol Active: v\d+\.\d+/gi, '');
     cleanHtml = cleanHtml.replace(/REF: GUTF-Protocol-[a-z0-9]+/gi, '');
     cleanHtml = cleanHtml.replace(/Lead Data Scientist[\s\S]*?Latest Data Audit.*?(<\/p>|<br>|\n)/gi, '');
     cleanHtml = cleanHtml.replace(/Verification Fact-Checked/gi, '');
     cleanHtml = cleanHtml.replace(/Methodology Peer-Reviewed/gi, '');
-    
+
     return cleanHtml.trim();
 };
 
@@ -69,7 +69,7 @@ const surgicalSanitizer = (html: string): string => {
  * INTEGRATES SERVER GUARD TO PREVENT CPU SPIKES.
  */
 export const fetchWordPressWithRetry = async (targetUrl: string, options: RequestInit): Promise<Response> => {
-    const REQUEST_TIMEOUT = 45000; 
+    const REQUEST_TIMEOUT = 45000;
 
     // SOTA FIX: robustly check for Authorization header
     let hasAuthHeader = false;
@@ -156,7 +156,7 @@ const fetchPAA = async (keyword: string, serperApiKey: string) => {
         const response = await fetchWithProxies("https://google.serper.dev/search", {
             method: 'POST',
             headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ q: keyword, type: 'search' }) 
+            body: JSON.stringify({ q: keyword, type: 'search' })
         });
         const data = await response.json();
         if (data.peopleAlsoAsk && Array.isArray(data.peopleAlsoAsk)) {
@@ -166,14 +166,14 @@ const fetchPAA = async (keyword: string, serperApiKey: string) => {
     } catch (e) { return null; }
 };
 
-const fetchVerifiedReferences = async (keyword: string, serperApiKey: string, wpUrl?: string): Promise<string> => {
-    if (!serperApiKey) return "";
+export const fetchVerifiedReferenceData = async (keyword: string, serperApiKey: string, count: number = 20): Promise<Array<{ url: string, title: string, source: string }>> => {
+    if (!serperApiKey) return [];
     try {
         const query = `${keyword} definitive guide research data statistics 2024 2025 -site:youtube.com -site:facebook.com -site:pinterest.com -site:twitter.com -site:reddit.com`;
         const response = await fetchWithProxies("https://google.serper.dev/search", {
             method: 'POST',
             headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ q: query, num: 20 }) 
+            body: JSON.stringify({ q: query, num: Math.max(20, count) })
         });
         const data = await response.json();
         const potentialLinks = data.organic || [];
@@ -188,25 +188,36 @@ const fetchVerifiedReferences = async (keyword: string, serperApiKey: string, wp
             'polishedrx.com', 'medium.com', 'linkedin.com', 'pinterest.com'
         ];
 
-        const validationPromises = potentialLinks.slice(0, 12).map(async (link: any) => {
+        const validationPromises = potentialLinks.map(async (link: any) => {
             try {
+                if (!link.link) return null;
                 const linkDomain = new URL(link.link).hostname.replace('www.', '');
 
                 // Block spam domains
                 if (BLOCKED_DOMAINS.some(blocked => linkDomain.includes(blocked))) return null;
-
-                // Block same domain as WordPress site
-                if (wpUrl && linkDomain.includes(new URL(wpUrl).hostname.replace('www.', ''))) return null;
 
                 return { title: link.title, url: link.link, source: linkDomain };
             } catch (e) { return null; }
         });
 
         const results = await Promise.all(validationPromises);
-        const filtered = results.filter(r => r !== null) as { title: string, url: string, source: string }[];
-        if (filtered.length === 0) return "";
+        return results.filter(r => r !== null) as { title: string, url: string, source: string }[];
+    } catch (e) { return []; }
+};
 
-        const listItems = filtered.slice(0, 8).map(ref => 
+export const fetchVerifiedReferences = async (keyword: string, serperApiKey: string, wpUrl?: string): Promise<string> => {
+    if (!serperApiKey) return "";
+    try {
+        const filtered = await fetchVerifiedReferenceData(keyword, serperApiKey);
+
+        // Filter out WP domain if provided
+        const finalLinks = wpUrl
+            ? filtered.filter(l => !l.source.includes(new URL(wpUrl).hostname.replace('www.', '')))
+            : filtered;
+
+        if (finalLinks.length === 0) return "";
+
+        const listItems = finalLinks.slice(0, 8).map(ref =>
             `<li><a href="${ref.url}" target="_blank" rel="noopener noreferrer" title="Verified Source: ${ref.source}" style="text-decoration: underline; color: #2563EB;">${ref.title}</a> <span style="color:#64748B; font-size:0.8em;">(${ref.source})</span></li>`
         ).join('');
 
@@ -220,12 +231,12 @@ const analyzeCompetitors = async (keyword: string, serperApiKey: string): Promis
         const response = await fetchWithProxies("https://google.serper.dev/search", {
             method: 'POST',
             headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ q: keyword, num: 3 }) 
+            body: JSON.stringify({ q: keyword, num: 3 })
         });
         const data = await response.json();
         const competitors = (data.organic || []).slice(0, 3);
         const topResult = competitors[0]?.snippet || "";
-        
+
         const snippetType = (data.organic?.[0]?.snippet?.includes('steps') || data.organic?.[0]?.title?.includes('How to')) ? 'LIST' : (data.organic?.[0]?.snippet?.includes('vs') ? 'TABLE' : 'PARAGRAPH');
         const reports = competitors.map((comp: any, index: number) => `COMPETITOR ${index + 1} (${comp.title}): ${comp.snippet}`);
         return { report: reports.join('\n'), snippetType, topResult };
@@ -322,23 +333,23 @@ const _internalCallAI = async (
     const cacheKey = `${String(promptKey)}-${JSON.stringify(promptArgs)}`;
     const cached = apiCache.get(cacheKey);
     if (cached) return Promise.resolve(cached);
-    
+
     const template = PROMPT_TEMPLATES[promptKey];
     // @ts-ignore
-    const systemInstruction = (promptKey === 'cluster_planner' && typeof template.systemInstruction === 'string') 
+    const systemInstruction = (promptKey === 'cluster_planner' && typeof template.systemInstruction === 'string')
         ? template.systemInstruction.replace('{{GEO_TARGET_INSTRUCTIONS}}', (geoTargeting.enabled && geoTargeting.location) ? `All titles must be geo-targeted for "${geoTargeting.location}".` : '')
         : template.systemInstruction;
     // @ts-ignore
     const userPrompt = template.userPrompt(...promptArgs);
-    
+
     let responseText: string | null = '';
 
     switch (selectedModel) {
         case 'gemini':
-             const geminiConfig: { systemInstruction: string; responseMimeType?: string; tools?: any[] } = { systemInstruction };
+            const geminiConfig: { systemInstruction: string; responseMimeType?: string; tools?: any[] } = { systemInstruction };
             if (responseFormat === 'json') geminiConfig.responseMimeType = "application/json";
-             if (useGrounding) {
-                geminiConfig.tools = [{googleSearch: {}}];
+            if (useGrounding) {
+                geminiConfig.tools = [{ googleSearch: {} }];
                 if (geminiConfig.responseMimeType) delete geminiConfig.responseMimeType;
             }
             const geminiResponse = await callAiWithRetry(() => (client as GoogleGenAI).models.generateContent({
@@ -362,7 +373,7 @@ const _internalCallAI = async (
                     const response = await callAiWithRetry(() => (client as unknown as OpenAI).chat.completions.create({
                         model: modelName,
                         messages: [{ role: "system", content: systemInstruction }, { role: "user", content: userPrompt }],
-                         ...(responseFormat === 'json' && { response_format: { type: "json_object" } })
+                        ...(responseFormat === 'json' && { response_format: { type: "json_object" } })
                     }));
                     responseText = response.choices[0].message.content;
                     break;
@@ -370,7 +381,7 @@ const _internalCallAI = async (
             }
             break;
         case 'groq':
-             const groqResponse = await callAiWithRetry(() => (client as unknown as OpenAI).chat.completions.create({
+            const groqResponse = await callAiWithRetry(() => (client as unknown as OpenAI).chat.completions.create({
                 model: selectedGroqModel,
                 messages: [{ role: "system", content: systemInstruction }, { role: "user", content: userPrompt }],
                 ...(responseFormat === 'json' && { response_format: { type: "json_object" } })
@@ -400,7 +411,7 @@ export const callAI = async (...args: Parameters<typeof _internalCallAI>): Promi
         const fallbackOrder: (keyof ApiClients)[] = ['gemini', 'openai', 'openrouter', 'anthropic', 'groq'];
         for (const fallback of fallbackOrder) {
             if (apiClients[fallback]) {
-                args[1] = fallback as any; 
+                args[1] = fallback as any;
                 break;
             }
         }
@@ -425,17 +436,17 @@ export const generateImageWithFallback = async (apiClients: ApiClients, prompt: 
     if (!prompt) return null;
     if (apiClients.gemini) {
         try {
-             const geminiImgResponse = await callAiWithRetry(() => apiClients.gemini!.models.generateImages({ model: AI_MODELS.GEMINI_IMAGEN, prompt: prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '16:9' } }));
-             return `data:image/jpeg;base64,${String(geminiImgResponse.generatedImages[0].image.imageBytes)}`;
+            const geminiImgResponse = await callAiWithRetry(() => apiClients.gemini!.models.generateImages({ model: AI_MODELS.GEMINI_IMAGEN, prompt: prompt, config: { numberOfImages: 1, outputMimeType: 'image/jpeg', aspectRatio: '16:9' } }));
+            return `data:image/jpeg;base64,${String(geminiImgResponse.generatedImages[0].image.imageBytes)}`;
         } catch (error) {
-             try {
+            try {
                 const flashImageResponse = await callAiWithRetry(() => apiClients.gemini!.models.generateContent({
                     model: 'gemini-2.5-flash-image',
                     contents: { parts: [{ text: prompt }] },
                     config: { responseModalities: ['IMAGE'] },
                 }));
                 return `data:image/png;base64,${String(flashImageResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data)}`;
-             } catch (e) { console.error(e); }
+            } catch (e) { console.error(e); }
         }
     }
     return null;
@@ -464,7 +475,7 @@ async function attemptDirectWordPressUpload(image: any, wpConfig: WpConfig, pass
     return null;
 }
 
-const processImageLayer = async (image: any, wpConfig: WpConfig, password: string): Promise<{url: string, id: number | null} | null> => {
+const processImageLayer = async (image: any, wpConfig: WpConfig, password: string): Promise<{ url: string, id: number | null } | null> => {
     const directUpload = await attemptDirectWordPressUpload(image, wpConfig, password);
     if (directUpload) return directUpload;
     return null;
@@ -473,7 +484,7 @@ const processImageLayer = async (image: any, wpConfig: WpConfig, password: strin
 async function criticLoop(html: string, callAI: Function, context: GenerationContext): Promise<string> {
     let currentHtml = html;
     let attempts = 0;
-    while (attempts < 1) { 
+    while (attempts < 1) {
         try {
             const critiqueJson = await memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_grader', [currentHtml], 'json');
             const aiRepairer = (brokenText: string) => callAI(context.apiClients, 'gemini', { enabled: false, location: '', region: '', country: '', postalCode: '' }, [], '', 'json_repair', [brokenText], 'json');
@@ -513,7 +524,7 @@ export const publishItemToWordPress = async (
             } else if (generatedContent.surgicalSnippets) {
                 contentToPublish = performSurgicalUpdate(itemToPublish.crawledContent || '', generatedContent.surgicalSnippets);
             } else {
-                 return { success: false, message: 'Refresh Failed: Missing content.' };
+                return { success: false, message: 'Refresh Failed: Missing content.' };
             }
 
             console.log(`[DEBUG] Finding post for URL: ${itemToPublish.originalUrl}`);
@@ -587,8 +598,8 @@ export const publishItemToWordPress = async (
         contentToPublish = surgicalSanitizer(contentToPublish);
 
         if (contentToPublish) {
-             const base64ImageRegex = /<img[^>]+src="(data:image\/(?:jpeg|png|webp);base64,([^"]+))"[^>]*>/g;
-             const imagesToUpload = [...contentToPublish.matchAll(base64ImageRegex)].map((match, index) => {
+            const base64ImageRegex = /<img[^>]+src="(data:image\/(?:jpeg|png|webp);base64,([^"]+))"[^>]*>/g;
+            const imagesToUpload = [...contentToPublish.matchAll(base64ImageRegex)].map((match, index) => {
                 return { fullImgTag: match[0], base64Data: match[1], altText: generatedContent.title, title: `${generatedContent.slug}-${index}`, index };
             });
             for (const image of imagesToUpload) {
@@ -602,7 +613,7 @@ export const publishItemToWordPress = async (
 
         const postData: any = {
             content: (contentToPublish || '') + generateSchemaMarkup(generatedContent.jsonLdSchema ?? {}),
-            status: status, 
+            status: status,
             meta: {
                 _yoast_wpseo_metadesc: generatedContent.metaDescription ?? '',
             }
@@ -612,7 +623,7 @@ export const publishItemToWordPress = async (
             postData.title = finalTitle;
             postData.meta._yoast_wpseo_title = finalTitle;
         }
-        
+
         if (itemToPublish.type !== 'refresh') {
             postData.slug = generatedContent.slug;
         }
@@ -680,11 +691,11 @@ export class MaintenanceEngine {
 
         if (this.currentContext.existingPages.length === 0) {
             if (this.currentContext.wpConfig.url) {
-                 this.logCallback("⚠️ NO CONTENT: God Mode requires a sitemap crawl.");
-                 this.logCallback("🛑 STOPPING: Please go to 'Content Hub' -> Crawl Sitemap.");
-                 this.isRunning = false;
-                 return;
-             }
+                this.logCallback("⚠️ NO CONTENT: God Mode requires a sitemap crawl.");
+                this.logCallback("🛑 STOPPING: Please go to 'Content Hub' -> Crawl Sitemap.");
+                this.isRunning = false;
+                return;
+            }
         }
 
         while (this.isRunning) {
@@ -692,7 +703,7 @@ export class MaintenanceEngine {
             try {
                 const pages = await this.getPrioritizedPages(this.currentContext);
                 if (pages.length === 0) {
-                     this.logCallback(`💤 All pages up to date. Sleeping 60s...`);
+                    this.logCallback(`💤 All pages up to date. Sleeping 60s...`);
                     await delay(60000);
                     continue;
                 }
@@ -982,8 +993,14 @@ Return ONLY the conclusion text (no headings, just paragraphs).`;
     private async addReferencesSection(body: HTMLElement, title: string, doc: Document): Promise<void> {
         this.logCallback(`✅ ADDING: References section with 8-12 verified links...`);
 
+        const serperApiKey = this.currentContext?.serperApiKey;
         // Generate high-quality reference URLs based on the article topic
-        const references = await this.generateHighQualityReferences(title);
+        const references = await this.generateHighQualityReferences(title, serperApiKey);
+
+        if (references.length === 0) {
+            this.logCallback(`⚠️ No references generated (API key missing or no results). Skipping section.`);
+            return;
+        }
 
         const referencesHtml = `
 <h2 style="font-size: 2rem; font-weight: 800; color: #1E293B; margin: 3rem 0 1.5rem 0;">📚 References & Further Reading</h2>
@@ -1016,7 +1033,7 @@ ${references.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
         this.logCallback(`🔍 VALIDATING: ${links.length} reference links...`);
 
         // Validate each link
-        const validLinks: Array<{url: string, title: string, description: string}> = [];
+        const validLinks: Array<{ url: string, title: string, description: string }> = [];
 
         for (const link of links) {
             const url = link.href;
@@ -1036,8 +1053,14 @@ ${references.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
         // If fewer than 8 valid links, add more
         if (validLinks.length < 8) {
             this.logCallback(`⚠️ Only ${validLinks.length} valid links found. Adding more to reach 8-12...`);
-            const additionalRefs = await this.generateHighQualityReferences(title, 12 - validLinks.length);
-            validLinks.push(...additionalRefs);
+            const serperApiKey = this.currentContext?.serperApiKey;
+            const additionalRefs = await this.generateHighQualityReferences(title, serperApiKey);
+            // Deduplicate
+            for (const ref of additionalRefs) {
+                if (!validLinks.some(v => v.url === ref.url) && validLinks.length < 12) {
+                    validLinks.push(ref);
+                }
+            }
         }
 
         // Keep only top 12 if more
@@ -1076,73 +1099,22 @@ ${finalLinks.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
         }
     }
 
-    private async generateHighQualityReferences(title: string, count: number = 10): Promise<Array<{url: string, title: string, description: string}>> {
-        // Generate topic-relevant, high-authority reference URLs
-        // These are generic but high-quality sources that are unlikely to 404
-        const baseReferences = [
-            {
-                url: 'https://scholar.google.com',
-                title: 'Google Scholar Research Database',
-                description: 'Comprehensive academic research and peer-reviewed studies'
-            },
-            {
-                url: 'https://www.nih.gov',
-                title: 'National Institutes of Health (NIH)',
-                description: 'Official health research and medical information'
-            },
-            {
-                url: 'https://www.ncbi.nlm.nih.gov/pubmed',
-                title: 'PubMed Central',
-                description: 'Free full-text archive of biomedical and life sciences research'
-            },
-            {
-                url: 'https://www.who.int',
-                title: 'World Health Organization (WHO)',
-                description: 'Global health data, guidelines, and recommendations'
-            },
-            {
-                url: 'https://www.cdc.gov',
-                title: 'Centers for Disease Control and Prevention (CDC)',
-                description: 'Public health data, research, and disease prevention guidelines'
-            },
-            {
-                url: 'https://www.nature.com',
-                title: 'Nature Journal',
-                description: 'Leading international scientific journal with peer-reviewed research'
-            },
-            {
-                url: 'https://www.sciencedirect.com',
-                title: 'ScienceDirect',
-                description: 'Database of scientific and technical research publications'
-            },
-            {
-                url: 'https://www.frontiersin.org',
-                title: 'Frontiers',
-                description: 'Open-access scientific publishing platform'
-            },
-            {
-                url: 'https://www.mayoclinic.org',
-                title: 'Mayo Clinic',
-                description: 'Trusted medical information and health resources'
-            },
-            {
-                url: 'https://www.webmd.com',
-                title: 'WebMD',
-                description: 'Medical information and health news'
-            },
-            {
-                url: 'https://www.healthline.com',
-                title: 'Healthline',
-                description: 'Evidence-based health and wellness information'
-            },
-            {
-                url: 'https://www.medicalnewstoday.com',
-                title: 'Medical News Today',
-                description: 'Latest medical research and health news'
-            }
-        ];
+    private async generateHighQualityReferences(title: string, serperApiKey: string | undefined): Promise<Array<{ url: string, title: string, description: string }>> {
+        if (!serperApiKey) return [];
 
-        return baseReferences.slice(0, count);
+        try {
+            // Use the new reusable function
+            const verifiedData = await fetchVerifiedReferenceData(title, serperApiKey, 15);
+
+            return verifiedData.map(d => ({
+                url: d.url,
+                title: d.title,
+                description: d.source // Use source as description
+            }));
+        } catch (e) {
+            this.logCallback(`⚠️ Reference generation failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            return [];
+        }
     }
 
     // 🔥 ULTRA GOD MODE: COMPLETE STRUCTURAL SURGEON
@@ -1517,7 +1489,7 @@ ${finalLinks.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
 
                 this.logCallback(`📊 FOUND: ${potentialLinks.length} potential sources - validating each one...`);
 
-                const validatedLinks: Array<{title: string, url: string, source: string}> = [];
+                const validatedLinks: Array<{ title: string, url: string, source: string }> = [];
                 let checkedCount = 0;
                 let skippedCount = 0;
 
@@ -1701,7 +1673,7 @@ ${finalLinks.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
 
                 if (altTextUpdates > 0) {
                     structuralFixesMade++;
-                    this.logCallback(`✅ OPTIMIZED: ${altTextUpdates} image alt texts (SEO + accessibility)` );
+                    this.logCallback(`✅ OPTIMIZED: ${altTextUpdates} image alt texts (SEO + accessibility)`);
                 }
             } catch (e: any) {
                 this.logCallback(`⚠️ Image alt text optimization failed: ${e.message}`);
@@ -1929,14 +1901,14 @@ ${finalLinks.map(ref => `  <li><a href="${ref.url}" target="_blank" rel="noopene
     private async fetchRawContent(page: SitemapPage, wpConfig: WpConfig): Promise<string | null> {
         try {
             if (page.slug) {
-                let res = await fetchWordPressWithRetry(`${wpConfig.url}/wp-json/wp/v2/posts?slug=${page.slug}&context=edit`, { 
+                let res = await fetchWordPressWithRetry(`${wpConfig.url}/wp-json/wp/v2/posts?slug=${page.slug}&context=edit`, {
                     method: 'GET',
                     headers: { 'Authorization': `Basic ${btoa(`${wpConfig.username}:${localStorage.getItem('wpPassword')}`)}` }
                 });
                 let data = await res.json();
                 if (data && data.length > 0) return data[0].content.raw || data[0].content.rendered;
             }
-            return await smartCrawl(page.id); 
+            return await smartCrawl(page.id);
         } catch (e) {
             return await smartCrawl(page.id);
         }
@@ -1947,8 +1919,8 @@ export const maintenanceEngine = new MaintenanceEngine((msg) => console.log(msg)
 
 export const generateContent = {
     analyzePages: async (pages: any[], callAI: any, setPages: any, onProgress: any, shouldStop: any) => {
-       const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
-       await processConcurrently(pages, async (page) => {
+        const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
+        await processConcurrently(pages, async (page) => {
             if (shouldStop()) return;
             try {
                 setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'analyzing' } : p));
@@ -1958,9 +1930,9 @@ export const generateContent = {
                 const analysisData = await parseJsonWithAiRepair(analysisResponse, aiRepairer);
                 setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'analyzed', analysis: analysisData.analysis, healthScore: analysisData.healthScore, updatePriority: analysisData.updatePriority } : p));
             } catch (error: any) { setPages((prev: any) => prev.map((p: any) => p.id === page.id ? { ...p, status: 'error', justification: error.message } : p)); }
-       }, 1, (c, t) => onProgress({current: c, total: t}), shouldStop);
+        }, 1, (c, t) => onProgress({ current: c, total: t }), shouldStop);
     },
-    
+
     analyzeContentGaps: async (existingPages: SitemapPage[], topic: string, callAI: Function, context: GenerationContext): Promise<GapAnalysisSuggestion[]> => {
         const titles = existingPages.map(p => p.title).filter(t => t && t.length > 5);
         const responseText = await memoizedCallAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_gap_analyzer', [titles, topic], 'json', true);
@@ -1973,8 +1945,8 @@ export const generateContent = {
         const { dispatch, serperApiKey } = context;
         let sourceContent = item.crawledContent;
         if (!sourceContent) {
-             sourceContent = await smartCrawl(item.originalUrl || item.id);
-             dispatch({ type: 'SET_CRAWLED_CONTENT', payload: { id: item.id, content: sourceContent } });
+            sourceContent = await smartCrawl(item.originalUrl || item.id);
+            dispatch({ type: 'SET_CRAWLED_CONTENT', payload: { id: item.id, content: sourceContent } });
         }
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Fetching Real-time Data...' } });
         const [paaQuestions, semanticKeywordsResponse, verifiedReferencesHtml] = await Promise.all([
@@ -2028,11 +2000,11 @@ export const generateContent = {
                 let neuronDataString = '';
                 let neuronAnalysisRaw: any = null;
                 if (neuronConfig.enabled) {
-                     try {
-                         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'NeuronWriter Analysis...' } });
-                         neuronAnalysisRaw = await getNeuronWriterAnalysis(item.title, neuronConfig);
-                         neuronDataString = formatNeuronDataForPrompt(neuronAnalysisRaw);
-                     } catch (e) { console.error(e); }
+                    try {
+                        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'NeuronWriter Analysis...' } });
+                        neuronAnalysisRaw = await getNeuronWriterAnalysis(item.title, neuronConfig);
+                        neuronDataString = formatNeuronDataForPrompt(neuronAnalysisRaw);
+                    } catch (e) { console.error(e); }
                 }
 
                 let auditDataString = '';
@@ -2042,7 +2014,7 @@ export const generateContent = {
                     This is a REWRITE of an underperforming article. You MUST fix the following issues identified by our SEO Auditor:
                     **Critique:** ${item.analysis.critique || 'N/A'}
                     **Missing Content Gaps (MUST ADD):**
-                    ${(item.analysis as any).contentGaps ? (item.analysis as any).contentGaps.map((g:string) => `- ${g}`).join('\n') : 'N/A'}
+                    ${(item.analysis as any).contentGaps ? (item.analysis as any).contentGaps.map((g: string) => `- ${g}`).join('\n') : 'N/A'}
                     **Improvement Plan:** ${(item.analysis as any).improvementPlan || 'N/A'}
                     **YOUR JOB IS TO EXECUTE THIS PLAN PERFECTLY.**
                     `;
@@ -2056,12 +2028,12 @@ export const generateContent = {
 
                 dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Generating...' } });
                 const serpData: any[] = [];
-                
+
                 const [semanticKeywordsResponse, outlineResponse] = await Promise.all([
                     memoizedCallAI(context.apiClients, context.selectedModel, geoTargeting, context.openrouterModels, context.selectedGroqModel, 'semantic_keyword_generator', [item.title, geoTargeting.enabled ? geoTargeting.location : null], 'json'),
                     memoizedCallAI(context.apiClients, context.selectedModel, geoTargeting, context.openrouterModels, context.selectedGroqModel, 'content_meta_and_outline', [item.title, null, serpData, null, existingPages, item.crawledContent, item.analysis, neuronDataString, competitorData], 'json')
                 ]);
-                
+
                 const semanticKeywordsRaw = await parseJsonWithAiRepair(semanticKeywordsResponse, aiRepairer);
                 const semanticKeywords = Array.isArray(semanticKeywordsRaw?.semanticKeywords)
                     ? semanticKeywordsRaw.semanticKeywords.map((k: any) => (typeof k === 'object' ? k.keyword : k))
@@ -2089,22 +2061,22 @@ export const generateContent = {
                 ]);
 
                 dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'AI Critic Reviewing...' } });
-                
+
                 const healedHtml = await criticLoop(fullHtml, (key: any, args: any[], fmt: any) => callAI(context.apiClients, context.selectedModel, context.geoTargeting, context.openrouterModels, context.selectedGroqModel, key, args, fmt), context);
 
                 try { enforceWordCount(healedHtml, TARGET_MIN_WORDS, TARGET_MAX_WORDS); } catch (e) { }
 
                 let finalContent = postProcessGeneratedHtml(healedHtml, generated, youtubeVideos, siteInfo, false) + referencesHtml;
                 finalContent = surgicalSanitizer(finalContent);
-                
+
                 generated.content = processInternalLinks(finalContent, existingPages);
                 images.forEach((img, i) => { if (img) generated.imageDetails[i].generatedImageSrc = img; });
-                
+
                 const schemaGenerator = lazySchemaGeneration(generated, wpConfig, siteInfo, geoTargeting);
                 const schemaMarkup = schemaGenerator();
                 const scriptMatch = schemaMarkup.match(/<script.*?>([\s\S]*)<\/script>/);
                 if (scriptMatch) generated.jsonLdSchema = JSON.parse(scriptMatch[1]);
-                
+
                 dispatch({ type: 'SET_CONTENT', payload: { id: item.id, content: generated } });
                 dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'done', statusText: 'Completed' } });
 
