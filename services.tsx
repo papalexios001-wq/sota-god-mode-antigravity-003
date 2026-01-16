@@ -930,9 +930,9 @@ export class MaintenanceEngine {
       }
     }
     
-    // 1308
-        : Only process user-specified URLs
-        if (context.priorityOnlyMode) {
+// 1308
+// Only process user-specified URLs
+if (context.priorityOnlyMode) {
       this.logCallback(`🔒 934
       : Processing ${priorityPages.length} URLs exclusively`);
       return priorityPages;
