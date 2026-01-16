@@ -841,6 +841,54 @@ const App = () => {
                                                     </div>
                                                 </div>
 
+                                  {/* 🎯 PRIORITY URL QUEUE - Enterprise Grade */}
+                              <div style={{marginTop: '1.5rem', padding: '1.25rem', background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)', borderRadius: '12px', border: '1px solid #3b82f6'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                                  <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                                    <span style={{fontSize: '1.5rem'}}>🎯</span>
+                                    <h4 style={{margin: 0, color: '#3b82f6', fontWeight: 700}}>Priority URL Queue</h4>
+                                  </div>
+                                  <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem'}}>
+                                    <span style={{fontSize: '0.75rem', color: priorityOnlyMode ? '#10b981' : '#64748b'}}>Process Priority URLs Only</span>
+                                    <label style={{position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer'}}>
+                                      <input type="checkbox" checked={priorityOnlyMode} onChange={e => { setPriorityOnlyMode(e.target.checked); localStorage.setItem('priorityOnlyMode', String(e.target.checked)); }} style={{opacity: 0, width: 0, height: 0}} />
+                                      <span style={{width: '36px', height: '20px', backgroundColor: priorityOnlyMode ? '#3b82f6' : '#334155', borderRadius: '20px', transition: 'all 0.3s', position: 'relative'}}>
+                                        <span style={{position: 'absolute', top: '2px', left: priorityOnlyMode ? '18px' : '2px', width: '16px', height: '16px', backgroundColor: 'white', borderRadius: '50%', transition: 'all 0.3s'}}></span>
+                                      </span>
+                                    </label>
+                                  </div>
+                                </div>
+                                <p style={{margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#94a3b8'}}>Add specific URLs that God Mode should optimize FIRST. These take priority over auto-discovered pages.</p>
+                                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1rem'}}>
+                                  <input type="url" id="priorityUrlInput" placeholder="https://example.com/page-to-optimize" style={{flex: 1, padding: '0.75rem 1rem', background: '#020617', border: '1px solid #334155', borderRadius: '8px', color: '#e2e8f0', fontSize: '0.9rem'}} onKeyDown={e => { if (e.key === 'Enter') { const input = document.getElementById('priorityUrlInput') as HTMLInputElement; const url = input.value.trim(); if (url && !priorityUrls.includes(url)) { const newUrls = [url, ...priorityUrls]; setPriorityUrls(newUrls); localStorage.setItem('priorityUrls', JSON.stringify(newUrls)); input.value = ''; } } }} />
+                                  <button onClick={() => { const input = document.getElementById('priorityUrlInput') as HTMLInputElement; const url = input.value.trim(); if (url && !priorityUrls.includes(url)) { const newUrls = [url, ...priorityUrls]; setPriorityUrls(newUrls); localStorage.setItem('priorityUrls', JSON.stringify(newUrls)); input.value = ''; } }} style={{padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'}}>+ Add URL</button>
+                                </div>
+                                {priorityUrls.length > 0 ? (
+                                  <div style={{maxHeight: '200px', overflowY: 'auto', background: '#020617', borderRadius: '8px', border: '1px solid #1e293b'}}>
+                                    {priorityUrls.map((url: string, idx: number) => (
+                                      <div key={idx} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid #1e293b'}}>
+                                        <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0}}>
+                                          <span style={{color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem'}}>#{idx + 1}</span>
+                                          <a href={url} target="_blank" rel="noopener noreferrer" style={{color: '#e2e8f0', textDecoration: 'none', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{url}</a>
+                                        </div>
+                                        <button onClick={() => { const newUrls = priorityUrls.filter((_: string, i: number) => i !== idx); setPriorityUrls(newUrls); localStorage.setItem('priorityUrls', JSON.stringify(newUrls)); }} style={{padding: '0.25rem 0.5rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: '4px', color: '#ef4444', cursor: 'pointer', fontSize: '0.75rem'}}>✕</button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{padding: '2rem', textAlign: 'center', background: '#020617', borderRadius: '8px', border: '1px dashed #334155'}}>
+                                    <span style={{fontSize: '2rem', display: 'block', marginBottom: '0.5rem'}}>📭</span>
+                                    <span style={{color: '#64748b', fontSize: '0.85rem'}}>No priority URLs added yet. Add URLs above to optimize them first.</span>
+                                  </div>
+                                )}
+                                {priorityUrls.length > 0 && (
+                                  <div style={{marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                    <span style={{fontSize: '0.8rem', color: '#64748b'}}>{priorityUrls.length} URL{priorityUrls.length !== 1 ? 's' : ''} in queue</span>
+                                    <button onClick={() => { if (confirm('Clear all priority URLs?')) { setPriorityUrls([]); localStorage.setItem('priorityUrls', '[]'); } }} style={{padding: '0.5rem 1rem', background: 'transparent', border: '1px solid #ef4444', borderRadius: '6px', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem'}}>Clear All</button>
+                                  </div>
+                                )}
+                              </div>
+
                                                 <div className="god-mode-dashboard" style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
                                                     <div className="god-mode-logs" style={{
                                                         background: '#020617', padding: '1rem', borderRadius: '8px',
