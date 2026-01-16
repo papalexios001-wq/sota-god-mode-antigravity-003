@@ -589,6 +589,111 @@ const App = () => {
                                             </label>
                                         </div>
 
+
+                            {/* SOTA PRIORITY URL QUEUE - Enterprise Grade URL Targeting */}
+                    <div className="priority-queue-section" style={{
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        marginBottom: '1.5rem',
+                        marginTop: '1rem'
+                    }}>
+                        <h4 style={{ margin: '0 0 1rem 0', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🎯 Priority URL Queue
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginBottom: '1rem' }}>
+                            Add specific URLs to optimize FIRST. These URLs will be processed before any auto-discovered sitemap pages.
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                                type="url"
+                                value={priorityUrlInput}
+                                onChange={e => setPriorityUrlInput(e.target.value)}
+                                placeholder="https://example.com/page-to-optimize"
+                                style={{
+                                    flex: 1,
+                                    padding: '0.75rem',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border-primary)',
+                                    borderRadius: '8px',
+                                    color: 'var(--text-primary)'
+                                }}
+                            />
+                            <button
+                                className="btn"
+                                onClick={() => {
+                                    if (priorityUrlInput.trim()) {
+                                        setPriorityUrls(prev => [...prev, priorityUrlInput.trim()]);
+                                        setPriorityUrlInput('');
+                                    }
+                                }}
+                                disabled={!priorityUrlInput.trim()}
+                            >
+                                Add URL
+                            </button>
+                        </div>
+                        {priorityUrls.length > 0 && (
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                                    Queued URLs ({priorityUrls.length}):
+                                </div>
+                                {priorityUrls.map((url, idx) => (
+                                    <div key={idx} style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        background: 'rgba(0,0,0,0.2)',
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '6px',
+                                        marginBottom: '0.25rem',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        <span style={{ color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis' }}>{url}</span>
+                                        <button
+                                            onClick={() => setPriorityUrls(prev => prev.filter((_, i) => i !== idx))}
+                                            style={{
+                                                background: 'rgba(239, 68, 68, 0.2)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#ef4444',
+                                                padding: '0.25rem 0.5rem',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.75rem'
+                                            }}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={priorityOnlyMode}
+                                    onChange={e => setPriorityOnlyMode(e.target.checked)}
+                                    style={{ opacity: 0, width: 0, height: 0 }}
+                                />
+                                <span className="slider round" style={{
+                                    position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                                    backgroundColor: priorityOnlyMode ? '#10b981' : '#334155',
+                                    transition: '.4s', borderRadius: '24px'
+                                }}>
+                                    <span style={{
+                                        position: 'absolute', content: '', height: '18px', width: '18px',
+                                        left: '3px', bottom: '3px', backgroundColor: 'white',
+                                        transition: '.4s', borderRadius: '50%',
+                                        transform: priorityOnlyMode ? 'translateX(20px)' : 'translateX(0)'
+                                    }}></span>
+                                </span>
+                            </label>
+                            <span style={{ fontSize: '0.85rem', color: priorityOnlyMode ? '#10b981' : '#94A3B8' }}>
+                                Priority URLs Only Mode {priorityOnlyMode && '(Only processes URLs in queue)'}
+                            </span>
+                        </div>
+                    </div>
                                         {isGodMode && (
                                             <div className="god-mode-dashboard" style={{display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem'}}>
                                                 <div className="god-mode-logs" style={{
