@@ -126,8 +126,16 @@ const App = () => {
     
     // Pagination State for Hub Table
         // SOTA: Priority URL Queue State for God Mode
-    const [priorityUrls, setPriorityUrls] = useState<string[]>([]);
-    const [priorityOnlyMode, setPriorityOnlyMode] = useState(false);
+  const [priorityUrls, setPriorityUrls] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('sota_priority_urls') || '[]');
+    } catch {
+      return [];
+    }
+  });
+      const [priorityOnlyMode, setPriorityOnlyMode] = useState(() => 
+    localStorage.getItem('sota_priority_only_mode') === 'true'
+  );
     const [priorityUrlInput, setPriorityUrlInput] = useState('');
     const [hubPage, setHubPage] = useState(1);
     const ITEMS_PER_PAGE = 20;
@@ -142,6 +150,14 @@ const App = () => {
     useEffect(() => { localStorage.setItem('geoTargeting', JSON.stringify(geoTargeting)); }, [geoTargeting]);
     useEffect(() => { localStorage.setItem('siteInfo', JSON.stringify(siteInfo)); }, [siteInfo]);
     useEffect(() => { localStorage.setItem('neuronConfig', JSON.stringify(neuronConfig)); }, [neuronConfig]);
+
+      useEffect(() => {
+    localStorage.setItem('sota_priority_urls', JSON.stringify(priorityUrls));
+  }, [priorityUrls]);
+
+  useEffect(() => {
+    localStorage.setItem('sota_priority_only_mode', String(priorityOnlyMode));
+  }, [priorityOnlyMode]);
 
     const fetchProjectsRef = useRef<string>('');
     const fetchProjects = useCallback(async (key: string) => {
