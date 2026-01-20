@@ -13,25 +13,25 @@ export default defineConfig({
   
   build: {
     target: 'esnext',
-    minify: 'terser',
+    minify: 'esbuild',
     sourcemap: false,
+    outDir: 'dist',
+    assetsDir: 'assets',
     
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+      },
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-ai': ['@anthropic-ai/sdk', '@google/genai', 'openai'],
-          'vendor-editor': ['react-quill'],
+          'vendor-ai': ['openai'],
         },
       },
     },
     
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
+    // Increase chunk size warning limit for AI SDKs
+    chunkSizeWarningLimit: 1000,
   },
   
   server: {
@@ -45,11 +45,15 @@ export default defineConfig({
   },
   
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-quill'],
+    include: ['react', 'react-dom'],
     exclude: ['@anthropic-ai/sdk'],
   },
   
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    'process.env': {},
+  },
+  
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
   },
 });
