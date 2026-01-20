@@ -1,37 +1,55 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react()],
-      resolve: {
-        alias: {
-          buffer: 'buffer/', // Trailing slash forces lookup in node_modules
+export default defineConfig({
+  plugins: [react()],
+  
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
+  
+  build: {
+    target: 'esnext',
+    minify: 'terser',
+    sourcemap: false,
+    
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-ai': ['@anthropic-ai/sdk', '@google/genai', 'openai'],
+          'vendor-editor': ['react-quill'],
         },
       },
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || '')
+    },
+    
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
       },
-      build: {
-        outDir: 'dist',
-        target: 'esnext',
-        rollupOptions: {
-          external: ['mermaid'],
-          onwarn(warning, warn) {
-            if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
-            if (warning.code === 'UNRESOLVED_IMPORT' && warning.message.includes('mermaid')) return;
-            warn(warning);
-          }
-        }
-      },
-      optimizeDeps: {
-        include: ['mermaid']
-      }
-    };
+    },
+  },
+  
+  server: {
+    port: 3000,
+    host: true,
+  },
+  
+  preview: {
+    port: 4173,
+    host: true,
+  },
+  
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-quill'],
+    exclude: ['@anthropic-ai/sdk'],
+  },
+  
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+  },
 });
