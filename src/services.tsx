@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - ENTERPRISE SERVICES v14.0
-// CRITICAL FIX: No H1s, No Duplicate Videos, Optimal Word Count, Premium Styling
+// SOTA WP CONTENT OPTIMIZER PRO - ENTERPRISE SERVICES v14.5
+// CRITICAL FIX: FORCE References + FORCE Natural Internal Links
 // =============================================================================
 
 import { GoogleGenAI } from "@anthropic-ai/sdk";
@@ -42,6 +42,7 @@ import {
   sanitizeContentHtml,
   removeDuplicateSections,
   processInternalLinkCandidates,
+  forceNaturalInternalLinks,
   extractImagesFromHtml,
   injectImagesIntoContent,
   convertMarkdownTablesToHtml,
@@ -162,29 +163,69 @@ const surgicalSanitizer = (html: string): string => {
 };
 
 // ============================================================================
-// SECTION 2: CRITICAL - REMOVE H1 TAGS (WordPress theme adds H1)
+// SECTION 2: CRITICAL - REMOVE H1 TAGS + INTERNAL LINK SECTIONS
 // ============================================================================
 
 const removeH1Tags = (html: string): string => {
   if (!html) return "";
-  
-  // Remove all H1 tags - WordPress theme already provides the H1 from post title
   let cleaned = html;
-  
-  // Pattern 1: Full H1 tags with content
   cleaned = cleaned.replace(/<h1[^>]*>[\s\S]*?<\/h1>/gi, "");
-  
-  // Pattern 2: Self-closing or malformed H1
   cleaned = cleaned.replace(/<h1[^>]*\/>/gi, "");
-  
-  // Pattern 3: H1 at the very start (common AI pattern)
   cleaned = cleaned.replace(/^\s*<h1[^>]*>[\s\S]*?<\/h1>\s*/i, "");
-  
-  // Clean up any double line breaks left behind
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
-  
   console.log("[H1 Remover] Removed all H1 tags from content");
   return cleaned;
+};
+
+// CRITICAL: Remove any "Internal Links", "Related Resources", etc. sections
+const removeInternalLinkSections = (html: string): string => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const body = doc.body;
+  
+  const sectionsToRemove = [
+    'internal link',
+    'related resources',
+    'related links',
+    'useful links',
+    'helpful links',
+    'more resources',
+    'additional resources',
+    'further reading links'
+  ];
+  
+  // Find and remove sections with these headers
+  const allHeadings = Array.from(body.querySelectorAll('h2, h3, h4, strong'));
+  
+  for (const heading of allHeadings) {
+    const text = (heading.textContent || '').toLowerCase().trim();
+    
+    if (sectionsToRemove.some(s => text.includes(s))) {
+      console.log(`[Section Remover] Found section to remove: "${heading.textContent}"`);
+      
+      // Find the container (parent div/section) or collect elements until next heading
+      let container = heading.closest('section, div.section, article > div');
+      
+      if (container && container !== body) {
+        container.remove();
+        console.log(`[Section Remover] Removed container for: "${heading.textContent}"`);
+      } else {
+        // Remove heading and all following siblings until next heading
+        const elementsToRemove: Element[] = [heading];
+        let sibling = heading.nextElementSibling;
+        
+        while (sibling && !['H2', 'H3'].includes(sibling.tagName)) {
+          elementsToRemove.push(sibling);
+          sibling = sibling.nextElementSibling;
+        }
+        
+        elementsToRemove.forEach(el => el.remove());
+        console.log(`[Section Remover] Removed ${elementsToRemove.length} elements for: "${heading.textContent}"`);
+      }
+    }
+  }
+  
+  return body.innerHTML;
 };
 
 // ============================================================================
@@ -196,7 +237,7 @@ export interface SerpGapResult {
   missingEntities: string[];
   competitorInsights: string[];
   topCompetitorTitles: string[];
-  optimalWordCount: number; // NEW: Optimal word count based on top competitors
+  optimalWordCount: number;
   averageCompetitorWords: number;
 }
 
@@ -210,7 +251,7 @@ export const analyzeSerpGaps = async (
     missingEntities: [],
     competitorInsights: [],
     topCompetitorTitles: [],
-    optimalWordCount: 2500, // Default
+    optimalWordCount: 2500,
     averageCompetitorWords: 2000
   };
   
@@ -219,7 +260,6 @@ export const analyzeSerpGaps = async (
   try {
     console.log(`[SERP Gap Analyzer] Analyzing: ${keyword}`);
     
-    // Step 1: Get top 5 SERP results
     const serpResponse = await fetchWithProxies("https://google.serper.dev/search", {
       method: "POST",
       headers: { "X-API-KEY": serperApiKey, "Content-Type": "application/json" },
@@ -233,7 +273,6 @@ export const analyzeSerpGaps = async (
     result.topCompetitorTitles = topResults.map(r => r.title);
     console.log(`[SERP Gap Analyzer] Found ${topResults.length} top competitors`);
 
-    // Step 2: Crawl top 3 competitors for content analysis AND word count
     const competitorContent: string[] = [];
     const competitorWordCounts: number[] = [];
     
@@ -251,25 +290,22 @@ export const analyzeSerpGaps = async (
       }
     }
 
-    // Calculate optimal word count (beat top competitors by 15-20%)
     if (competitorWordCounts.length > 0) {
       result.averageCompetitorWords = Math.round(
         competitorWordCounts.reduce((a, b) => a + b, 0) / competitorWordCounts.length
       );
       const maxCompetitorWords = Math.max(...competitorWordCounts);
-      // Target: Max competitor + 15%, but minimum 2000 and maximum 5000
       result.optimalWordCount = Math.min(5000, Math.max(2000, Math.round(maxCompetitorWords * 1.15)));
       console.log(`[SERP Gap Analyzer] Competitor avg: ${result.averageCompetitorWords}, Max: ${maxCompetitorWords}, Target: ${result.optimalWordCount}`);
     }
 
-    // Step 3: Extract keywords/entities from competitors using AI
     if (competitorContent.length > 0) {
       const combinedContent = competitorContent.join("\n\n---\n\n").substring(0, 15000);
       
       const analysisPrompt = `Analyze these top-ranking competitor articles and extract:
-1. Top 15 MISSING KEYWORDS that would improve our content (specific, actionable keywords)
-2. Top 10 ENTITIES mentioned (brands, tools, people, specific products)
-3. Top 5 CONTENT INSIGHTS (what makes these rank well)
+1. Top 15 MISSING KEYWORDS that would improve our content
+2. Top 10 ENTITIES mentioned (brands, tools, people, products)
+3. Top 5 CONTENT INSIGHTS
 
 TOPIC: ${keyword}
 
@@ -297,7 +333,6 @@ Output ONLY valid JSON:
       }
     }
 
-    // Step 4: Also search for related questions (People Also Ask)
     try {
       const paaResponse = await fetchWithProxies("https://google.serper.dev/search", {
         method: "POST",
@@ -366,14 +401,12 @@ export const getSmartYoutubeVideos = async (
   }
 };
 
-// CRITICAL: Inject videos ONCE only, track which videos have been used
 export const injectYoutubeInRelevantSections = (
   content: string,
   videos: Array<{ videoId: string; title: string }>
 ): string => {
   if (videos.length === 0) return content;
   
-  // First, check if any of these videos already exist in content
   const existingVideoIds = new Set<string>();
   const videoIdPattern = /youtube\.com\/embed\/([a-zA-Z0-9_-]+)/g;
   let match;
@@ -381,7 +414,6 @@ export const injectYoutubeInRelevantSections = (
     existingVideoIds.add(match[1]);
   }
   
-  // Filter out videos that already exist
   const newVideos = videos.filter(v => !existingVideoIds.has(v.videoId));
   if (newVideos.length === 0) {
     console.log("[Smart YouTube] All videos already present in content, skipping injection");
@@ -393,11 +425,9 @@ export const injectYoutubeInRelevantSections = (
   const body = doc.body;
   const h2s = Array.from(body.querySelectorAll("h2"));
 
-  // Track which sections have received videos
   const sectionsWithVideos = new Set<number>();
   const usedVideoIndices = new Set<number>();
 
-  // Match videos to relevant sections based on title similarity
   for (let vidIdx = 0; vidIdx < newVideos.length; vidIdx++) {
     const video = newVideos[vidIdx];
     const videoWords = video.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
@@ -405,7 +435,7 @@ export const injectYoutubeInRelevantSections = (
     let bestScore = 0;
 
     h2s.forEach((h2, idx) => {
-      if (sectionsWithVideos.has(idx)) return; // Don't add multiple videos to same section
+      if (sectionsWithVideos.has(idx)) return;
       const h2Text = h2.textContent?.toLowerCase() || "";
       const h2Words = h2Text.split(/\s+/).filter(w => w.length > 3);
       
@@ -418,7 +448,6 @@ export const injectYoutubeInRelevantSections = (
       }
     });
 
-    // If good match found (>15% overlap), inject after that section
     if (bestMatchIndex >= 0 && bestScore >= 0.15 && !sectionsWithVideos.has(bestMatchIndex)) {
       sectionsWithVideos.add(bestMatchIndex);
       usedVideoIndices.add(vidIdx);
@@ -433,7 +462,7 @@ export const injectYoutubeInRelevantSections = (
 <div style="margin: 2.5rem 0; padding: 1.75rem; background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
   <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
     <span style="font-size: 1.5rem;">🎬</span>
-    <span style="color: #94A3B8; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Related Video</span>
+    <span style="color: #94A3B8; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Recommended Video</span>
   </div>
   <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
     <iframe 
@@ -457,11 +486,9 @@ export const injectYoutubeInRelevantSections = (
     }
   }
 
-  // Add ONE remaining video at the end if we have any unused (NOT a "Related Videos" section that duplicates)
   const remainingVideos = newVideos.filter((_, idx) => !usedVideoIndices.has(idx));
   if (remainingVideos.length > 0 && remainingVideos.length === newVideos.length) {
-    // Only add end section if NO videos were matched to sections
-    const video = remainingVideos[0]; // Just one video at the end
+    const video = remainingVideos[0];
     const videoSection = doc.createElement("div");
     videoSection.className = "sota-video-section-end";
     videoSection.innerHTML = `
@@ -489,13 +516,11 @@ export const injectYoutubeInRelevantSections = (
   return body.innerHTML;
 };
 
-// Remove any duplicate video sections that might have been created
 const removeDuplicateVideos = (html: string): string => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
   const body = doc.body;
   
-  // Track seen video IDs
   const seenVideoIds = new Set<string>();
   const iframes = Array.from(body.querySelectorAll('iframe[src*="youtube.com/embed"]'));
   
@@ -505,7 +530,6 @@ const removeDuplicateVideos = (html: string): string => {
     if (videoIdMatch) {
       const videoId = videoIdMatch[1];
       if (seenVideoIds.has(videoId)) {
-        // Remove the parent container of this duplicate video
         let parent = iframe.parentElement;
         while (parent && parent !== body) {
           if (parent.className?.includes('sota-video') || 
@@ -523,37 +547,11 @@ const removeDuplicateVideos = (html: string): string => {
     }
   }
   
-  // Also remove any "Related Videos" sections that might contain duplicates
-  const relatedVideoHeaders = body.querySelectorAll('h2, h3, h4');
-  relatedVideoHeaders.forEach(header => {
-    const text = header.textContent?.toLowerCase() || '';
-    if (text.includes('related video') && text !== 'related video') {
-      // This is likely a "Related Videos" section header - check if it has videos we've already seen
-      let sibling = header.nextElementSibling;
-      while (sibling && !['H2', 'H3', 'H4'].includes(sibling.tagName)) {
-        const siblingIframes = sibling.querySelectorAll('iframe[src*="youtube.com/embed"]');
-        let allDuplicates = true;
-        siblingIframes.forEach(iframe => {
-          const src = iframe.getAttribute('src') || '';
-          const match = src.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
-          if (match && !seenVideoIds.has(match[1])) {
-            allDuplicates = false;
-          }
-        });
-        if (siblingIframes.length > 0 && allDuplicates) {
-          sibling.remove();
-          console.log(`[Video Dedup] Removed duplicate video container`);
-        }
-        sibling = header.nextElementSibling;
-      }
-    }
-  });
-  
   return body.innerHTML;
 };
 
 // ============================================================================
-// SECTION 5: VALIDATED REFERENCES v2.0 (ALWAYS GENERATES)
+// SECTION 5: GUARANTEED REFERENCES (NEVER EMPTY)
 // ============================================================================
 
 const AUTHORITY_DOMAINS = [
@@ -564,18 +562,19 @@ const AUTHORITY_DOMAINS = [
   'investopedia.com', 'healthline.com', 'webmd.com', 'mayoclinic.org'
 ];
 
+// GUARANTEED to return references - NEVER returns empty string
 export const fetchVerifiedReferences = async (
   keyword: string,
   semanticKeywords: string[],
   serperApiKey: string,
   wpUrl?: string
 ): Promise<string> => {
-  // ALWAYS generate references, even if API fails we'll create placeholder
   const currentYear = new Date().getFullYear();
   
+  // ALWAYS generate references - fallback if API fails
   if (!serperApiKey) {
-    console.log("[References] No Serper API key, generating placeholder references");
-    return generatePlaceholderReferences(keyword);
+    console.log("[References] No Serper API key, generating guaranteed fallback references");
+    return generateGuaranteedReferences(keyword);
   }
 
   try {
@@ -586,10 +585,9 @@ export const fetchVerifiedReferences = async (
       try { userDomain = new URL(wpUrl).hostname.replace("www.", ""); } catch {}
     }
 
-    // Search with authority modifiers - multiple queries for better coverage
     const queries = [
-      `${keyword} site:edu OR site:gov ${currentYear}`,
-      `${keyword} research study statistics`,
+      `${keyword} site:edu OR site:gov`,
+      `${keyword} research study`,
       `"${keyword}" guide tutorial`,
       `${keyword} ${semanticKeywords.slice(0, 2).join(' ')}`
     ];
@@ -611,7 +609,6 @@ export const fetchVerifiedReferences = async (
       await delay(200);
     }
 
-    // Deduplicate by domain
     const seenDomains = new Set<string>();
     const validLinks: Array<{ title: string; url: string; source: string; isAuthority: boolean; snippet: string }> = [];
 
@@ -622,13 +619,11 @@ export const fetchVerifiedReferences = async (
         const urlObj = new URL(result.link);
         const domain = urlObj.hostname.replace("www.", "").toLowerCase();
 
-        // Skip if already seen, user's domain, or blocked
         if (seenDomains.has(domain)) continue;
         if (userDomain && domain.includes(userDomain)) continue;
         if (isBlockedDomain(result.link)) continue;
         if (BLOCKED_SPAM_DOMAINS.some(spam => domain.includes(spam))) continue;
 
-        // Quick validation (HEAD request with short timeout)
         try {
           const checkRes = await Promise.race([
             fetchWithProxies(result.link, { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" } }),
@@ -648,7 +643,6 @@ export const fetchVerifiedReferences = async (
             console.log(`[References] ✅ Validated: ${domain}`);
           }
         } catch {
-          // If HEAD fails, still add it but mark as unverified
           const isAuthority = AUTHORITY_DOMAINS.some(auth => domain.includes(auth));
           if (isAuthority) {
             seenDomains.add(domain);
@@ -666,24 +660,27 @@ export const fetchVerifiedReferences = async (
       }
     }
 
+    // GUARANTEED: If we couldn't get enough links, add fallback
     if (validLinks.length < 3) {
-      console.log("[References] Not enough valid links, adding placeholders");
-      return generatePlaceholderReferences(keyword);
+      console.log("[References] Not enough valid links, using guaranteed fallback");
+      return generateGuaranteedReferences(keyword);
     }
 
-    // Sort: authority domains first
     validLinks.sort((a, b) => (b.isAuthority ? 1 : 0) - (a.isAuthority ? 1 : 0));
 
     console.log(`[References] Final count: ${validLinks.length} verified links`);
-    return generateReferencesHtml(validLinks);
+    return generateReferencesHtml(validLinks, keyword);
     
   } catch (error) {
     console.error("[References] Error:", error);
-    return generatePlaceholderReferences(keyword);
+    return generateGuaranteedReferences(keyword);
   }
 };
 
-const generateReferencesHtml = (links: Array<{ title: string; url: string; source: string; isAuthority: boolean; snippet?: string }>): string => {
+const generateReferencesHtml = (
+  links: Array<{ title: string; url: string; source: string; isAuthority: boolean; snippet?: string }>,
+  keyword: string
+): string => {
   const linksHtml = links.map(link => `
     <li style="margin-bottom: 1.25rem; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid ${link.isAuthority ? '#10B981' : '#3B82F6'}; transition: transform 0.2s, box-shadow 0.2s;">
       <a href="${link.url}" target="_blank" rel="noopener noreferrer" style="color: #1E40AF; font-weight: 700; text-decoration: none; display: block; margin-bottom: 0.5rem; font-size: 1.1rem; line-height: 1.4;">
@@ -710,35 +707,40 @@ const generateReferencesHtml = (links: Array<{ title: string; url: string; sourc
 <!-- SOTA-REFERENCES-END -->`;
 };
 
-const generatePlaceholderReferences = (keyword: string): string => {
-  // Generate helpful placeholder when API fails
-  const searchUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(keyword)}`;
-  const wikiUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(keyword)}`;
+// GUARANTEED fallback - always returns valid references HTML
+const generateGuaranteedReferences = (keyword: string): string => {
+  const searchKeyword = encodeURIComponent(keyword);
+  const currentYear = new Date().getFullYear();
   
-  return `
-<!-- SOTA-REFERENCES-START -->
-<div class="sota-references-section" style="margin-top: 4rem; padding: 3rem; background: linear-gradient(180deg, #F8FAFC 0%, #E2E8F0 100%); border-radius: 24px; border: 2px solid #CBD5E1;">
-  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
-    <span style="font-size: 2.5rem;">📚</span>
-    <h2 style="margin: 0; font-size: 2rem; font-weight: 800; color: #0F172A;">Further Reading</h2>
-  </div>
-  <p style="margin: 0 0 2rem 0; color: #64748B; font-size: 1rem;">Explore more resources on this topic</p>
-  <ul style="list-style: none; padding: 0; margin: 0;">
-    <li style="margin-bottom: 1.25rem; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #10B981;">
-      <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" style="color: #1E40AF; font-weight: 700; text-decoration: none; display: block; font-size: 1.1rem;">
-        Google Scholar: Research on ${keyword}
-      </a>
-      <span style="display: inline-flex; margin-top: 0.75rem; padding: 4px 12px; background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); color: #065F46; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">🏛️ Academic Source</span>
-    </li>
-    <li style="margin-bottom: 1.25rem; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #3B82F6;">
-      <a href="${wikiUrl}" target="_blank" rel="noopener noreferrer" style="color: #1E40AF; font-weight: 700; text-decoration: none; display: block; font-size: 1.1rem;">
-        Wikipedia: ${keyword}
-      </a>
-      <span style="display: inline-flex; margin-top: 0.75rem; padding: 4px 12px; background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%); color: #1E40AF; border-radius: 20px; font-size: 0.8rem; font-weight: 700;">📖 Encyclopedia</span>
-    </li>
-  </ul>
-</div>
-<!-- SOTA-REFERENCES-END -->`;
+  const fallbackLinks = [
+    {
+      title: `Google Scholar: Research on ${keyword}`,
+      url: `https://scholar.google.com/scholar?q=${searchKeyword}`,
+      source: 'scholar.google.com',
+      isAuthority: true
+    },
+    {
+      title: `Wikipedia: ${keyword}`,
+      url: `https://en.wikipedia.org/wiki/Special:Search?search=${searchKeyword}`,
+      source: 'wikipedia.org',
+      isAuthority: true
+    },
+    {
+      title: `Investopedia: Understanding ${keyword}`,
+      url: `https://www.investopedia.com/search?q=${searchKeyword}`,
+      source: 'investopedia.com',
+      isAuthority: true
+    },
+    {
+      title: `Harvard Business Review: ${keyword} Insights`,
+      url: `https://hbr.org/search?term=${searchKeyword}`,
+      source: 'hbr.org',
+      isAuthority: true
+    }
+  ];
+
+  console.log("[References] Generated guaranteed fallback references");
+  return generateReferencesHtml(fallbackLinks, keyword);
 };
 
 // ============================================================================
@@ -855,7 +857,7 @@ async function callGroq(client: OpenAI, system: string, prompt: string, model: s
 }
 
 // ============================================================================
-// SECTION 7: CONTENT GENERATION ENGINE v14.0 - ENTERPRISE GRADE
+// SECTION 7: CONTENT GENERATION ENGINE v14.5 - ENTERPRISE GRADE
 // ============================================================================
 
 export const generateContent = {
@@ -880,20 +882,18 @@ export const generateContent = {
       context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🔍 Researching competitors..." } });
 
       try {
-        // ========== STEP 1: SERP GAP ANALYSIS (includes word count analysis) ==========
+        // ========== STEP 1: SERP GAP ANALYSIS ==========
         const serpGaps = await analyzeSerpGaps(item.title, serperApiKey, callAIFn);
         console.log(`[Generate] SERP Gaps: ${serpGaps.missingKeywords.length} keywords, Target: ${serpGaps.optimalWordCount} words`);
 
-        // ========== STEP 2: SEMANTIC KEYWORDS + GAP KEYWORDS ==========
+        // ========== STEP 2: SEMANTIC KEYWORDS ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🔑 Generating keywords..." } });
         const keywordsResponse = await callAIFn("semantickeywordgenerator", [item.title], "json");
         let semanticKeywords = extractSemanticKeywords(keywordsResponse, "keywords");
-        
-        // Merge SERP gap keywords (prioritize gaps)
         const allKeywords = [...new Set([...serpGaps.missingKeywords, ...semanticKeywords, ...serpGaps.missingEntities])];
         semanticKeywords = allKeywords.slice(0, 50);
 
-        // ========== STEP 3: NEURONWRITER TERMS ==========
+        // ========== STEP 3: NEURONWRITER ==========
         let neuronData: string | null = null;
         if (neuronConfig?.enabled && neuronConfig.apiKey && neuronConfig.projectId) {
           context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🧠 Fetching NLP terms..." } });
@@ -908,26 +908,26 @@ export const generateContent = {
         const strategyResponse = await callAIFn("contentstrategygenerator", [item.title, semanticKeywords, serpGaps.topCompetitorTitles, item.type], "json");
         const strategy = safeJsonParseWithRecovery<Record<string, unknown>>(strategyResponse, "strategy", { targetAudience: "General", searchIntent: "Informational" });
 
-        // ========== STEP 5: MAIN CONTENT WITH OPTIMAL WORD COUNT ==========
+        // ========== STEP 5: MAIN CONTENT ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: `✍️ Writing ${serpGaps.optimalWordCount}+ words...` } });
         
-        // Build enhanced article plan with gap insights AND word count target
         const articlePlan = `
 TOPIC: ${item.title}
 
-⚠️ CRITICAL: DO NOT include an H1 tag. WordPress adds the H1 from the post title.
-Start with an H2 or intro paragraph directly.
+⚠️ CRITICAL RULES:
+1. DO NOT include an H1 tag - WordPress adds it from post title
+2. DO NOT include a "Related Resources" or "Internal Links" section - links must be embedded naturally in paragraphs
+3. Start with an H2 or intro paragraph
 
-TARGET WORD COUNT: ${serpGaps.optimalWordCount} words (top competitors average ${serpGaps.averageCompetitorWords} words)
-You MUST write at least ${serpGaps.optimalWordCount} words to outrank competitors.
+TARGET WORD COUNT: ${serpGaps.optimalWordCount} words (competitors average ${serpGaps.averageCompetitorWords})
 
-MUST INCLUDE THESE MISSING KEYWORDS (from competitor analysis):
+MUST INCLUDE THESE KEYWORDS:
 ${serpGaps.missingKeywords.slice(0, 15).map((k, i) => `${i + 1}. ${k}`).join('\n')}
 
 MUST MENTION THESE ENTITIES:
 ${serpGaps.missingEntities.slice(0, 10).map((e, i) => `${i + 1}. ${e}`).join('\n')}
 
-COMPETITOR INSIGHTS TO BEAT:
+COMPETITOR INSIGHTS:
 ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('\n')}
 `;
 
@@ -938,8 +938,9 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
         );
         let generatedHtml = surgicalSanitizer(contentResponse);
 
-        // ========== STEP 5.5: CRITICAL - REMOVE ALL H1 TAGS ==========
+        // ========== STEP 5.5: REMOVE H1 + INTERNAL LINK SECTIONS ==========
         generatedHtml = removeH1Tags(generatedHtml);
+        generatedHtml = removeInternalLinkSections(generatedHtml);
 
         // ========== STEP 6: SEO METADATA ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🎯 Optimizing SEO..." } });
@@ -948,7 +949,7 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
           metaResponse, "metadata", { seoTitle: item.title, metaDescription: `Learn about ${item.title}`, slug: item.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50) }
         );
 
-        // ========== STEP 7: FAQ GENERATION ==========
+        // ========== STEP 7: FAQ ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "❓ Creating FAQ..." } });
         const faqResponse = await callAIFn("sotafaqgenerator", [item.title, semanticKeywords], "html");
         const faqHtml = surgicalSanitizer(faqResponse);
@@ -957,11 +958,12 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
         const takeawaysResponse = await callAIFn("sotatakeawaysgenerator", [item.title, generatedHtml], "html");
         const takeawaysHtml = surgicalSanitizer(takeawaysResponse);
 
-        // ========== STEP 9: VALIDATED REFERENCES (ALWAYS) ==========
+        // ========== STEP 9: GUARANTEED REFERENCES ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "📚 Fetching references..." } });
         const referencesHtml = await fetchVerifiedReferences(item.title, semanticKeywords, serperApiKey, wpConfig.url);
+        console.log(`[Generate] References HTML length: ${referencesHtml.length}`);
 
-        // ========== STEP 10: SMART YOUTUBE PLACEMENT (NO DUPLICATES) ==========
+        // ========== STEP 10: YOUTUBE ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🎬 Finding videos..." } });
         if (serperApiKey) {
           const videos = await getSmartYoutubeVideos(item.title, serperApiKey, 2);
@@ -971,40 +973,43 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
           }
         }
 
-        // ========== STEP 11: INTERNAL LINKS ==========
-        generatedHtml = processInternalLinkCandidates(generatedHtml, existingPages.map(p => ({ title: p.title, slug: p.slug })), wpConfig.url, MAX_INTERNAL_LINKS);
+        // ========== STEP 11: FORCE NATURAL INTERNAL LINKS ==========
+        context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🔗 Injecting internal links..." } });
+        if (existingPages.length > 0) {
+          console.log(`[Generate] Forcing natural internal links into ${existingPages.length} available pages`);
+          generatedHtml = forceNaturalInternalLinks(
+            generatedHtml,
+            existingPages.map(p => ({ title: p.title, slug: p.slug })),
+            wpConfig.url,
+            12 // Target 12 internal links
+          );
+        }
 
-        // ========== STEP 12: ASSEMBLE FINAL CONTENT ==========
+        // ========== STEP 12: ASSEMBLE CONTENT ==========
         context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🔧 Assembling content..." } });
         const verificationFooter = generateVerificationFooterHtml();
         let finalContent = performSurgicalUpdate(generatedHtml, { keyTakeawaysHtml: takeawaysHtml, faqHtml, referencesHtml });
 
         // ========== STEP 13: COMPREHENSIVE POST-PROCESSING ==========
-        // Remove any H1s that might have been added during assembly
         finalContent = removeH1Tags(finalContent);
-        
-        // Convert any markdown tables to HTML
+        finalContent = removeInternalLinkSections(finalContent);
         finalContent = convertMarkdownTablesToHtml(finalContent);
-        
-        // Smart post-processing (banned phrases, cleanup)
         finalContent = smartPostProcess(finalContent);
-        
-        // Remove duplicate sections (FAQs, takeaways, etc.)
         finalContent = removeDuplicateSections(finalContent);
-        
-        // Remove duplicate videos
         finalContent = removeDuplicateVideos(finalContent);
         
-        // Ensure references section exists
+        // ========== STEP 14: GUARANTEE REFERENCES ARE PRESENT ==========
         if (!finalContent.includes('sota-references-section') && !finalContent.includes('SOTA-REFERENCES-START')) {
+          console.log("[Generate] ⚠️ References missing! Force adding...");
           finalContent += referencesHtml;
-          console.log("[Generate] Added references section to final content");
         }
         
         // Add verification footer
-        finalContent += verificationFooter;
+        if (!finalContent.includes('verification-footer-sota')) {
+          finalContent += verificationFooter;
+        }
 
-        // ========== STEP 14: SCHEMA MARKUP ==========
+        // ========== STEP 15: SCHEMA ==========
         const faqItems = extractFaqForSchema(finalContent);
         const schemaJson = generateFullSchema({
           title: seoTitle, description: metaDescription, content: finalContent,
@@ -1024,9 +1029,9 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
         };
 
         context.dispatch({ type: "SET_CONTENT", payload: { id: item.id, content: generatedContent } });
-        context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "done", statusText: `✅ ${finalWordCount} words (Target: ${serpGaps.optimalWordCount})` } });
+        context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "done", statusText: `✅ ${finalWordCount} words | ${existingPages.length > 0 ? '🔗 Links' : ''} | 📚 Refs` } });
         
-        console.log(`[Generate] ✅ SUCCESS: ${item.title} - ${finalWordCount} words (target: ${serpGaps.optimalWordCount})`);
+        console.log(`[Generate] ✅ SUCCESS: ${item.title} - ${finalWordCount} words`);
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error);
         console.error(`[Generate] ❌ ERROR for ${item.title}:`, error);
@@ -1058,8 +1063,6 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
       const doc = parser.parseFromString(crawledContent, "text/html");
       const existingTitle = doc.querySelector("h1")?.textContent?.trim() || item.title || extractSlugFromUrl(item.originalUrl!).replace(/-/g, " ");
 
-      // SERP Gap Analysis for refresh too
-      context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "📊 Analyzing competitors..." } });
       const serpGaps = await analyzeSerpGaps(existingTitle, serperApiKey, callAIFn);
 
       context.dispatch({ type: "UPDATE_STATUS", payload: { id: item.id, status: "generating", statusText: "🔑 Generating keywords..." } });
@@ -1071,28 +1074,36 @@ ${serpGaps.competitorInsights.slice(0, 5).map((c, i) => `${i + 1}. ${c}`).join('
       const optimizedResponse = await callAIFn("godmodestructuralguardian", [crawledContent, semanticKeywords, existingTitle], "html");
       let optimizedContent = surgicalSanitizer(optimizedResponse);
 
-      // CRITICAL: Remove H1 tags
       optimizedContent = removeH1Tags(optimizedContent);
+      optimizedContent = removeInternalLinkSections(optimizedContent);
 
       if (existingImages.length > 0) optimizedContent = injectImagesIntoContent(optimizedContent, existingImages);
 
-      // Smart YouTube placement (no duplicates)
       if (serperApiKey) {
         const videos = await getSmartYoutubeVideos(existingTitle, serperApiKey, 2);
         if (videos.length > 0) optimizedContent = injectYoutubeInRelevantSections(optimizedContent, videos);
       }
 
-      // Always add references
+      // FORCE internal links
+      if (existingPages.length > 0) {
+        optimizedContent = forceNaturalInternalLinks(
+          optimizedContent,
+          existingPages.map(p => ({ title: p.title, slug: p.slug })),
+          wpConfig.url,
+          10
+        );
+      }
+
+      // GUARANTEED references
       const referencesHtml = await fetchVerifiedReferences(existingTitle, semanticKeywords, serperApiKey, wpConfig.url);
       const verificationFooter = generateVerificationFooterHtml();
       
-      // Comprehensive post-processing
       optimizedContent = convertMarkdownTablesToHtml(optimizedContent);
       optimizedContent = smartPostProcess(optimizedContent);
       optimizedContent = removeDuplicateSections(optimizedContent);
       optimizedContent = removeDuplicateVideos(optimizedContent);
       
-      // Ensure references
+      // GUARANTEE references
       if (!optimizedContent.includes('sota-references-section')) {
         optimizedContent += referencesHtml;
       }
@@ -1320,7 +1331,7 @@ class MaintenanceEngine {
 
   private async optimizePage(page: SitemapPage): Promise<void> {
     if (!this.context) return;
-    const { apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, wpConfig, serperApiKey, siteInfo } = this.context;
+    const { apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, wpConfig, serperApiKey, siteInfo, existingPages } = this.context;
 
     try {
       this.logCallback(`📥 Crawling ${page.id}`);
@@ -1330,7 +1341,6 @@ class MaintenanceEngine {
       const callAIFn = (pk: string, args: unknown[], fmt: "json" | "html" = "json") => 
         callAI(apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, pk, args, fmt);
       
-      // SERP Gap Analysis
       const serpGaps = await analyzeSerpGaps(page.title || page.slug, serperApiKey, callAIFn);
 
       this.logCallback("🔍 Generating keywords...");
@@ -1342,8 +1352,8 @@ class MaintenanceEngine {
       const optimizedResponse = await callAI(apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, "godmodestructuralguardian", [crawledContent, semanticKeywords, page.title || page.slug], "html");
       let optimizedContent = surgicalSanitizer(optimizedResponse);
       
-      // CRITICAL: Remove H1 tags
       optimizedContent = removeH1Tags(optimizedContent);
+      optimizedContent = removeInternalLinkSections(optimizedContent);
       
       let changesMade = optimizedContent.length > crawledContent.length * 0.6 ? 1 : 0;
 
@@ -1352,13 +1362,24 @@ class MaintenanceEngine {
         changesMade++;
       }
 
-      // Always add references if missing
+      // FORCE references
       if (!optimizedContent.includes("sota-references-section") && serperApiKey) {
         const refs = await fetchVerifiedReferences(page.title || page.slug, semanticKeywords, serperApiKey, wpConfig.url);
         if (refs) { optimizedContent += refs; changesMade++; }
       }
 
-      // Smart YouTube (no duplicates)
+      // FORCE internal links
+      if (existingPages.length > 0) {
+        optimizedContent = forceNaturalInternalLinks(
+          optimizedContent,
+          existingPages.map(p => ({ title: p.title, slug: p.slug })),
+          wpConfig.url,
+          8
+        );
+        changesMade++;
+      }
+
+      // YouTube
       if (serperApiKey && !optimizedContent.includes("youtube.com/embed")) {
         const videos = await getSmartYoutubeVideos(page.title || page.slug, serperApiKey, 2);
         if (videos.length > 0) {
@@ -1367,7 +1388,6 @@ class MaintenanceEngine {
         }
       }
 
-      // Comprehensive post-processing
       optimizedContent = convertMarkdownTablesToHtml(optimizedContent);
       optimizedContent = smartPostProcess(optimizedContent);
       optimizedContent = removeDuplicateSections(optimizedContent);
@@ -1417,5 +1437,6 @@ export {
   stripMarkdownCodeBlocks,
   repairTruncatedJson,
   removeH1Tags,
+  removeInternalLinkSections,
   removeDuplicateVideos
 };
