@@ -68,7 +68,6 @@ import { listNeuronProjects, NeuronProject } from './neuronwriter';
 import mermaid from 'mermaid';
 
 // Re-export ErrorBoundary from main.tsx for backward compatibility
-export { SotaErrorBoundary } from './main';
 
 
 console.log("🚀 SOTA ENGINE V12.0 - ENTERPRISE GRADE INITIALIZED");
