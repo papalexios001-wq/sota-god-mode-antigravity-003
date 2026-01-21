@@ -61,13 +61,13 @@ const stripMarkdownCodeBlocks = (text: string): string => {
   
   // Remove various markdown code block formats (case insensitive)
   const patterns = [
-    /^```json\\s*/i,
-    /^```JSON\\s*/i,
-    /^```javascript\\s*/i,
-    /^```js\\s*/i,
-    /^```html\\s*/i,
-    /^```HTML\\s*/i,
-    /^```\\s*/,
+    /^```json\s*/i,
+    /^```JSON\s*/i,
+    /^```javascript\s*/i,
+    /^```js\s*/i,
+    /^```html\s*/i,
+    /^```HTML\s*/i,
+    /^```\s*/,
   ];
   
   for (const pattern of patterns) {
@@ -123,7 +123,7 @@ const extractJsonFromResponse = (response: string): string => {
         continue;
       }
       
-      if (char === "\\\\") {
+      if (char === "\\") {
         escapeNext = true;
         continue;
       }
@@ -154,7 +154,7 @@ const extractJsonFromResponse = (response: string): string => {
   }
 
   // Case 3: Markdown code block with json/JSON tag (already stripped, but check again)
-  const jsonBlockRegex = /```(?:json|JSON)?\\s*([\\s\\S]*?)```/;
+  const jsonBlockRegex = /```(?:json|JSON)?\s*([\s\S]*?)```/;
   const jsonBlockMatch = trimmed.match(jsonBlockRegex);
   if (jsonBlockMatch && jsonBlockMatch[1]) {
     const extracted = jsonBlockMatch[1].trim();
@@ -285,12 +285,12 @@ const surgicalSanitizer = (html: string): string => {
   if (!html || typeof html !== "string") return "";
   
   return html
-    .replace(/^```html\\s*/gi, "")
-    .replace(/^```HTML\\s*/gi, "")
+    .replace(/^```html\s*/gi, "")
+    .replace(/^```HTML\s*/gi, "")
     .replace(/```$/gi, "")
-    .replace(/^```\\s*/gi, "")
+    .replace(/^```\s*/gi, "")
     .replace(/^(Here(?:'s| is) the|Below is|The following)/i, "")
-    .replace(/\\n{3,}/g, "\\n\\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 };
 
@@ -324,7 +324,7 @@ export const callAI = async (
   // Add geo-targeting context if enabled
   let enhancedPrompt = userPrompt;
   if (geoTargeting.enabled && geoTargeting.location) {
-    enhancedPrompt = `[GEO-TARGET: ${geoTargeting.location}, ${geoTargeting.region}, ${geoTargeting.country}]\\n${userPrompt}`;
+    enhancedPrompt = `[GEO-TARGET: ${geoTargeting.location}, ${geoTargeting.region}, ${geoTargeting.country}]\n${userPrompt}`;
   }
 
   // Build fallback chain
@@ -803,7 +803,7 @@ export const generateContent = {
             if (neuronTerms) {
               neuronData = Object.entries(neuronTerms)
                 .map(([key, val]) => `${key}: ${val}`)
-                .join("\\n");
+                .join("\n");
             }
           } catch (e) {
             console.warn("[NeuronWriter] Failed to fetch terms:", e);
@@ -1366,7 +1366,7 @@ export const publishItemToWordPress = async (
   }
 
   const { title, metaDescription, slug, content, schemaMarkup } = item.generatedContent;
-  const baseUrl = wpConfig.url.replace(/\\/$/, "");
+  const baseUrl = wpConfig.url.replace(/\/$/, "");
   const authHeader = `Basic ${btoa(`${wpConfig.username}:${wpPassword}`)}`;
 
   const schemaString = schemaMarkup ? JSON.stringify(schemaMarkup) : "";
@@ -1730,7 +1730,3 @@ export {
   surgicalSanitizer,
   stripMarkdownCodeBlocks,
 };
-''';
-
-print("Services file generated successfully!")
-print(f"Total characters: {len(services_tsx)}")
