@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - CONTENT UTILITIES v13.0
-// Enterprise-Grade Content Processing with Smart Post-Processing
+// SOTA WP CONTENT OPTIMIZER PRO - CONTENT UTILITIES v14.1
+// CRITICAL FIX: Natural Internal Links + Guaranteed References
 // =============================================================================
 
 import { TARGET_MIN_WORDS, TARGET_MAX_WORDS, BLOCKED_REFERENCE_DOMAINS, BLOCKED_SPAM_DOMAINS } from './constants';
@@ -147,7 +147,6 @@ export const convertMarkdownTablesToHtml = (content: string): string => {
   while ((match = tablePattern.exec(content)) !== null) {
     const fullMatch = match[0];
     const headerRow = match[1].trim();
-    const separatorRow = match[2].trim();
     const bodyRows = match[3].trim();
     
     // Parse header cells
@@ -208,42 +207,24 @@ export const removeDuplicateSections = (html: string): string => {
   
   // Enhanced detection patterns
   const sectionPatterns = [
-    // Key Takeaways - multiple detection methods
     { 
       type: 'takeaways',
-      selectors: [
-        '[class*="takeaway"]',
-        '[class*="key-takeaway"]',
-        'div[style*="#064E3B"]',  // Our gradient color
-        'div[style*="#047857"]',
-      ],
+      selectors: ['[class*="takeaway"]', 'div[style*="#064E3B"]', 'div[style*="#047857"]'],
       textMatch: /key takeaways/i
     },
-    // FAQ sections
     { 
       type: 'faq',
-      selectors: [
-        '[class*="faq"]',
-        '[itemtype*="FAQPage"]',
-      ],
+      selectors: ['[class*="faq"]', '[itemtype*="FAQPage"]'],
       textMatch: /frequently asked questions/i
     },
-    // References
     { 
       type: 'references',
-      selectors: [
-        '[class*="reference"]',
-        '[class*="sources"]',
-      ],
-      textMatch: /references|sources|citations/i
+      selectors: ['[class*="reference"]', '[class*="sources"]', '.sota-references-section'],
+      textMatch: /references|sources|citations|further reading/i
     },
-    // Verification footer
     { 
       type: 'verification',
-      selectors: [
-        '.verification-footer-sota',
-        '[class*="verification"]',
-      ],
+      selectors: ['.verification-footer-sota', '[class*="verification"]'],
       textMatch: /fact-checked|expert reviewed/i
     },
   ];
@@ -252,27 +233,19 @@ export const removeDuplicateSections = (html: string): string => {
   sectionPatterns.forEach(({ type, selectors, textMatch }) => {
     const foundElements: Element[] = [];
     
-    // Find by selectors
     selectors.forEach(selector => {
       try {
         body.querySelectorAll(selector).forEach(el => {
-          if (!foundElements.includes(el)) {
-            foundElements.push(el);
-          }
+          if (!foundElements.includes(el)) foundElements.push(el);
         });
-      } catch (e) {
-        // Invalid selector, skip
-      }
+      } catch (e) {}
     });
     
-    // Find by text content matching
     if (textMatch) {
       body.querySelectorAll('div, section').forEach(el => {
         const h3 = el.querySelector('h3, h2');
         if (h3 && textMatch.test(h3.textContent || '')) {
-          if (!foundElements.includes(el)) {
-            foundElements.push(el);
-          }
+          if (!foundElements.includes(el)) foundElements.push(el);
         }
       });
     }
@@ -281,7 +254,6 @@ export const removeDuplicateSections = (html: string): string => {
     foundElements.forEach((el, index) => {
       if (index === 0) {
         seenSections.set(type, el);
-        console.log(`[Dedup] Keeping first ${type} section`);
       } else {
         el.remove();
         console.log(`[Dedup] Removed duplicate ${type} section`);
@@ -304,12 +276,27 @@ export const removeDuplicateSections = (html: string): string => {
     }
   });
 
-  // Remove SOTA comment markers (for dedup tracking)
+  // CRITICAL: Remove "Internal Linking & Related Resources" sections
+  // These should NOT exist - links should be embedded naturally in content
+  body.querySelectorAll('h2, h3').forEach(heading => {
+    const text = heading.textContent?.toLowerCase() || '';
+    if (text.includes('internal link') || text.includes('related resources') || 
+        text.includes('related links') || text.includes('more resources')) {
+      // Remove the entire section
+      let sibling = heading.nextElementSibling;
+      const toRemove: Element[] = [heading];
+      while (sibling && !['H2', 'H3'].includes(sibling.tagName)) {
+        toRemove.push(sibling);
+        sibling = sibling.nextElementSibling;
+      }
+      toRemove.forEach(el => el.remove());
+      console.log('[Dedup] Removed "Internal Linking" section - links should be embedded naturally');
+    }
+  });
+
   let resultHtml = body.innerHTML;
-  resultHtml = resultHtml.replace(/<!--\s*SOTA-TAKEAWAYS-START\s*-->/gi, '');
-  resultHtml = resultHtml.replace(/<!--\s*SOTA-TAKEAWAYS-END\s*-->/gi, '');
-  resultHtml = resultHtml.replace(/<!--\s*SOTA-FAQ-START\s*-->/gi, '');
-  resultHtml = resultHtml.replace(/<!--\s*SOTA-FAQ-END\s*-->/gi, '');
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-[A-Z]+-START\s*-->/gi, '');
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-[A-Z]+-END\s*-->/gi, '');
 
   return resultHtml;
 };
@@ -325,9 +312,7 @@ export const extractFaqForSchema = (html: string): Array<{question: string; answ
   doc.querySelectorAll('[itemtype*="Question"]').forEach(questionEl => {
     const question = questionEl.querySelector('[itemprop="name"]')?.textContent?.trim();
     const answer = questionEl.querySelector('[itemprop="text"]')?.textContent?.trim();
-    if (question && answer) {
-      faqs.push({ question, answer });
-    }
+    if (question && answer) faqs.push({ question, answer });
   });
   
   // Method 2: Details/Summary elements
@@ -353,28 +338,23 @@ export const smartPostProcess = (html: string): string => {
   
   let processed = html;
   
-  // Step 1: Normalize content (remove code blocks, etc)
+  // Step 1: Normalize content
   processed = normalizeGeneratedContent(processed);
-  console.log('[Post-Processor] Step 1: Normalized content');
   
   // Step 2: Convert markdown tables to HTML
   processed = convertMarkdownTablesToHtml(processed);
-  console.log('[Post-Processor] Step 2: Converted markdown tables');
   
   // Step 3: Remove duplicate sections
   processed = removeDuplicateSections(processed);
-  console.log('[Post-Processor] Step 3: Removed duplicates');
   
   // Step 4: Sanitize dangerous content
   processed = sanitizeContentHtml(processed);
-  console.log('[Post-Processor] Step 4: Sanitized content');
   
   // Step 5: Clean up empty elements
   processed = processed
     .replace(/<p>\s*<\/p>/g, '')
     .replace(/<div>\s*<\/div>/g, '')
     .replace(/\n{4,}/g, '\n\n');
-  console.log('[Post-Processor] Step 5: Cleaned empty elements');
   
   console.log('[Post-Processor] Complete!');
   return processed;
@@ -424,13 +404,12 @@ export const performSurgicalUpdate = (
   const doc = parser.parseFromString(originalHtml, 'text/html');
   const body = doc.body;
 
-  // Remove existing sections before injecting new ones (prevent duplicates)
+  // Remove existing sections before injecting new ones
   if (snippets.keyTakeawaysHtml) {
     body.querySelectorAll('[class*="takeaway"], div[style*="#064E3B"], div[style*="#047857"]').forEach(el => {
       const h3 = el.querySelector('h3');
       if (h3?.textContent?.toLowerCase().includes('takeaway')) {
         el.remove();
-        console.log('[Surgical] Removed existing takeaways before injection');
       }
     });
   }
@@ -494,12 +473,20 @@ export const performSurgicalUpdate = (
     body.appendChild(conclusion);
   }
 
-  // Inject references at the very end
-  if (snippets.referencesHtml) {
+  // CRITICAL: Inject references at the very end (ALWAYS)
+  if (snippets.referencesHtml && snippets.referencesHtml.trim().length > 0) {
+    // First remove any existing references sections to avoid duplicates
+    body.querySelectorAll('.sota-references-section, [class*="reference"]').forEach(el => {
+      if (el.querySelector('h2')?.textContent?.toLowerCase().includes('reference')) {
+        el.remove();
+      }
+    });
+    
     const refs = doc.createElement('div');
     refs.innerHTML = snippets.referencesHtml;
     refs.className = 'sota-references-section';
     body.appendChild(refs);
+    console.log('[Surgical Update] Injected references section at end');
   }
 
   return body.innerHTML;
@@ -524,10 +511,7 @@ export const getGuaranteedYoutubeVideos = async (
   try {
     const response = await fetchWithProxies('https://google.serper.dev/videos', {
       method: 'POST',
-      headers: {
-        'X-API-KEY': serperApiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'X-API-KEY': serperApiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: keyword, num: 10 }),
     });
 
@@ -538,9 +522,7 @@ export const getGuaranteedYoutubeVideos = async (
       if (videos.length >= count) break;
       if (video.link?.includes('youtube.com/watch?v=')) {
         const videoId = video.link.split('v=')[1]?.split('&')[0];
-        if (videoId) {
-          videos.push({ videoId, title: video.title });
-        }
+        if (videoId) videos.push({ videoId, title: video.title });
       }
     }
 
@@ -568,9 +550,7 @@ export const generateYoutubeEmbedHtml = (videos: Array<{ videoId: string; title:
         loading="lazy"
         style="border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"
       ></iframe>
-      <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b; text-align: center;">
-        ${video.title}
-      </p>
+      <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b; text-align: center;">${video.title}</p>
     </div>
   `).join('');
 
@@ -619,14 +599,133 @@ export const sanitizeContentHtml = (html: string): string => {
   return doc.body.innerHTML;
 };
 
-// ==================== INTERNAL LINK PROCESSING ====================
+// ==================== NATURAL INTERNAL LINK INJECTION ====================
+// This is the CRITICAL function that injects links NATURALLY within content
 
+export const injectNaturalInternalLinks = (
+  content: string,
+  availablePages: Array<{ title: string; slug: string }>,
+  baseUrl: string,
+  maxLinks: number = 12
+): string => {
+  if (availablePages.length === 0) return content;
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'text/html');
+  const body = doc.body;
+  
+  const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+  const usedSlugs = new Set<string>();
+  let linksAdded = 0;
+  
+  // Get all paragraphs and list items that can have links injected
+  const textContainers = Array.from(body.querySelectorAll('p, li')).filter(el => {
+    // Skip if already has many links
+    const existingLinks = el.querySelectorAll('a').length;
+    if (existingLinks >= 2) return false;
+    // Skip if in FAQ or references section
+    if (el.closest('.sota-faq-section, .sota-references-section, [class*="faq"], [class*="reference"]')) return false;
+    // Must have enough text
+    const textLength = el.textContent?.length || 0;
+    return textLength > 50;
+  });
+  
+  // Build keyword-to-page mapping
+  const keywordPageMap: Array<{ keywords: string[]; page: { title: string; slug: string } }> = [];
+  
+  for (const page of availablePages) {
+    // Extract keywords from title and slug
+    const titleWords = page.title.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3);
+    const slugWords = page.slug.toLowerCase()
+      .split('-')
+      .filter(w => w.length > 3);
+    
+    const keywords = [...new Set([...titleWords, ...slugWords])];
+    if (keywords.length > 0) {
+      keywordPageMap.push({ keywords, page });
+    }
+  }
+  
+  // Process each text container
+  for (const container of textContainers) {
+    if (linksAdded >= maxLinks) break;
+    
+    const text = container.textContent?.toLowerCase() || '';
+    
+    // Find the best matching page for this paragraph
+    let bestMatch: { page: { title: string; slug: string }; phrase: string; score: number } | null = null;
+    
+    for (const { keywords, page } of keywordPageMap) {
+      if (usedSlugs.has(page.slug)) continue;
+      
+      // Find matching keywords in text
+      const matchingKeywords = keywords.filter(kw => text.includes(kw));
+      if (matchingKeywords.length === 0) continue;
+      
+      // Calculate score based on number of matching keywords
+      const score = matchingKeywords.length / keywords.length;
+      
+      // Find the best phrase to use as anchor text (2-5 words containing keywords)
+      const words = container.textContent?.split(/\s+/) || [];
+      let anchorPhrase = '';
+      
+      for (let i = 0; i < words.length; i++) {
+        for (let len = 2; len <= 5 && i + len <= words.length; len++) {
+          const phrase = words.slice(i, i + len).join(' ');
+          const phraseLower = phrase.toLowerCase();
+          const phraseMatches = matchingKeywords.filter(kw => phraseLower.includes(kw)).length;
+          
+          if (phraseMatches > 0 && !anchorPhrase) {
+            // Check if this phrase is not already a link
+            if (!container.innerHTML.includes(`>${phrase}<`)) {
+              anchorPhrase = phrase;
+            }
+          }
+        }
+      }
+      
+      if (anchorPhrase && score > (bestMatch?.score || 0)) {
+        bestMatch = { page, phrase: anchorPhrase, score };
+      }
+    }
+    
+    // Inject the link if we found a good match
+    if (bestMatch && bestMatch.score >= 0.3) {
+      const { page, phrase } = bestMatch;
+      const url = `${cleanBaseUrl}/${page.slug}/`;
+      
+      // Create the link HTML
+      const linkHtml = `<a href="${url}" title="${page.title}" style="color: #1E40AF; text-decoration: underline; font-weight: 500;">${phrase}</a>`;
+      
+      // Replace the first occurrence of the phrase (case-insensitive but preserve original case)
+      const regex = new RegExp(`(?<!<a[^>]*>)\\b(${escapeRegExp(phrase)})\\b(?![^<]*<\\/a>)`, 'i');
+      const originalHtml = container.innerHTML;
+      const newHtml = originalHtml.replace(regex, linkHtml);
+      
+      if (newHtml !== originalHtml) {
+        container.innerHTML = newHtml;
+        usedSlugs.add(page.slug);
+        linksAdded++;
+        console.log(`[Natural Links] Added link: "${phrase}" → ${page.slug}`);
+      }
+    }
+  }
+  
+  console.log(`[Natural Links] Injected ${linksAdded} natural internal links`);
+  return body.innerHTML;
+};
+
+// Legacy function for [LINK_CANDIDATE:] markers (keep for backward compatibility)
 export const processInternalLinkCandidates = (
   content: string,
   availablePages: Array<{ title: string; slug: string }>,
   baseUrl: string,
   maxLinks: number = 12
 ): string => {
+  // First, process any [LINK_CANDIDATE:] markers
   const linkPattern = /\[LINK_CANDIDATE:\s*([^\]]+)\]/g;
   let processedContent = content;
   let linkCount = 0;
@@ -640,14 +739,35 @@ export const processInternalLinkCandidates = (
     if (targetPage) {
       linkCount++;
       usedSlugs.add(targetPage.slug);
-      const url = `${baseUrl.replace(/\/+$/, '')}/${targetPage.slug}`;
-      return `<a href="${url}" title="${targetPage.title}">${anchorText}</a>`;
+      const url = `${baseUrl.replace(/\/+$/, '')}/${targetPage.slug}/`;
+      return `<a href="${url}" title="${targetPage.title}" style="color: #1E40AF; text-decoration: underline; font-weight: 500;">${anchorText}</a>`;
     }
     
     return anchorText;
   });
 
-  console.log(`[Internal Links] Added ${linkCount} links`);
+  console.log(`[Link Candidates] Processed ${linkCount} [LINK_CANDIDATE:] markers`);
+  
+  // Then inject additional natural links if we haven't reached the max
+  if (linkCount < maxLinks) {
+    // Update usedSlugs with already linked pages from the processed content
+    const existingLinks = processedContent.match(/href="[^"]*\/([^/"]+)\/?"/g) || [];
+    existingLinks.forEach(link => {
+      const match = link.match(/\/([^/"]+)\/?"/);
+      if (match) usedSlugs.add(match[1]);
+    });
+    
+    // Filter out already used pages
+    const remainingPages = availablePages.filter(p => !usedSlugs.has(p.slug));
+    
+    processedContent = injectNaturalInternalLinks(
+      processedContent,
+      remainingPages,
+      baseUrl,
+      maxLinks - linkCount
+    );
+  }
+  
   return processedContent;
 };
 
@@ -675,7 +795,7 @@ function findBestMatchingPage(
     
     const score = matchingWords.length / Math.max(anchorWords.length, 1);
     
-    if (score > bestScore && score >= 0.4) {
+    if (score > bestScore && score >= 0.3) {
       bestScore = score;
       bestMatch = page;
     }
@@ -797,8 +917,8 @@ export const generateComparisonTableHtml = (
 
 // ==================== READABILITY ====================
 
-export const escapeRegExp = (string: string) => {
-  return string.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+export const escapeRegExp = (string: string): string => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
 export const calculateFleschReadability = (text: string): number => {
@@ -854,7 +974,9 @@ export default {
   smartPostProcess,
   extractFaqForSchema,
   processInternalLinkCandidates,
+  injectNaturalInternalLinks,
   extractImagesFromHtml,
   injectImagesIntoContent,
   generateComparisonTableHtml,
+  escapeRegExp,
 };
