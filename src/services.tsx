@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - SERVICES v12.0
-// Enterprise-Grade AI Services with God Mode Engine
+// SOTA WP CONTENT OPTIMIZER PRO - SERVICES v12.1 (HOTFIX)
+// Enterprise-Grade AI Services with Robust JSON Parsing
 // =============================================================================
 
 import { GoogleGenAI } from "@google/genai";
@@ -23,234 +23,6 @@ import {
 } from './contentUtils';
 import { generateFullSchema } from './schema-generator';
 import { fetchNeuronTerms } from './neuronwriter';
-
-
-// =============================================================================
-// SAFE AI CALL WRAPPER - Prevents 400 Errors
-// =============================================================================
-
-import { PROMPT_TEMPLATES, buildPrompt } from './prompts';
-
-/**
- * Safely calls AI with proper error handling and content truncation
- */
-export async function safeCallAI(
-  promptKey: string,
-  args: any[],
-  context: any,
-  outputFormat: 'text' | 'json' | 'html' = 'text',
-  maxRetries: number = 2
-): Promise<string> {
-  const { apiClients, selectedModel, logCallback } = context;
-  
-  // Validate API client
-  const client = apiClients?.[selectedModel as keyof typeof apiClients];
-  
-  if (!client) {
-    const errorMsg = `❌ API Client for '${selectedModel}' not initialized. Configure API key in Settings.`;
-    logCallback?.(errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  // Build prompt with compatibility for both formats
-  let systemInstruction: string;
-  let userPrompt: string;
-
-  try {
-    const promptResult = buildPrompt(promptKey as keyof typeof PROMPT_TEMPLATES, args);
-    
-    // Handle both return formats
-    systemInstruction = promptResult.systemInstruction || promptResult.system || '';
-    userPrompt = promptResult.userPrompt || promptResult.user || '';
-  } catch (e: any) {
-    logCallback?.(`❌ Prompt build error: ${e.message}`);
-    throw e;
-  }
-
-  // CRITICAL: Truncate to prevent 400 errors
-  const MAX_SYSTEM = 6000;
-  const MAX_USER = 80000;
-  
-  if (systemInstruction.length > MAX_SYSTEM) {
-    systemInstruction = systemInstruction.substring(0, MAX_SYSTEM) + '\n[TRUNCATED]';
-  }
-  
-  if (userPrompt.length > MAX_USER) {
-    userPrompt = userPrompt.substring(0, MAX_USER) + '\n[TRUNCATED]';
-    logCallback?.(`⚠️ Content truncated to ${MAX_USER} chars`);
-  }
-
-  // Retry logic
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      logCallback?.(`🤖 AI Call (${promptKey}) - Attempt ${attempt}/${maxRetries}...`);
-      
-      const response = await callAIProvider(client, selectedModel, systemInstruction, userPrompt);
-      
-      if (!response || response.trim().length === 0) {
-        throw new Error('Empty response from AI');
-      }
-      
-      return response;
-      
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error?.message || String(error);
-      
-      logCallback?.(`⚠️ AI Error (Attempt ${attempt}): ${errorMsg.substring(0, 200)}`);
-      
-      // Handle specific errors
-      if (errorMsg.includes('400') && (errorMsg.includes('context') || errorMsg.includes('too long'))) {
-        userPrompt = userPrompt.substring(0, Math.floor(userPrompt.length * 0.6));
-        logCallback?.(`📏 Truncating content further...`);
-      } else if (errorMsg.includes('429')) {
-        logCallback?.(`⏳ Rate limited. Waiting 5s...`);
-        await new Promise(r => setTimeout(r, 5000));
-      } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
-        throw new Error(`Auth error: Check your ${selectedModel} API key`);
-      }
-      
-      if (attempt < maxRetries) {
-        await new Promise(r => setTimeout(r, 1000 * attempt));
-      }
-    }
-  }
-  
-  throw lastError || new Error('AI call failed');
-}
-
-/**
- * Calls the appropriate AI provider
- */
-async function callAIProvider(
-  client: any,
-  model: string,
-  systemInstruction: string,
-  userPrompt: string
-): Promise<string> {
-  
-  const isAnthropic = model.includes('claude');
-  const isGemini = model.includes('gemini');
-  
-  try {
-    if (isAnthropic && client.messages) {
-      const response = await client.messages.create({
-        model: model,
-        max_tokens: 8192,
-        system: systemInstruction,
-        messages: [{ role: 'user', content: userPrompt }],
-      });
-      return response.content?.[0]?.text || '';
-      
-    } else if (isGemini && client.generateContent) {
-      const result = await client.generateContent({
-        contents: [{ role: 'user', parts: [{ text: `${systemInstruction}\n\n${userPrompt}` }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
-      });
-      return result.response?.text() || '';
-      
-    } else if (client.chat?.completions) {
-      // OpenAI / OpenRouter / Groq format
-      const response = await client.chat.completions.create({
-        model: model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 8192,
-      });
-      return response.choices?.[0]?.message?.content || '';
-      
-    } else {
-      throw new Error(`Unknown model format: ${model}`);
-    }
-  } catch (error: any) {
-    const errMsg = error?.message || error?.error?.message || String(error);
-    throw new Error(`Provider error: ${errMsg.substring(0, 300)}`);
-  }
-}
-
-// =============================================================================
-// CONTENT OPTIMIZATION FUNCTION
-// =============================================================================
-
-/**
- * Main function to optimize content for a URL
- */
-export async function optimizeContentForUrl(
-  url: string,
-  existingContent: string,
-  topic: string,
-  context: any,
-  existingPages: { title: string; slug: string }[]
-): Promise<{ content: string; success: boolean; message: string }> {
-  const { logCallback } = context;
-  
-  try {
-    logCallback?.(`🚀 Starting optimization for: ${url}`);
-    
-    // Validate
-    if (!existingContent || existingContent.trim().length < 100) {
-      return { content: '', success: false, message: 'Content too short (min 100 chars)' };
-    }
-    
-    // Truncate if needed
-    const MAX_CONTENT = 70000;
-    let content = existingContent;
-    if (content.length > MAX_CONTENT) {
-      logCallback?.(`⚠️ Truncating from ${content.length} to ${MAX_CONTENT}`);
-      content = content.substring(0, MAX_CONTENT);
-    }
-    
-    // Generate keywords
-    logCallback?.(`🔍 Generating semantic keywords...`);
-    let keywords: string[] = [];
-    try {
-      const kwResponse = await safeCallAI(
-        'semantic_keyword_generator',
-        [topic, topic, []],
-        context,
-        'json'
-      );
-      const parsed = JSON.parse(kwResponse);
-      keywords = Array.isArray(parsed) ? parsed : (parsed.keywords || [topic]);
-    } catch {
-      keywords = [topic];
-    }
-    
-    // Optimize content
-    logCallback?.(`⚡ Running God Mode optimization...`);
-    const optimized = await safeCallAI(
-      'god_mode_autonomous_agent',
-      [content, keywords, existingPages, topic],
-      context,
-      'html'
-    );
-    
-    if (!optimized || optimized.length < 500) {
-      return { content: existingContent, success: false, message: 'Optimization produced insufficient content' };
-    }
-    
-    logCallback?.(`✅ Complete! ${optimized.length} chars`);
-    
-    return {
-      content: optimized,
-      success: true,
-      message: `Successfully optimized (${optimized.length} chars)`
-    };
-    
-  } catch (error: any) {
-    logCallback?.(`❌ Failed: ${error.message}`);
-    return { content: existingContent, success: false, message: error.message };
-  }
-}
-
-
-
-
 
 // ==================== AI PROVIDER INTERFACE ====================
 
@@ -619,119 +391,6 @@ export const fetchVerifiedReferences = async (
   }
 };
 
-// ==================== WORDPRESS PUBLISHING ====================
-
-export const publishItemToWordPress = async (
-  item: ContentItem,
-  wpPassword: string,
-  status: 'publish' | 'draft',
-  fetchFn: typeof fetchWithProxies,
-  wpConfig: WpConfig
-): Promise<{ success: boolean; message: string | React.ReactNode; link?: string; postId?: number }> => {
-  if (!item.generatedContent) {
-    return { success: false, message: 'No content to publish' };
-  }
-
-  const { title, content, metaDescription, slug } = item.generatedContent;
-  const baseUrl = wpConfig.url.replace(/\/+$/, '');
-  const authHeader = `Basic ${btoa(`${wpConfig.username}:${wpPassword}`)}`;
-
-  try {
-    // Check if post exists (update vs create)
-    const isUpdate = !!item.originalUrl;
-    let postId: number | null = null;
-
-    if (isUpdate) {
-      // Extract slug from URL and find post
-      const pageSlug = extractSlugFromUrl(item.originalUrl!);
-      
-      // Search for existing post
-      const searchRes = await fetchFn(`${baseUrl}/wp-json/wp/v2/posts?slug=${pageSlug}&status=any`, {
-        method: 'GET',
-        headers: { 'Authorization': authHeader }
-      });
-
-      const posts = await searchRes.json();
-      if (Array.isArray(posts) && posts.length > 0) {
-        postId = posts[0].id;
-      }
-
-      // Also check pages
-      if (!postId) {
-        const pagesRes = await fetchFn(`${baseUrl}/wp-json/wp/v2/pages?slug=${pageSlug}&status=any`, {
-          method: 'GET',
-          headers: { 'Authorization': authHeader }
-        });
-        const pages = await pagesRes.json();
-        if (Array.isArray(pages) && pages.length > 0) {
-          postId = pages[0].id;
-        }
-      }
-    }
-
-    // Prepare post data
-    const postData: any = {
-      title: title,
-      content: content,
-      status: status,
-      slug: slug,
-      excerpt: metaDescription,
-    };
-
-    let response: Response;
-
-    if (postId) {
-      // Update existing post
-      response = await fetchFn(`${baseUrl}/wp-json/wp/v2/posts/${postId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(postData)
-      });
-    } else {
-      // Create new post
-      response = await fetchFn(`${baseUrl}/wp-json/wp/v2/posts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(postData)
-      });
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    return {
-      success: true,
-      message: postId ? 'Post updated successfully!' : 'Post published successfully!',
-      link: result.link,
-      postId: result.id
-    };
-
-  } catch (error: any) {
-    console.error('[publishItemToWordPress] Error:', error);
-    return {
-      success: false,
-      message: `Publishing failed: ${error.message}`
-    };
-  }
-};
-
-// Continue in Part 2...
-
-
-// =============================================================================
-// SERVICES PART 2 - Content Generation & God Mode Engine
-// =============================================================================
-
 // ==================== CONTENT GENERATION ====================
 
 export const generateContent = {
@@ -748,6 +407,9 @@ export const generateContent = {
   ): Promise<void> {
     const { dispatch, existingPages, siteInfo, wpConfig, geoTargeting, serperApiKey, neuronConfig } = context;
 
+    // Helper for JSON repair
+    const aiRepairer = (brokenText: string) => serviceCallAI('json_repair', [brokenText], 'json');
+
     const processItem = async (item: ContentItem, index: number): Promise<void> => {
       if (shouldStopRef.current.has(item.id)) {
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'idle', statusText: 'Stopped' } });
@@ -762,7 +424,8 @@ export const generateContent = {
         
         const location = geoTargeting.enabled ? geoTargeting.location : null;
         const keywordsJson = await serviceCallAI('semantic_keyword_generator', [item.title, [], location], 'json');
-        const semanticKeywords: string[] = JSON.parse(keywordsJson);
+        // FIX: Use Safe Parse
+        const semanticKeywords: string[] = await parseJsonWithAiRepair(keywordsJson, aiRepairer);
 
         if (shouldStopRef.current.has(item.id)) return;
 
@@ -798,7 +461,8 @@ export const generateContent = {
             
             if (competitorContent.length > 0) {
               const gapAnalysisJson = await serviceCallAI('competitor_gap_analyzer', [item.title, competitorContent, null], 'json');
-              const gapAnalysis = JSON.parse(gapAnalysisJson);
+              // FIX: Use Safe Parse
+              const gapAnalysis = await parseJsonWithAiRepair(gapAnalysisJson, aiRepairer);
               competitorGaps = gapAnalysis.gaps?.map((g: any) => g.opportunity) || [];
             }
           } catch (e) {
@@ -909,7 +573,8 @@ export const generateContent = {
           [item.title, contentSummary, 'General audience', [], location],
           'json'
         );
-        const metadata = JSON.parse(metadataJson);
+        // FIX: Use Safe Parse
+        const metadata = await parseJsonWithAiRepair(metadataJson, aiRepairer);
 
         // Step 12: Generate schema
         const jsonLdSchema = generateFullSchema(
@@ -996,7 +661,8 @@ export const generateContent = {
       // Generate semantic keywords
       const location = geoTargeting.enabled ? geoTargeting.location : null;
       const keywordsJson = await serviceCallAI('semantic_keyword_generator', [item.title, [], location], 'json');
-      const semanticKeywords: string[] = JSON.parse(keywordsJson);
+      // FIX: Use Safe Parse
+      const semanticKeywords: string[] = await parseJsonWithAiRepair(keywordsJson, aiRepairer);
 
       dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: 'Rewriting content...' } });
 
@@ -1041,7 +707,8 @@ export const generateContent = {
         [item.title, contentSummary, 'General audience', [], location],
         'json'
       );
-      const metadata = JSON.parse(metadataJson);
+      // FIX: Use Safe Parse
+      const metadata = await parseJsonWithAiRepair(metadataJson, aiRepairer);
 
       const generatedContent: GeneratedContent = {
         title: metadata.seoTitle || item.title,
@@ -1089,6 +756,9 @@ export const generateContent = {
     onProgress: (progress: { current: number; total: number }) => void,
     shouldStop: () => boolean
   ): Promise<void> {
+    // Helper for JSON repair
+    const aiRepairer = (brokenText: string) => serviceCallAI('json_repair', [brokenText], 'json');
+
     const processPage = async (page: SitemapPage, index: number): Promise<void> => {
       if (shouldStop()) return;
 
@@ -1102,12 +772,13 @@ export const generateContent = {
         
         // Analyze with AI
         const analysisJson = await serviceCallAI(
-          'content_health_analyzer',
-          [page.id, crawledContent, page.lastMod],
+          'health_analyzer',
+          [page.id, crawledContent, page.title],
           'json'
         );
         
-        const analysis = JSON.parse(analysisJson);
+        // FIX: Use Safe Parse
+        const analysis = await parseJsonWithAiRepair(analysisJson, aiRepairer);
 
         setExistingPages(prev => prev.map(p => 
           p.id === page.id ? {
@@ -1115,15 +786,15 @@ export const generateContent = {
             status: 'analyzed',
             crawledContent,
             healthScore: analysis.healthScore,
-            updatePriority: analysis.updatePriority,
-            justification: analysis.justification,
+            updatePriority: analysis.healthScore < 50 ? 'Critical' : analysis.healthScore < 70 ? 'High' : analysis.healthScore < 90 ? 'Medium' : 'Healthy',
+            justification: analysis.recommendations?.[0] || 'Analysis complete',
             analysis: {
-              critique: analysis.critique,
-              strengths: analysis.strengths || [],
-              weaknesses: analysis.weaknesses || [],
+              critique: "Automated analysis completed",
+              strengths: [],
+              weaknesses: analysis.issues || [],
               recommendations: analysis.recommendations || [],
-              seoScore: analysis.seoScore,
-              readabilityScore: analysis.readabilityScore
+              seoScore: analysis.healthScore,
+              readabilityScore: 0
             }
           } : p
         ));
@@ -1152,16 +823,18 @@ export const generateContent = {
     context: GenerationContext
   ): Promise<any[]> {
     const existingTitles = existingPages.map(p => p.title).slice(0, 50);
+    const aiRepairer = (brokenText: string) => serviceCallAI('json_repair', [brokenText], 'json');
     
     const gapAnalysisJson = await serviceCallAI(
-      'competitor_gap_analyzer',
-      [topic, [], existingTitles.join('\n')],
+      'gap_analyzer',
+      [existingTitles, [], topic],
       'json'
     );
     
-    const gapAnalysis = JSON.parse(gapAnalysisJson);
+    // FIX: Use Safe Parse
+    const gapAnalysis = await parseJsonWithAiRepair(gapAnalysisJson, aiRepairer);
     
-    return gapAnalysis.gaps || [];
+    return Array.isArray(gapAnalysis) ? gapAnalysis : (gapAnalysis.gaps || []);
   }
 };
 
@@ -1418,7 +1091,9 @@ class MaintenanceEngine {
       callAI(apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, promptKey, args, format);
 
     const keywordsJson = await serviceCallAI('semantic_keyword_generator', [page.title, [], null], 'json');
-    const semanticKeywords: string[] = JSON.parse(keywordsJson);
+    const aiRepairer = (brokenText: string) => serviceCallAI('json_repair', [brokenText], 'json');
+    // FIX: Use Safe Parse
+    const semanticKeywords: string[] = await parseJsonWithAiRepair(keywordsJson, aiRepairer);
 
     // Perform surgical DOM optimization
     this.log(`  ⚡ Performing surgical optimization...`);
@@ -1517,7 +1192,7 @@ class MaintenanceEngine {
 
       try {
         const optimizedHtml = await serviceCallAI(
-          'god_mode_structural_guardian',
+          'dom_content_polisher',
           [batchHtml, semanticKeywords, topic],
           'html'
         );
@@ -1573,4 +1248,3 @@ export {
   extractExistingImages,
   injectImagesIntoContent
 };
-
