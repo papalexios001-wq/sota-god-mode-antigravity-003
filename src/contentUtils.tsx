@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - CONTENT UTILITIES v12.0
-// Enterprise-Grade Content Processing Functions (COMPLETE)
+// SOTA WP CONTENT OPTIMIZER PRO - CONTENT UTILITIES v13.0
+// Enterprise-Grade Content Processing with Smart Post-Processing
 // =============================================================================
 
 import { TARGET_MIN_WORDS, TARGET_MAX_WORDS, BLOCKED_REFERENCE_DOMAINS, BLOCKED_SPAM_DOMAINS } from './constants';
@@ -73,11 +73,9 @@ export const smartCrawl = async (url: string): Promise<string> => {
     const response = await fetchWithProxies(url);
     const html = await response.text();
 
-    // Parse and extract main content
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // Remove unwanted elements
     const removeSelectors = [
       'script', 'style', 'noscript', 'iframe', 'nav', 'header', 'footer',
       '.sidebar', '#sidebar', '.menu', '#menu', '.navigation', '.comments',
@@ -90,7 +88,6 @@ export const smartCrawl = async (url: string): Promise<string> => {
       doc.querySelectorAll(selector).forEach(el => el.remove());
     });
 
-    // Try to find main content area
     const mainContent = 
       doc.querySelector('main') ||
       doc.querySelector('article') ||
@@ -122,30 +119,265 @@ export const enforceWordCount = (
   maxWords: number = TARGET_MAX_WORDS
 ): void => {
   const wordCount = countWords(html);
-
-  if (wordCount < minWords) {
-    throw new ContentTooShortError(wordCount, minWords);
-  }
-
-  if (wordCount > maxWords) {
-    throw new ContentTooLongError(wordCount, maxWords);
-  }
+  if (wordCount < minWords) throw new ContentTooShortError(wordCount, minWords);
+  if (wordCount > maxWords) throw new ContentTooLongError(wordCount, maxWords);
 };
 
 // ==================== CONTENT NORMALIZATION ====================
 
 export const normalizeGeneratedContent = (html: string): string => {
   let normalized = html
-    // Remove markdown code blocks
     .replace(/```html\n?/g, '')
     .replace(/```\n?/g, '')
-    // Fix common HTML issues
     .replace(/<\/?(html|head|body)[^>]*>/gi, '')
-    // Normalize whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-
   return normalized;
+};
+
+// ==================== MARKDOWN TABLE TO HTML CONVERTER ====================
+
+export const convertMarkdownTablesToHtml = (content: string): string => {
+  // Pattern to match markdown tables
+  const tablePattern = /(?:^|\n)(\|[^\n]+\|\n)(\|[-:|\s]+\|\n)((?:\|[^\n]+\|\n?)+)/gm;
+  
+  let result = content;
+  let match;
+  
+  while ((match = tablePattern.exec(content)) !== null) {
+    const fullMatch = match[0];
+    const headerRow = match[1].trim();
+    const separatorRow = match[2].trim();
+    const bodyRows = match[3].trim();
+    
+    // Parse header cells
+    const headers = headerRow
+      .split('|')
+      .map(cell => cell.trim())
+      .filter(cell => cell.length > 0);
+    
+    // Parse body rows
+    const rows = bodyRows
+      .split('\n')
+      .filter(row => row.includes('|'))
+      .map(row => 
+        row
+          .split('|')
+          .map(cell => cell.trim())
+          .filter(cell => cell.length > 0 || row.split('|').length > 2)
+      );
+    
+    // Build HTML table with beautiful styling
+    const htmlTable = `
+<div style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+  <table style="width: 100%; border-collapse: collapse; background: white;">
+    <thead>
+      <tr style="background: linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%);">
+        ${headers.map(h => `<th style="padding: 1.25rem; color: white; text-align: left; font-weight: 700;">${h}</th>`).join('\n        ')}
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map((row, idx) => `
+      <tr style="background: ${idx % 2 === 0 ? '#F8FAFC' : 'white'};">
+        ${row.map((cell, cellIdx) => `<td style="padding: 1rem; border-bottom: 1px solid #E2E8F0;${cellIdx === 0 ? ' font-weight: 600;' : ''}">${cell}</td>`).join('\n        ')}
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>`;
+    
+    result = result.replace(fullMatch, htmlTable);
+    console.log('[Table Converter] Converted markdown table to HTML');
+  }
+  
+  // Also fix inline broken table rendering (|---|)
+  result = result.replace(/\|---\|---\|---\|/g, '');
+  result = result.replace(/\|\s*\|\s*\|\s*\|/g, '');
+  
+  return result;
+};
+
+// ==================== ENHANCED DUPLICATE REMOVAL ====================
+
+export const removeDuplicateSections = (html: string): string => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const body = doc.body;
+
+  // Track seen section types
+  const seenSections = new Map<string, Element>();
+  
+  // Enhanced detection patterns
+  const sectionPatterns = [
+    // Key Takeaways - multiple detection methods
+    { 
+      type: 'takeaways',
+      selectors: [
+        '[class*="takeaway"]',
+        '[class*="key-takeaway"]',
+        'div[style*="#064E3B"]',  // Our gradient color
+        'div[style*="#047857"]',
+      ],
+      textMatch: /key takeaways/i
+    },
+    // FAQ sections
+    { 
+      type: 'faq',
+      selectors: [
+        '[class*="faq"]',
+        '[itemtype*="FAQPage"]',
+      ],
+      textMatch: /frequently asked questions/i
+    },
+    // References
+    { 
+      type: 'references',
+      selectors: [
+        '[class*="reference"]',
+        '[class*="sources"]',
+      ],
+      textMatch: /references|sources|citations/i
+    },
+    // Verification footer
+    { 
+      type: 'verification',
+      selectors: [
+        '.verification-footer-sota',
+        '[class*="verification"]',
+      ],
+      textMatch: /fact-checked|expert reviewed/i
+    },
+  ];
+
+  // Process each pattern
+  sectionPatterns.forEach(({ type, selectors, textMatch }) => {
+    const foundElements: Element[] = [];
+    
+    // Find by selectors
+    selectors.forEach(selector => {
+      try {
+        body.querySelectorAll(selector).forEach(el => {
+          if (!foundElements.includes(el)) {
+            foundElements.push(el);
+          }
+        });
+      } catch (e) {
+        // Invalid selector, skip
+      }
+    });
+    
+    // Find by text content matching
+    if (textMatch) {
+      body.querySelectorAll('div, section').forEach(el => {
+        const h3 = el.querySelector('h3, h2');
+        if (h3 && textMatch.test(h3.textContent || '')) {
+          if (!foundElements.includes(el)) {
+            foundElements.push(el);
+          }
+        }
+      });
+    }
+    
+    // Keep first, remove duplicates
+    foundElements.forEach((el, index) => {
+      if (index === 0) {
+        seenSections.set(type, el);
+        console.log(`[Dedup] Keeping first ${type} section`);
+      } else {
+        el.remove();
+        console.log(`[Dedup] Removed duplicate ${type} section`);
+      }
+    });
+  });
+
+  // Remove duplicate H2 headings with same text
+  const h2Map = new Map<string, Element>();
+  body.querySelectorAll('h2').forEach(h2 => {
+    const text = h2.textContent?.trim().toLowerCase() || '';
+    if (text && h2Map.has(text)) {
+      const parent = h2.closest('section, div.section, article > div') || h2.parentElement;
+      if (parent && parent !== body) {
+        parent.remove();
+        console.log(`[Dedup] Removed duplicate section: ${text}`);
+      }
+    } else if (text) {
+      h2Map.set(text, h2);
+    }
+  });
+
+  // Remove SOTA comment markers (for dedup tracking)
+  let resultHtml = body.innerHTML;
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-TAKEAWAYS-START\s*-->/gi, '');
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-TAKEAWAYS-END\s*-->/gi, '');
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-FAQ-START\s*-->/gi, '');
+  resultHtml = resultHtml.replace(/<!--\s*SOTA-FAQ-END\s*-->/gi, '');
+
+  return resultHtml;
+};
+
+// ==================== EXTRACT FAQ FOR SCHEMA ====================
+
+export const extractFaqForSchema = (html: string): Array<{question: string; answer: string}> => {
+  const faqs: Array<{question: string; answer: string}> = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  // Method 1: Schema.org markup
+  doc.querySelectorAll('[itemtype*="Question"]').forEach(questionEl => {
+    const question = questionEl.querySelector('[itemprop="name"]')?.textContent?.trim();
+    const answer = questionEl.querySelector('[itemprop="text"]')?.textContent?.trim();
+    if (question && answer) {
+      faqs.push({ question, answer });
+    }
+  });
+  
+  // Method 2: Details/Summary elements
+  if (faqs.length === 0) {
+    doc.querySelectorAll('details').forEach(details => {
+      const question = details.querySelector('summary')?.textContent?.trim();
+      const answerEl = details.querySelector('div, p');
+      const answer = answerEl?.textContent?.trim();
+      if (question && answer) {
+        faqs.push({ question: question.replace(/[\u25BC\u25B6]/g, '').trim(), answer });
+      }
+    });
+  }
+  
+  console.log(`[FAQ Extractor] Found ${faqs.length} FAQ items`);
+  return faqs;
+};
+
+// ==================== SMART POST-PROCESSOR ====================
+
+export const smartPostProcess = (html: string): string => {
+  console.log('[Post-Processor] Starting smart post-processing...');
+  
+  let processed = html;
+  
+  // Step 1: Normalize content (remove code blocks, etc)
+  processed = normalizeGeneratedContent(processed);
+  console.log('[Post-Processor] Step 1: Normalized content');
+  
+  // Step 2: Convert markdown tables to HTML
+  processed = convertMarkdownTablesToHtml(processed);
+  console.log('[Post-Processor] Step 2: Converted markdown tables');
+  
+  // Step 3: Remove duplicate sections
+  processed = removeDuplicateSections(processed);
+  console.log('[Post-Processor] Step 3: Removed duplicates');
+  
+  // Step 4: Sanitize dangerous content
+  processed = sanitizeContentHtml(processed);
+  console.log('[Post-Processor] Step 4: Sanitized content');
+  
+  // Step 5: Clean up empty elements
+  processed = processed
+    .replace(/<p>\s*<\/p>/g, '')
+    .replace(/<div>\s*<\/div>/g, '')
+    .replace(/\n{4,}/g, '\n\n');
+  console.log('[Post-Processor] Step 5: Cleaned empty elements');
+  
+  console.log('[Post-Processor] Complete!');
+  return processed;
 };
 
 // ==================== VERIFICATION FOOTER ====================
@@ -192,13 +424,22 @@ export const performSurgicalUpdate = (
   const doc = parser.parseFromString(originalHtml, 'text/html');
   const body = doc.body;
 
+  // Remove existing sections before injecting new ones (prevent duplicates)
+  if (snippets.keyTakeawaysHtml) {
+    body.querySelectorAll('[class*="takeaway"], div[style*="#064E3B"], div[style*="#047857"]').forEach(el => {
+      const h3 = el.querySelector('h3');
+      if (h3?.textContent?.toLowerCase().includes('takeaway')) {
+        el.remove();
+        console.log('[Surgical] Removed existing takeaways before injection');
+      }
+    });
+  }
+
   // Inject intro at beginning
   if (snippets.introHtml) {
     const intro = doc.createElement('div');
     intro.innerHTML = snippets.introHtml;
     intro.className = 'sota-intro-section';
-    
-    // Insert at the very beginning of body
     if (body.firstChild) {
       body.insertBefore(intro, body.firstChild);
     } else {
@@ -216,7 +457,6 @@ export const performSurgicalUpdate = (
     if (firstH2 && firstH2.parentNode) {
       firstH2.parentNode.insertBefore(takeaways, firstH2);
     } else {
-      // If no H2, insert after intro or at beginning
       const introSection = body.querySelector('.sota-intro-section');
       if (introSection && introSection.nextSibling) {
         body.insertBefore(takeaways, introSection.nextSibling);
@@ -232,7 +472,6 @@ export const performSurgicalUpdate = (
     faq.innerHTML = snippets.faqHtml;
     faq.className = 'sota-faq-section';
     
-    // Try to find conclusion heading
     const headings = Array.from(body.querySelectorAll('h2, h3'));
     const conclusionHeading = headings.find(h => 
       h.textContent?.toLowerCase().includes('conclusion') ||
@@ -243,12 +482,11 @@ export const performSurgicalUpdate = (
     if (conclusionHeading && conclusionHeading.parentNode) {
       conclusionHeading.parentNode.insertBefore(faq, conclusionHeading);
     } else {
-      // Append before last element or at end
       body.appendChild(faq);
     }
   }
 
-  // Inject conclusion at end (before references)
+  // Inject conclusion at end
   if (snippets.conclusionHtml) {
     const conclusion = doc.createElement('div');
     conclusion.innerHTML = snippets.conclusionHtml;
@@ -298,7 +536,6 @@ export const getGuaranteedYoutubeVideos = async (
 
     for (const video of data.videos || []) {
       if (videos.length >= count) break;
-
       if (video.link?.includes('youtube.com/watch?v=')) {
         const videoId = video.link.split('v=')[1]?.split('&')[0];
         if (videoId) {
@@ -314,8 +551,6 @@ export const getGuaranteedYoutubeVideos = async (
     return [];
   }
 };
-
-// ==================== YOUTUBE EMBED HTML ====================
 
 export const generateYoutubeEmbedHtml = (videos: Array<{ videoId: string; title: string }>): string => {
   if (videos.length === 0) return '';
@@ -353,20 +588,11 @@ export const generateYoutubeEmbedHtml = (videos: Array<{ videoId: string; title:
 export const isBlockedDomain = (url: string): boolean => {
   try {
     const domain = new URL(url).hostname.replace('www.', '').toLowerCase();
-    
-    // Check against blocked reference domains
-    if (BLOCKED_REFERENCE_DOMAINS.some(blocked => domain.includes(blocked))) {
-      return true;
-    }
-    
-    // Check against spam domains
-    if (BLOCKED_SPAM_DOMAINS.some(blocked => domain.includes(blocked))) {
-      return true;
-    }
-    
+    if (BLOCKED_REFERENCE_DOMAINS.some(blocked => domain.includes(blocked))) return true;
+    if (BLOCKED_SPAM_DOMAINS.some(blocked => domain.includes(blocked))) return true;
     return false;
   } catch {
-    return true; // Invalid URL is blocked
+    return true;
   }
 };
 
@@ -376,75 +602,21 @@ export const sanitizeContentHtml = (html: string): string => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
-  // Remove dangerous elements
-  const dangerousSelectors = ['script', 'style', 'iframe[src*="javascript"]', 'object', 'embed'];
+  const dangerousSelectors = ['script', 'style:not([type])', 'iframe[src*="javascript"]', 'object', 'embed'];
   dangerousSelectors.forEach(selector => {
-    doc.querySelectorAll(selector).forEach(el => el.remove());
+    try {
+      doc.querySelectorAll(selector).forEach(el => el.remove());
+    } catch (e) {}
   });
 
-  // Remove dangerous attributes
   doc.querySelectorAll('*').forEach(el => {
     Array.from(el.attributes).forEach(attr => {
-      // Remove on* event handlers
-      if (attr.name.startsWith('on')) {
-        el.removeAttribute(attr.name);
-      }
-      // Remove javascript: URLs
-      if (attr.value.toLowerCase().includes('javascript:')) {
-        el.removeAttribute(attr.name);
-      }
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+      if (attr.value.toLowerCase().includes('javascript:')) el.removeAttribute(attr.name);
     });
   });
 
   return doc.body.innerHTML;
-};
-
-// ==================== CONTENT DEDUPLICATION ====================
-
-export const removeDuplicateSections = (html: string): string => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const body = doc.body;
-
-  // Track seen section types
-  const seenSections = new Set<string>();
-  const sectionPatterns = [
-    { selector: '.key-takeaways-box, [class*="takeaway"]', type: 'takeaways' },
-    { selector: '.faq-section, [class*="faq"]', type: 'faq' },
-    { selector: '.sota-references-section, [class*="reference"]', type: 'references' },
-    { selector: '.verification-footer-sota', type: 'verification' },
-  ];
-
-  sectionPatterns.forEach(({ selector, type }) => {
-    const elements = Array.from(body.querySelectorAll(selector));
-    elements.forEach((el, index) => {
-      if (index === 0) {
-        seenSections.add(type);
-      } else {
-        // Remove duplicate
-        el.remove();
-        console.log(`[Dedup] Removed duplicate ${type} section`);
-      }
-    });
-  });
-
-  // Also check for duplicate H2 headings with same text
-  const h2Map = new Map<string, Element>();
-  body.querySelectorAll('h2').forEach(h2 => {
-    const text = h2.textContent?.trim().toLowerCase() || '';
-    if (h2Map.has(text)) {
-      // Found duplicate heading - remove the section
-      const parent = h2.parentElement;
-      if (parent && parent !== body) {
-        parent.remove();
-        console.log(`[Dedup] Removed duplicate section with heading: ${text}`);
-      }
-    } else {
-      h2Map.set(text, h2);
-    }
-  });
-
-  return body.innerHTML;
 };
 
 // ==================== INTERNAL LINK PROCESSING ====================
@@ -461,9 +633,7 @@ export const processInternalLinkCandidates = (
   const usedSlugs = new Set<string>();
 
   processedContent = processedContent.replace(linkPattern, (match, anchorText) => {
-    if (linkCount >= maxLinks) {
-      return anchorText; // Just return text without link
-    }
+    if (linkCount >= maxLinks) return anchorText;
 
     const targetPage = findBestMatchingPage(anchorText.trim(), availablePages, usedSlugs);
     
@@ -474,7 +644,7 @@ export const processInternalLinkCandidates = (
       return `<a href="${url}" title="${targetPage.title}">${anchorText}</a>`;
     }
     
-    return anchorText; // No match found, return plain text
+    return anchorText;
   });
 
   console.log(`[Internal Links] Added ${linkCount} links`);
@@ -487,28 +657,25 @@ function findBestMatchingPage(
   usedSlugs: Set<string>
 ): { title: string; slug: string } | null {
   const anchorWords = anchorText.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  
   if (anchorWords.length === 0) return null;
 
   let bestMatch: { title: string; slug: string } | null = null;
   let bestScore = 0;
 
   for (const page of pages) {
-    // Skip already used pages
     if (usedSlugs.has(page.slug)) continue;
 
     const titleWords = page.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const slugWords = page.slug.toLowerCase().split('-').filter(w => w.length > 3);
     const allPageWords = [...titleWords, ...slugWords];
     
-    // Count matching words
     const matchingWords = anchorWords.filter(w => 
       allPageWords.some(pw => pw.includes(w) || w.includes(pw))
     );
     
     const score = matchingWords.length / Math.max(anchorWords.length, 1);
     
-    if (score > bestScore && score >= 0.4) { // 40% match threshold
+    if (score > bestScore && score >= 0.4) {
       bestScore = score;
       bestMatch = page;
     }
@@ -517,7 +684,7 @@ function findBestMatchingPage(
   return bestMatch;
 }
 
-// ==================== IMAGE EXTRACTION ====================
+// ==================== IMAGE HANDLING ====================
 
 export const extractImagesFromHtml = (html: string): Array<{ src: string; alt: string; title?: string }> => {
   const images: Array<{ src: string; alt: string; title?: string }> = [];
@@ -526,7 +693,7 @@ export const extractImagesFromHtml = (html: string): Array<{ src: string; alt: s
 
   doc.querySelectorAll('img').forEach(img => {
     const src = img.getAttribute('src');
-    if (src && !src.startsWith('data:image/svg')) { // Skip SVG data URIs
+    if (src && !src.startsWith('data:image/svg')) {
       images.push({
         src,
         alt: img.getAttribute('alt') || '',
@@ -535,7 +702,6 @@ export const extractImagesFromHtml = (html: string): Array<{ src: string; alt: s
     }
   });
 
-  // Also extract video iframes (YouTube, Vimeo)
   doc.querySelectorAll('iframe').forEach(iframe => {
     const src = iframe.getAttribute('src') || '';
     if (src.includes('youtube.com') || src.includes('vimeo.com')) {
@@ -550,8 +716,6 @@ export const extractImagesFromHtml = (html: string): Array<{ src: string; alt: s
   return images;
 };
 
-// ==================== IMAGE INJECTION ====================
-
 export const injectImagesIntoContent = (
   content: string,
   images: Array<{ src: string; alt: string; title?: string }>,
@@ -563,17 +727,14 @@ export const injectImagesIntoContent = (
   const doc = parser.parseFromString(content, 'text/html');
   const body = doc.body;
   
-  // Get all H2 elements for distribution
   const h2s = Array.from(body.querySelectorAll('h2'));
   const imagesToInject = images.slice(0, maxImages);
   
-  // Distribute images after H2s
   imagesToInject.forEach((img, idx) => {
     const targetH2Index = idx % Math.max(h2s.length, 1);
     const targetH2 = h2s[targetH2Index];
     
     if (targetH2) {
-      // Create image element
       const imgEl = doc.createElement('img');
       imgEl.src = img.src;
       imgEl.alt = img.alt;
@@ -581,12 +742,10 @@ export const injectImagesIntoContent = (
       imgEl.loading = 'lazy';
       imgEl.style.cssText = 'width: 100%; height: auto; border-radius: 12px; margin: 1.5rem 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);';
       
-      // Create figure wrapper
       const figure = doc.createElement('figure');
       figure.style.cssText = 'margin: 2rem 0; text-align: center;';
       figure.appendChild(imgEl);
       
-      // Add caption if alt text exists
       if (img.alt && img.alt !== 'Embedded video') {
         const caption = doc.createElement('figcaption');
         caption.style.cssText = 'margin-top: 0.5rem; font-size: 0.875rem; color: #64748b; font-style: italic;';
@@ -594,7 +753,6 @@ export const injectImagesIntoContent = (
         figure.appendChild(caption);
       }
       
-      // Insert after H2's next sibling (after first paragraph)
       const nextSibling = targetH2.nextElementSibling;
       if (nextSibling?.nextSibling) {
         nextSibling.parentNode?.insertBefore(figure, nextSibling.nextSibling);
@@ -615,26 +773,66 @@ export const generateComparisonTableHtml = (
   rows: string[][],
   caption?: string
 ): string => {
-  const headerHtml = headers.map(h => `<th style="padding: 1rem; text-align: left; font-weight: 700; background: #f1f5f9; border-bottom: 2px solid #e2e8f0;">${h}</th>`).join('');
+  const headerHtml = headers.map(h => `<th style="padding: 1.25rem; color: white; text-align: left; font-weight: 700;">${h}</th>`).join('');
   
   const rowsHtml = rows.map((row, idx) => {
-    const bgColor = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const cellsHtml = row.map(cell => `<td style="padding: 1rem; border-bottom: 1px solid #e2e8f0;">${cell}</td>`).join('');
+    const bgColor = idx % 2 === 0 ? '#F8FAFC' : 'white';
+    const cellsHtml = row.map((cell, cellIdx) => `<td style="padding: 1rem; border-bottom: 1px solid #E2E8F0;${cellIdx === 0 ? ' font-weight: 600;' : ''}">${cell}</td>`).join('');
     return `<tr style="background: ${bgColor};">${cellsHtml}</tr>`;
   }).join('');
 
   return `
-<div class="sota-table-container" style="overflow-x: auto; margin: 2rem 0;">
+<div style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
   ${caption ? `<p style="font-weight: 600; margin-bottom: 1rem; color: #1e293b;">${caption}</p>` : ''}
-  <table style="width: 100%; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+  <table style="width: 100%; border-collapse: collapse; background: white;">
     <thead>
-      <tr>${headerHtml}</tr>
+      <tr style="background: linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%);">${headerHtml}</tr>
     </thead>
     <tbody>
       ${rowsHtml}
     </tbody>
   </table>
 </div>`;
+};
+
+// ==================== READABILITY ====================
+
+export const escapeRegExp = (string: string) => {
+  return string.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+};
+
+export const calculateFleschReadability = (text: string): number => {
+  if (!text || text.trim().length === 0) return 100;
+  const words: string[] = text.match(/\b\w+\b/g) || [];
+  const wordCount = words.length;
+  if (wordCount < 100) return 100;
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  const sentenceCount = sentences.length || 1;
+  const syllables = words.reduce((acc, word) => {
+    let currentWord = word.toLowerCase();
+    if (currentWord.length <= 3) return acc + 1;
+    currentWord = currentWord.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
+    const syllableMatches = currentWord.match(/[aeiouy]{1,2}/g);
+    return acc + (syllableMatches ? syllableMatches.length : 0);
+  }, 0);
+  const score = 206.835 - 1.015 * (wordCount / sentenceCount) - 84.6 * (syllables / wordCount);
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
+export const getReadabilityVerdict = (score: number): { verdict: string, color: string } => {
+  if (score >= 90) return { verdict: 'Very Easy', color: '#10B981' };
+  if (score >= 80) return { verdict: 'Easy', color: '#10B981' };
+  if (score >= 70) return { verdict: 'Fairly Easy', color: '#34D399' };
+  if (score >= 60) return { verdict: 'Standard', color: '#FBBF24' };
+  if (score >= 50) return { verdict: 'Fairly Difficult', color: '#F59E0B' };
+  if (score >= 30) return { verdict: 'Difficult', color: '#EF4444' };
+  return { verdict: 'Very Difficult', color: '#DC2626' };
+};
+
+export const extractYouTubeID = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
 };
 
 // ==================== EXPORTS ====================
@@ -645,6 +843,7 @@ export default {
   countWords,
   enforceWordCount,
   normalizeGeneratedContent,
+  convertMarkdownTablesToHtml,
   generateVerificationFooterHtml,
   performSurgicalUpdate,
   getGuaranteedYoutubeVideos,
@@ -652,49 +851,10 @@ export default {
   isBlockedDomain,
   sanitizeContentHtml,
   removeDuplicateSections,
+  smartPostProcess,
+  extractFaqForSchema,
   processInternalLinkCandidates,
   extractImagesFromHtml,
   injectImagesIntoContent,
   generateComparisonTableHtml,
-};
-
-import { GeneratedContent, SiteInfo, SitemapPage } from "./types";
-import { TARGET_MAX_WORDS, TARGET_MIN_WORDS } from "./constants";
-
-export const escapeRegExp = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-}
-
-export const calculateFleschReadability = (text: string): number => {
-    if (!text || text.trim().length === 0) return 100;
-    const words: string[] = text.match(/\b\w+\b/g) || [];
-    const wordCount = words.length;
-    if (wordCount < 100) return 100;
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-    const sentenceCount = sentences.length || 1;
-    const syllables = words.reduce((acc, word) => {
-        let currentWord = word.toLowerCase();
-        if (currentWord.length <= 3) return acc + 1;
-        currentWord = currentWord.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
-        const syllableMatches = currentWord.match(/[aeiouy]{1,2}/g);
-        return acc + (syllableMatches ? syllableMatches.length : 0);
-    }, 0);
-    const score = 206.835 - 1.015 * (wordCount / sentenceCount) - 84.6 * (syllables / wordCount);
-    return Math.max(0, Math.min(100, Math.round(score)));
-};
-
-export const getReadabilityVerdict = (score: number): { verdict: string, color: string } => {
-    if (score >= 90) return { verdict: 'Very Easy', color: '#10B981' };
-    if (score >= 80) return { verdict: 'Easy', color: '#10B981' };
-    if (score >= 70) return { verdict: 'Fairly Easy', color: '#34D399' };
-    if (score >= 60) return { verdict: 'Standard', color: '#FBBF24' };
-    if (score >= 50) return { verdict: 'Fairly Difficult', color: '#F59E0B' };
-    if (score >= 30) return { verdict: 'Difficult', color: '#EF4444' };
-    return { verdict: 'Very Difficult', color: '#DC2626' };
-};
-
-export const extractYouTubeID = (url: string): string | null => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
 };
