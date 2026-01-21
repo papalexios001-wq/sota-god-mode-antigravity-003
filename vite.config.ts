@@ -13,15 +13,11 @@ export default defineConfig({
   
   build: {
     target: 'esnext',
-    minify: 'esbuild',
-    sourcemap: false,
     outDir: 'dist',
-    assetsDir: 'assets',
-    
+    sourcemap: false,
+    minify: 'esbuild',
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-      },
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
@@ -29,31 +25,13 @@ export default defineConfig({
         },
       },
     },
-    
-    // Increase chunk size warning limit for AI SDKs
-    chunkSizeWarningLimit: 1000,
-  },
-  
-  server: {
-    port: 3000,
-    host: true,
-  },
-  
-  preview: {
-    port: 4173,
-    host: true,
-  },
-  
-  optimizeDeps: {
-    include: ['react', 'react-dom'],
-    exclude: ['@anthropic-ai/sdk'],
   },
   
   define: {
     'process.env': {},
   },
   
-  esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' },
+  optimizeDeps: {
+    exclude: ['@anthropic-ai/sdk'],
   },
 });
