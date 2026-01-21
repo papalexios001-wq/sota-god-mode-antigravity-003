@@ -1,6 +1,7 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - PROMPT SUITE v12.0
+// SOTA WP CONTENT OPTIMIZER PRO - PROMPT SUITE v12.1
 // =============================================================================
+// CRITICAL: All template keys support both snake_case AND camelCase for compatibility
 
 export interface PromptTemplate {
   systemInstruction: string;
@@ -225,9 +226,52 @@ DISTRIBUTION:
 - 1-2 links in conclusion
 `;
 
-// ==================== PROMPT TEMPLATES ====================
-export const PROMPT_TEMPLATES: Record<string, PromptTemplate> = {
+// ==================== CORE PROMPT TEMPLATES ====================
+const CORE_TEMPLATES: Record<string, PromptTemplate> = {
 
+  // ==================== CONTENT STRATEGY GENERATOR (NEW) ====================
+  content_strategy_generator: {
+    systemInstruction: `You are a content strategy expert. Analyze the topic and create a comprehensive content strategy.
+
+OUTPUT FORMAT (JSON):
+{
+  "targetAudience": "Primary audience description",
+  "searchIntent": "informational|transactional|navigational|commercial",
+  "contentAngle": "Unique angle for this content",
+  "competitorAnalysis": "Brief analysis of competition",
+  "keyMessages": ["Message 1", "Message 2", "Message 3"],
+  "contentStructure": {
+    "introduction": "Hook strategy",
+    "mainSections": ["Section 1", "Section 2", "Section 3"],
+    "conclusion": "CTA strategy"
+  },
+  "differentiators": ["What makes this content unique"],
+  "estimatedWordCount": 2500
+}`,
+
+    userPrompt: (
+      topic: string = "",
+      semanticKeywords: string[] = [],
+      serpData: unknown[] = [],
+      contentType: string = "article"
+    ): string => {
+      const keywords = semanticKeywords?.slice(0, 20).join(", ") || "None";
+      const serp = Array.isArray(serpData) 
+        ? serpData.slice(0, 5).map((s: any) => s?.title || "").filter(Boolean).join("; ") 
+        : "None";
+      
+      return `CREATE CONTENT STRATEGY:
+
+TOPIC: ${topic || "General topic"}
+TYPE: ${contentType}
+KEYWORDS: ${keywords}
+COMPETITOR TITLES: ${serp}
+
+Analyze and output JSON strategy.`;
+    }
+  },
+
+  // ==================== ULTRA SOTA ARTICLE WRITER ====================
   ultra_sota_article_writer: {
     systemInstruction: `You are an elite SEO content writer using Alex Hormozi + Tim Ferriss style.
 
@@ -244,22 +288,28 @@ OUTPUT: Clean HTML only. No markdown. 2500-3000 words.`,
     userPrompt: (
       articlePlan: string = "",
       semanticKeywords: string[] = [],
-      competitorGaps: string[] = [],
+      strategy: any = {},
       existingPages: ExistingPage[] = [],
-      neuronData: any = null,
-      recentNews: string[] = []
+      competitorGaps: string[] = [],
+      geoLocation: string | null = null,
+      neuronData: string | null = null
     ): string => {
       const keywords = semanticKeywords?.slice(0, 40).join(", ") || "None";
       const gaps = competitorGaps?.slice(0, 5).join("; ") || "None";
       const pages = existingPages?.slice(0, 20).map(p => p.title).join(", ") || "None";
+      const geo = geoLocation ? `\nGEO-TARGET: ${geoLocation}` : "";
+      const neuron = neuronData ? `\nNLP TERMS: ${neuronData.substring(0, 500)}` : "";
       
       return `WRITE ARTICLE:
 
 PLAN: ${articlePlan || "Comprehensive guide"}
+TARGET AUDIENCE: ${strategy?.targetAudience || "General"}
+SEARCH INTENT: ${strategy?.searchIntent || "Informational"}
+CONTENT ANGLE: ${strategy?.contentAngle || "Comprehensive coverage"}${geo}${neuron}
 
 KEYWORDS: ${keywords}
 
-GAPS: ${gaps}
+GAPS TO FILL: ${gaps}
 
 LINK TARGETS: ${pages}
 
@@ -280,6 +330,7 @@ OUTPUT: HTML only.`;
     }
   },
 
+  // ==================== GOD MODE AUTONOMOUS AGENT ====================
   god_mode_autonomous_agent: {
     systemInstruction: `You optimize existing content to enterprise quality.
 
@@ -323,6 +374,7 @@ OUTPUT: Full optimized HTML.`;
     }
   },
 
+  // ==================== DOM CONTENT POLISHER ====================
   dom_content_polisher: {
     systemInstruction: `You enhance text while PRESERVING HTML structure.
 
@@ -356,6 +408,7 @@ Keep ALL HTML tags. Only improve text. Output polished HTML.`;
     }
   },
 
+  // ==================== GOD MODE STRUCTURAL GUARDIAN ====================
   god_mode_structural_guardian: {
     systemInstruction: `You refine content while PRESERVING HTML structure.
 
@@ -379,7 +432,9 @@ BANNED: ${BANNED_AI_PHRASES.slice(0, 15).join(", ")}`,
       semanticKeywords: string[] = [],
       topic: string = ""
     ): string => {
-      const keywords = semanticKeywords?.slice(0, 15).join(", ") || "None";
+      const keywords = Array.isArray(semanticKeywords) 
+        ? semanticKeywords.slice(0, 15).join(", ") 
+        : "None";
       const html = htmlFragment?.substring(0, 12000) || "";
       
       return `REFINE (preserve structure):
@@ -394,6 +449,7 @@ Output refined HTML with identical structure.`;
     }
   },
 
+  // ==================== GOD MODE ULTRA INSTINCT ====================
   god_mode_ultra_instinct: {
     systemInstruction: `You transmute content to highest quality.
 
@@ -411,7 +467,9 @@ BANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
       semanticKeywords: string[] = [],
       topic: string = ""
     ): string => {
-      const keywords = semanticKeywords?.slice(0, 20).join(", ") || "None";
+      const keywords = Array.isArray(semanticKeywords)
+        ? semanticKeywords.slice(0, 20).join(", ")
+        : "None";
       const html = htmlFragment?.substring(0, 12000) || "";
       
       return `TRANSMUTE:
@@ -426,6 +484,7 @@ Output transmuted HTML.`;
     }
   },
 
+  // ==================== SOTA INTRO GENERATOR ====================
   sota_intro_generator: {
     systemInstruction: `You write hook introductions.
 
@@ -454,6 +513,7 @@ Output 100-200 word HTML intro.`;
     }
   },
 
+  // ==================== SOTA TAKEAWAYS GENERATOR ====================
   sota_takeaways_generator: {
     systemInstruction: `Extract KEY TAKEAWAYS from content.
 
@@ -463,8 +523,8 @@ Each must be:
 - Valuable`,
 
     userPrompt: (
-      content: string = "",
-      topic: string = ""
+      topic: string = "",
+      content: string = ""
     ): string => {
       const text = content?.substring(0, 5000) || "";
       return `EXTRACT TAKEAWAYS:
@@ -476,6 +536,7 @@ Output Key Takeaways HTML box with 5-7 insights.`;
     }
   },
 
+  // ==================== SOTA FAQ GENERATOR ====================
   sota_faq_generator: {
     systemInstruction: `Generate FAQ for Featured Snippets.
 
@@ -486,24 +547,22 @@ Each FAQ:
 
     userPrompt: (
       topic: string = "",
-      primaryKeyword: string = "",
-      content: string = "",
-      serpData: SerpDataItem[] = []
+      semanticKeywords: string[] = []
     ): string => {
-      const text = content?.substring(0, 3000) || "N/A";
-      const serp = serpData?.slice(0, 3).map(d => d.title).join("; ") || "None";
+      const keywords = Array.isArray(semanticKeywords)
+        ? semanticKeywords.slice(0, 15).join(", ")
+        : "None";
       
       return `GENERATE FAQ:
 
 Topic: ${topic}
-Keyword: ${primaryKeyword}
-Content: ${text}
-SERP: ${serp}
+Keywords: ${keywords}
 
 Output FAQ HTML with 5-7 questions.`;
     }
   },
 
+  // ==================== SOTA CONCLUSION GENERATOR ====================
   sota_conclusion_generator: {
     systemInstruction: `Write conclusions that drive action.
 
@@ -529,16 +588,22 @@ Output 150-200 word HTML conclusion.`;
     }
   },
 
+  // ==================== SEMANTIC KEYWORD GENERATOR ====================
   semantic_keyword_generator: {
     systemInstruction: `Generate semantic keyword clusters.
 
-Categories:
+OUTPUT FORMAT (JSON):
+{
+  "semanticKeywords": ["keyword1", "keyword2", ...]
+}
+
+Categories to include:
 1. Primary Variations (5-10)
 2. LSI Keywords (15-20)
 3. Question Keywords (10-15)
 4. Long-tail Keywords (15-20)
 
-Total: 60-90 keywords`,
+Total: 60-90 keywords in the array`,
 
     userPrompt: (
       primaryKeyword: string = "",
@@ -552,59 +617,76 @@ Primary: ${primaryKeyword}
 Topic: ${topic || primaryKeyword}
 SERP: ${serp}
 
-Output JSON array of 60-90 keywords.`;
+Output JSON: { "semanticKeywords": [...] } with 60-90 keywords.`;
     }
   },
 
+  // ==================== COMPETITOR GAP ANALYZER ====================
   competitor_gap_analyzer: {
     systemInstruction: `Identify content gaps competitors miss.
 
-Output:
-- Keyword/topic
-- Why valuable
-- Difficulty (1-10)
-- Content type`,
+OUTPUT FORMAT (JSON):
+{
+  "gaps": [
+    {
+      "topic": "Gap topic",
+      "reason": "Why valuable",
+      "difficulty": 5,
+      "contentType": "article|guide|listicle"
+    }
+  ]
+}
+
+Find 10-15 opportunities.`,
 
     userPrompt: (
       topic: string = "",
-      competitorContent: string[] = [],
+      competitorContent: unknown[] = [],
       existingTitles: string = ""
     ): string => {
-      const competitors = competitorContent?.slice(0, 5).join("; ") || "None";
+      const competitors = Array.isArray(competitorContent)
+        ? competitorContent.slice(0, 5).map((c: any) => c?.title || c).filter(Boolean).join("; ")
+        : "None";
       return `FIND GAPS:
 
 Topic: ${topic}
 Competitors: ${competitors}
 Our Content: ${existingTitles || "None"}
 
-Output JSON array of 10-15 opportunities.`;
+Output JSON: { "gaps": [...] } with 10-15 opportunities.`;
     }
   },
 
+  // ==================== SEO METADATA GENERATOR ====================
   seo_metadata_generator: {
     systemInstruction: `Generate SEO metadata.
 
-Title: 50-60 chars, keyword near start
-Meta: 140-155 chars, include benefit
-Slug: lowercase, hyphens, 3-5 words`,
+OUTPUT FORMAT (JSON):
+{
+  "seoTitle": "50-60 char title with keyword near start",
+  "metaDescription": "140-155 char description with benefit",
+  "slug": "lowercase-hyphenated-3-5-words"
+}`,
 
     userPrompt: (
       primaryKeyword: string = "",
       contentSummary: string = "",
       targetAudience: string = "",
       competitorTitles: string[] = [],
-      location: string = ""
+      location: string | null = null
     ): string => {
       const summary = contentSummary?.substring(0, 500) || "";
+      const geo = location ? `\nLocation: ${location}` : "";
       return `GENERATE METADATA:
 
 Keyword: ${primaryKeyword}
-Summary: ${summary}
+Summary: ${summary}${geo}
 
-Output JSON: { seoTitle, metaDescription, slug }`;
+Output JSON: { "seoTitle": "...", "metaDescription": "...", "slug": "..." }`;
     }
   },
 
+  // ==================== CLUSTER PLANNER ====================
   cluster_planner: {
     systemInstruction: `Create content cluster plans.
 
@@ -628,6 +710,7 @@ Output JSON: { pillarTitle, pillarKeyword, clusterPages: [{title, keyword, angle
     }
   },
 
+  // ==================== GENERATE INTERNAL LINKS ====================
   generate_internal_links: {
     systemInstruction: `Suggest internal links with rich anchor text.
 
@@ -650,6 +733,7 @@ Output JSON: [{ anchorText, targetSlug, contextSentence }]`;
     }
   },
 
+  // ==================== REFERENCE GENERATOR ====================
   reference_generator: {
     systemInstruction: `Generate authoritative references.
 
@@ -671,17 +755,30 @@ Output reference section HTML with 8-12 sources.`;
     }
   },
 
+  // ==================== HEALTH ANALYZER ====================
   health_analyzer: {
-    systemInstruction: `Analyze content health.
+    systemInstruction: `Analyze content health comprehensively.
 
-Check:
-1. Word count
-2. Keyword optimization
-3. Readability
-4. Structure
-5. Internal linking
+OUTPUT FORMAT (JSON):
+{
+  "healthScore": 75,
+  "wordCount": 1500,
+  "issues": [
+    {"type": "seo", "issue": "Missing H2 tags", "fix": "Add 3-5 H2 headings"}
+  ],
+  "recommendations": ["Add more internal links", "Include FAQ section"],
+  "critique": "Overall assessment of content quality",
+  "strengths": ["Good keyword usage", "Clear structure"],
+  "weaknesses": ["Thin content", "No schema markup"]
+}
 
-Score: 0-100`,
+Score: 0-100 based on:
+- Word count (target 2500+)
+- Keyword optimization
+- Readability
+- Structure (H2/H3)
+- Internal linking
+- Schema presence`,
 
     userPrompt: (
       url: string = "",
@@ -695,10 +792,11 @@ URL: ${url}
 Keyword: ${targetKeyword}
 Content: ${text}
 
-Output JSON: { healthScore, wordCount, issues: [{type, issue, fix}], recommendations }`;
+Output JSON with healthScore, wordCount, issues array, recommendations array, critique, strengths, and weaknesses.`;
     }
   },
 
+  // ==================== SOTA IMAGE ALT OPTIMIZER ====================
   sota_image_alt_optimizer: {
     systemInstruction: `Write SEO alt text.
 
@@ -706,7 +804,7 @@ Rules:
 - Describe image accurately
 - Include keyword naturally
 - 80-125 characters
-- No image of prefix`,
+- No "image of" prefix`,
 
     userPrompt: (
       images: ImageContext[] = [],
@@ -722,16 +820,18 @@ Output JSON: [{ index, altText }]`;
     }
   },
 
+  // ==================== JSON REPAIR ====================
   json_repair: {
-    systemInstruction: `Repair malformed JSON. Return ONLY valid JSON.`,
+    systemInstruction: `Repair malformed JSON. Return ONLY valid JSON, nothing else.`,
     userPrompt: (brokenJson: string = ""): string => {
       const json = brokenJson?.substring(0, 5000) || "{}";
-      return `FIX: ${json}
+      return `FIX THIS JSON AND RETURN ONLY VALID JSON:
 
-Output valid JSON only.`;
+${json}`;
     }
   },
 
+  // ==================== SCHEMA GENERATOR ====================
   schema_generator: {
     systemInstruction: `Generate valid JSON-LD schema markup for SEO.
 
@@ -751,6 +851,56 @@ Output valid JSON-LD schema markup.`;
   }
 };
 
+// ==================== CREATE ALIASES FOR BACKWARD COMPATIBILITY ====================
+// This ensures both snake_case and camelCase/lowercase versions work
+
+const createAliases = (templates: Record<string, PromptTemplate>): Record<string, PromptTemplate> => {
+  const result: Record<string, PromptTemplate> = { ...templates };
+  
+  // Define explicit aliases (lowercase no underscores -> snake_case)
+  const aliasMap: Record<string, string> = {
+    // Content generation
+    "contentstrategygenerator": "content_strategy_generator",
+    "ultrasotaarticlewriter": "ultra_sota_article_writer",
+    "godmodeautonomousagent": "god_mode_autonomous_agent",
+    "domcontentpolisher": "dom_content_polisher",
+    "godmodestructuralguardian": "god_mode_structural_guardian",
+    "godmodeultrainstinct": "god_mode_ultra_instinct",
+    
+    // Section generators
+    "sotaintrogenerator": "sota_intro_generator",
+    "sotatakeawaysgenerator": "sota_takeaways_generator",
+    "sotafaqgenerator": "sota_faq_generator",
+    "sotaconclusiongenerator": "sota_conclusion_generator",
+    
+    // SEO & Analysis
+    "semantickeywordgenerator": "semantic_keyword_generator",
+    "competitorgapanalyzer": "competitor_gap_analyzer",
+    "seometadatagenerator": "seo_metadata_generator",
+    "healthanalyzer": "health_analyzer",
+    
+    // Utilities
+    "clusterplanner": "cluster_planner",
+    "generateinternallinks": "generate_internal_links",
+    "referencegenerator": "reference_generator",
+    "sotaimagealtoptimizer": "sota_image_alt_optimizer",
+    "jsonrepair": "json_repair",
+    "schemagenerator": "schema_generator",
+  };
+  
+  // Add all aliases pointing to the original templates
+  for (const [alias, original] of Object.entries(aliasMap)) {
+    if (templates[original]) {
+      result[alias] = templates[original];
+    }
+  }
+  
+  return result;
+};
+
+// ==================== FINAL PROMPT TEMPLATES WITH ALIASES ====================
+export const PROMPT_TEMPLATES: Record<string, PromptTemplate> = createAliases(CORE_TEMPLATES);
+
 // ==================== BUILD PROMPT FUNCTION ====================
 export function buildPrompt(
   promptKey: keyof typeof PROMPT_TEMPLATES | string,
@@ -759,7 +909,9 @@ export function buildPrompt(
   const template = PROMPT_TEMPLATES[promptKey as keyof typeof PROMPT_TEMPLATES];
 
   if (!template) {
-    console.error("Unknown prompt key:", promptKey);
+    console.error(`[buildPrompt] Unknown prompt key: "${promptKey}"`);
+    console.error(`[buildPrompt] Available keys:`, Object.keys(PROMPT_TEMPLATES).join(", "));
+    
     return {
       systemInstruction: "You are a helpful assistant.",
       userPrompt: String(args[0] || ""),
@@ -779,7 +931,7 @@ export function buildPrompt(
       user: userPrompt
     };
   } catch (error) {
-    console.error("Error building prompt:", error);
+    console.error("[buildPrompt] Error building prompt:", error);
     return {
       systemInstruction: template.systemInstruction || "You are a helpful assistant.",
       userPrompt: String(args[0] || ""),
@@ -820,6 +972,22 @@ export function isValidPromptKey(key: string): key is keyof typeof PROMPT_TEMPLA
   return key in PROMPT_TEMPLATES;
 }
 
+// Utility to normalize prompt keys (for debugging)
+export function normalizePromptKey(key: string): string {
+  // Try exact match first
+  if (key in PROMPT_TEMPLATES) return key;
+  
+  // Try lowercase
+  const lower = key.toLowerCase();
+  if (lower in PROMPT_TEMPLATES) return lower;
+  
+  // Try snake_case conversion
+  const snake = key.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+  if (snake in PROMPT_TEMPLATES) return snake;
+  
+  return key;
+}
+
 export default {
   PROMPT_TEMPLATES,
   buildPrompt,
@@ -830,5 +998,6 @@ export default {
   PROMPT_CONSTANTS,
   containsBannedPhrase,
   getAvailablePromptKeys,
-  isValidPromptKey
+  isValidPromptKey,
+  normalizePromptKey
 };
