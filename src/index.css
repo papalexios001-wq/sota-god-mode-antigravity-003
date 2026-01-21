@@ -1,6 +1,6 @@
 /* =============================================================================
-   SOTA WP CONTENT OPTIMIZER PRO - DONEZO-INSPIRED DESIGN SYSTEM v12.0
-   Enterprise-Grade Modern Dashboard Theme
+   SOTA WP CONTENT OPTIMIZER PRO - ENTERPRISE DESIGN SYSTEM v12.0
+   Donezo-Inspired + Visual Supernova + SOTA Content Styling
    ============================================================================= */
 
 /* ==================== CSS VARIABLES - DONEZO INSPIRED ==================== */
@@ -43,12 +43,19 @@
   --accent-warning: #F59E0B;
   --accent-error: #EF4444;
   --accent-info: #3B82F6;
+  --accent-purple: #8B5CF6;
   
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, #166534 0%, #15803D 50%, #22C55E 100%);
   --gradient-card: linear-gradient(145deg, #1A2B22 0%, #142118 100%);
   --gradient-glow: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
   --gradient-hero: linear-gradient(180deg, #0F1A14 0%, #0A0F0D 100%);
+  --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --gradient-premium: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  --gradient-sunset: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   
   /* Borders */
   --border-primary: rgba(34, 197, 94, 0.15);
@@ -64,6 +71,8 @@
   --shadow-glow: 0 0 40px rgba(34, 197, 94, 0.2);
   --shadow-glow-sm: 0 0 20px rgba(34, 197, 94, 0.15);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(34, 197, 94, 0.1);
+  --shadow-neumorphic: 20px 20px 60px #0a0f0d, -20px -20px 60px #1a2b22;
+  --shadow-neumorphic-inset: inset 8px 8px 16px #0a0f0d, inset -8px -8px 16px #1a2b22;
   
   /* Spacing */
   --spacing-xs: 0.25rem;
@@ -638,14 +647,16 @@ a:hover {
   left: -100%;
 }
 
-.btn-secondary {
+.btn-secondary,
+.btn.btn-secondary {
   background: var(--bg-elevated);
   border: 1px solid var(--border-card);
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn.btn-secondary:hover {
   background: var(--bg-card-hover);
   border-color: var(--accent-primary);
   box-shadow: var(--shadow-md);
@@ -684,6 +695,16 @@ a:hover {
   height: 44px;
   padding: 0;
   border-radius: var(--radius-lg);
+}
+
+/* Danger Button */
+.btn-danger {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  box-shadow: var(--shadow-md), 0 0 20px rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger:hover {
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(239, 68, 68, 0.3);
 }
 
 /* ==================== FORMS - DONEZO STYLE ==================== */
@@ -1308,7 +1329,7 @@ a:hover {
   background: var(--bg-elevated);
 }
 
-/* ==================== REVIEW TABS ==================== */
+/* ==================== REVIEW MODAL SPECIFICS ==================== */
 
 .review-tabs {
   display: flex;
@@ -1329,35 +1350,584 @@ a:hover {
   overflow-y: auto;
 }
 
+/* ==================== LIVE PREVIEW - SOTA VISUAL ENGINE ==================== */
+
 .live-preview {
-  padding: var(--spacing-xl);
-  background: white;
+  padding: var(--spacing-2xl);
+  background: #FFFFFF;
   color: #1a1a1a;
   min-height: 500px;
   line-height: 1.8;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 1.1rem;
 }
 
-.live-preview h1, .live-preview h2, .live-preview h3,
-.live-preview h4, .live-preview h5, .live-preview h6 {
-  color: #1a1a1a;
+.live-preview h1 {
+  font-size: 2.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+  color: #0F172A;
+  font-family: var(--font-sans);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.live-preview h2 {
+  font-size: 1.875rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: #1E293B;
+  border-bottom: 2px solid #E2E8F0;
+  padding-bottom: 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 800;
+}
+
+.live-preview h3 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  color: #0F172A;
+  font-family: var(--font-sans);
+  font-weight: 700;
+}
+
+.live-preview h4 {
+  font-size: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #1E293B;
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 
 .live-preview p {
-  color: #374151;
+  font-size: 1.1rem;
+  line-height: 1.9;
+  color: #334155;
+  margin-bottom: 1.5rem;
 }
 
-.editor-tab-container {
-  height: 500px;
+.live-preview ul, 
+.live-preview ol {
+  margin-bottom: 1.5rem;
+  padding-left: 2rem;
 }
 
-.editor-tab-container .ql-container {
-  height: calc(100% - 42px);
-  font-size: var(--text-base);
+.live-preview li {
+  margin-bottom: 0.75rem;
+  color: #334155;
+  line-height: 1.7;
 }
 
-.editor-tab-container .ql-editor {
-  background: var(--bg-input);
-  color: var(--text-primary);
+.live-preview strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+.live-preview a {
+  color: #2563EB;
+  text-decoration: underline;
+  text-decoration-color: rgba(37, 99, 235, 0.3);
+  text-underline-offset: 2px;
+  transition: all 0.2s ease;
+}
+
+.live-preview a:hover {
+  color: #1D4ED8;
+  text-decoration-color: #1D4ED8;
+}
+
+.live-preview blockquote {
+  border-left: 4px solid #8B5CF6;
+  padding: 1.5rem 2rem;
+  margin: 2rem 0;
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-radius: 0 12px 12px 0;
+  font-style: italic;
+  color: #475569;
+}
+
+.live-preview img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 2rem 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Tables in Live Preview */
+.live-preview table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 2.5rem 0;
+  font-size: 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.live-preview thead {
+  background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+}
+
+.live-preview th {
+  padding: 1.25rem 1rem;
+  color: white;
+  font-weight: 700;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+
+.live-preview td {
+  padding: 1rem;
+  border-bottom: 1px solid #E5E7EB;
+  color: #334155;
+  background: white;
+}
+
+.live-preview tbody tr:hover td {
+  background: #F9FAFB;
+}
+
+.live-preview tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Code in Live Preview */
+.live-preview code {
+  background: #F1F5F9;
+  color: #7C3AED;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.live-preview pre {
+  background: #1E293B;
+  color: #E2E8F0;
+  padding: 1.5rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  margin: 2rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.live-preview pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+/* Animations for Live Preview Elements */
+.live-preview > * {
+  animation: sota-fade-in-up 0.5s ease-out forwards;
+}
+
+@keyframes sota-fade-in-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* ==================== SOTA GLASSMORPHISM UTILITIES ==================== */
+
+.sota-glass-panel,
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* ==================== SOTA NEUMORPHISM UTILITIES ==================== */
+
+.neumorphic-card {
+  background: #e0e5ec;
+  border-radius: 20px;
+  box-shadow: 20px 20px 60px #d1d5db, -20px -20px 60px #ffffff;
+}
+
+/* Dark theme neumorphism */
+.dark .neumorphic-card,
+.neumorphic-card-dark {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-neumorphic);
+}
+
+/* ==================== SOTA KEY TAKEAWAYS BOX ==================== */
+
+.key-takeaways-box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  margin: 2.5rem 0;
+  box-shadow: 0 10px 40px rgba(102, 126, 234, 0.25);
+}
+
+.key-takeaways-box h3 {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: white;
+}
+
+.key-takeaways-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.key-takeaways-box li {
+  margin-bottom: 0.875rem;
+  padding-left: 1.5rem;
+  position: relative;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.key-takeaways-box li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #10B981;
+  font-weight: bold;
+}
+
+/* ==================== SOTA COMPARISON TABLE ==================== */
+
+.sota-comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  margin: 2.5rem 0;
+}
+
+.sota-comparison-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.sota-comparison-table th {
+  padding: 1.25rem 1rem;
+  color: white;
+  font-weight: 700;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.sota-comparison-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #E5E7EB;
+  color: #334155;
+  background: white;
+}
+
+.sota-comparison-table tbody tr:hover td {
+  background: #F9FAFB;
+}
+
+.sota-comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Table Container for Responsiveness */
+.table-container,
+.sota-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 16px;
+  margin: 2rem 0;
+}
+
+/* ==================== SOTA REFERENCES SECTION ==================== */
+
+.sota-references-section,
+.references-section {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 3rem 0;
+  border: 1px solid #E2E8F0;
+}
+
+.sota-references-section h2,
+.references-section h2 {
+  color: #0F172A;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: none;
+  background: none;
+  -webkit-text-fill-color: #0F172A;
+}
+
+.sota-references-section ul,
+.references-section ul {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  columns: 1;
+}
+
+@media (min-width: 768px) {
+  .sota-references-section ul,
+  .references-section ul {
+    columns: 2;
+    column-gap: 2rem;
+  }
+}
+
+.sota-references-section li,
+.references-section li {
+  margin-bottom: 1rem;
+  break-inside: avoid;
+  color: #475569;
+}
+
+.sota-references-section a,
+.references-section a {
+  color: #2563EB;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sota-references-section a:hover,
+.references-section a:hover {
+  color: #1D4ED8;
+  text-decoration: underline;
+}
+
+/* ==================== SOTA FAQ ACCORDION ==================== */
+
+.faq-section {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 2.5rem 0;
+}
+
+.faq-section h2 {
+  color: #0F172A;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  border-bottom: none;
+  background: none;
+  -webkit-text-fill-color: #0F172A;
+}
+
+.faq-section details {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #E5E7EB;
+  transition: all 0.2s ease;
+}
+
+.faq-section details:hover {
+  border-color: #3B82F6;
+}
+
+.faq-section details[open] {
+  border-color: #3B82F6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.faq-section summary {
+  padding: 1.25rem;
+  cursor: pointer;
+  color: #0F172A;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.faq-section summary:hover {
+  background: #F8FAFC;
+}
+
+.faq-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-section summary::after {
+  content: "+";
+  color: #3B82F6;
+  font-size: 1.25rem;
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+.faq-section details[open] summary::after {
+  content: "−";
+}
+
+.faq-section details > div,
+.faq-section details > p {
+  padding: 0 1.25rem 1.25rem;
+  color: #475569;
+  line-height: 1.7;
+}
+
+/* ==================== SOTA PRO TIP BOX ==================== */
+
+.pro-tip-box {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border-left: 5px solid #F59E0B;
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.pro-tip-box strong {
+  color: #92400E;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.pro-tip-box p {
+  color: #78350F;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ==================== SOTA WARNING BOX ==================== */
+
+.warning-box {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  border-left: 5px solid #EF4444;
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.warning-box strong {
+  color: #991B1B;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.warning-box p {
+  color: #7F1D1D;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ==================== SOTA INFO BOX ==================== */
+
+.info-box {
+  background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+  border-left: 5px solid #3B82F6;
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.info-box strong {
+  color: #1E40AF;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.info-box p {
+  color: #1E3A8A;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ==================== SOTA SUCCESS BOX ==================== */
+
+.success-box {
+  background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+  border-left: 5px solid #10B981;
+  border-radius: 0 12px 12px 0;
+  padding: 1.5rem;
+  margin: 2rem 0;
+}
+
+.success-box strong {
+  color: #065F46;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.success-box p {
+  color: #047857;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ==================== TEXT GRADIENT UTILITIES ==================== */
+
+.text-gradient-primary {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-purple {
+  background: var(--gradient-purple);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ==================== BACKGROUND GRADIENT UTILITIES ==================== */
+
+.bg-gradient-soft {
+  background: var(--gradient-purple);
+}
+
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-success {
+  background: var(--gradient-success);
+}
+
+.bg-gradient-warning {
+  background: var(--gradient-warning);
+}
+
+.bg-gradient-info {
+  background: var(--gradient-info);
 }
 
 /* ==================== RANK GUARDIAN ==================== */
@@ -1540,6 +2110,22 @@ input:checked + .slider:before {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
+}
+
+/* ==================== EDITOR TAB CONTAINER ==================== */
+
+.editor-tab-container {
+  height: 500px;
+}
+
+.editor-tab-container .ql-container {
+  height: calc(100% - 42px);
+  font-size: var(--text-base);
+}
+
+.editor-tab-container .ql-editor {
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 /* ==================== FOOTER - DONEZO STYLE ==================== */
@@ -1763,7 +2349,7 @@ input:checked + .slider:before {
   flex-wrap: wrap;
 }
 
-/* Floating Orbs - Enhanced */
+/* Floating Orbs */
 .floating-orb {
   position: absolute;
   border-radius: 50%;
@@ -1950,6 +2536,69 @@ input:checked + .slider:before {
   color: var(--accent-primary);
 }
 
+/* ==================== QUILL EDITOR OVERRIDES ==================== */
+
+.ql-toolbar.ql-snow {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.ql-container.ql-snow {
+  border: 1px solid var(--border-subtle);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.ql-toolbar.ql-snow .ql-stroke {
+  stroke: var(--text-secondary);
+}
+
+.ql-toolbar.ql-snow .ql-fill {
+  fill: var(--text-secondary);
+}
+
+.ql-toolbar.ql-snow button:hover .ql-stroke {
+  stroke: var(--accent-primary);
+}
+
+.ql-toolbar.ql-snow button:hover .ql-fill {
+  fill: var(--accent-primary);
+}
+
+.ql-toolbar.ql-snow .ql-picker-label {
+  color: var(--text-secondary);
+}
+
+.ql-toolbar.ql-snow .ql-picker-options {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+}
+
+/* ==================== SKELETON LOADER ==================== */
+
+.skeleton-loader {
+  background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-card-hover) 50%, var(--bg-elevated) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ==================== ENDPOINT STATUS ==================== */
+
+.endpoint-status-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
 /* ==================== RESPONSIVE DESIGN ==================== */
 
 @media (max-width: 1200px) {
@@ -2038,6 +2687,29 @@ input:checked + .slider:before {
     border-radius: var(--radius-xl);
     margin: var(--spacing-md);
   }
+  
+  /* Mobile Live Preview Adjustments */
+  .live-preview {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  .live-preview h2 {
+    font-size: 1.5rem;
+  }
+  
+  .live-preview h3 {
+    font-size: 1.25rem;
+  }
+  
+  .key-takeaways-box {
+    padding: 1.5rem;
+  }
+  
+  .sota-references-section ul,
+  .references-section ul {
+    columns: 1;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2059,6 +2731,10 @@ input:checked + .slider:before {
     padding: 0.875rem 1.5rem;
     font-size: var(--text-sm);
   }
+  
+  .live-preview {
+    padding: 0.75rem;
+  }
 }
 
 /* ==================== UTILITY CLASSES ==================== */
@@ -2079,6 +2755,17 @@ input:checked + .slider:before {
 .mb-3 { margin-bottom: var(--spacing-lg); }
 .mb-4 { margin-bottom: var(--spacing-xl); }
 
+.mr-1 { margin-right: var(--spacing-sm); }
+.mr-2 { margin-right: var(--spacing-md); }
+.ml-1 { margin-left: var(--spacing-sm); }
+.ml-2 { margin-left: var(--spacing-md); }
+
+.p-0 { padding: 0; }
+.p-1 { padding: var(--spacing-sm); }
+.p-2 { padding: var(--spacing-md); }
+.p-3 { padding: var(--spacing-lg); }
+.p-4 { padding: var(--spacing-xl); }
+
 .success { color: var(--accent-success); }
 .warning { color: var(--accent-warning); }
 .error { color: var(--accent-error); }
@@ -2086,22 +2773,55 @@ input:checked + .slider:before {
 
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
 .items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
 .justify-center { justify-content: center; }
 .justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
 .gap-1 { gap: var(--spacing-sm); }
 .gap-2 { gap: var(--spacing-md); }
 .gap-3 { gap: var(--spacing-lg); }
 .gap-4 { gap: var(--spacing-xl); }
 
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.min-h-screen { min-height: 100vh; }
+
 .hidden { display: none; }
 .visible { visibility: visible; }
 .invisible { visibility: hidden; }
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+
+.rounded { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+.shadow { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-glow { box-shadow: var(--shadow-glow); }
 
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .animate-pulse {
@@ -2113,42 +2833,118 @@ input:checked + .slider:before {
   50% { opacity: 0.5; }
 }
 
-/* ==================== QUILL EDITOR OVERRIDES ==================== */
-
-.ql-toolbar.ql-snow {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
-.ql-container.ql-snow {
-  border: 1px solid var(--border-subtle);
-  border-top: none;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+.animate-bounce {
+  animation: bounce 1s infinite;
 }
 
-.ql-toolbar.ql-snow .ql-stroke {
-  stroke: var(--text-secondary);
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
 }
 
-.ql-toolbar.ql-snow .ql-fill {
-  fill: var(--text-secondary);
+/* ==================== PRINT STYLES ==================== */
+
+@media print {
+  .app-header,
+  .sidebar,
+  .btn,
+  .modal-overlay {
+    display: none !important;
+  }
+  
+  .main-content {
+    padding: 0;
+    background: white;
+  }
+  
+  .live-preview {
+    box-shadow: none;
+    padding: 0;
+  }
 }
 
-.ql-toolbar.ql-snow button:hover .ql-stroke {
-  stroke: var(--accent-primary);
+/* ==================== ACCESSIBILITY ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.ql-toolbar.ql-snow button:hover .ql-fill {
-  fill: var(--accent-primary);
+/* Focus Styles for Accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
-.ql-toolbar.ql-snow .ql-picker-label {
-  color: var(--text-secondary);
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
-.ql-toolbar.ql-snow .ql-picker-options {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-md);
+/* Skip Link for Accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  z-index: 9999;
+  transition: top var(--transition-fast);
 }
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ==================== HIGH CONTRAST MODE ==================== */
+
+@media (prefers-contrast: high) {
+  :root {
+    --border-subtle: rgba(255, 255, 255, 0.3);
+    --border-card: rgba(255, 255, 255, 0.4);
+  }
+  
+  .btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* ==================== DARK MODE FORCED (Already Default) ==================== */
+
+@media (prefers-color-scheme: light) {
+  /* Override if needed - currently app is dark-mode only */
+}
+
+/* ==================== SELECTION STYLES ==================== */
+
+::selection {
+  background: var(--accent-primary);
+  color: white;
+}
+
+::-moz-selection {
+  background: var(--accent-primary);
+  color: white;
+}
+
+/* ==================== END OF FILE ==================== */
