@@ -599,7 +599,91 @@ export const sanitizeContentHtml = (html: string): string => {
 
 export const escapeRegExp = (string: string): string => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  
 };
+
+// ==================== SEMANTIC KEYWORD EXPANSION ====================
+// Enterprise-grade semantic keyword matching for natural internal linking
+const SEMANTIC_EXPANSIONS: Record<string, string[]> = {
+  // Health & Wellness
+  'health': ['wellness', 'wellbeing', 'fitness', 'medical', 'healthcare'],
+  'diet': ['nutrition', 'eating', 'food', 'dietary', 'meal'],
+  'exercise': ['workout', 'training', 'fitness', 'physical activity'],
+  'weight': ['pounds', 'kilos', 'body mass', 'bmi'],
+  'sleep': ['rest', 'insomnia', 'slumber', 'bedtime'],
+  
+  // Business & Finance
+  'business': ['company', 'enterprise', 'corporation', 'firm'],
+  'money': ['finance', 'funds', 'capital', 'cash', 'currency'],
+  'investment': ['investing', 'portfolio', 'stocks', 'assets'],
+  'marketing': ['advertising', 'promotion', 'branding', 'sales'],
+  
+  // Technology
+  'software': ['application', 'app', 'program', 'tool'],
+  'computer': ['pc', 'laptop', 'desktop', 'machine'],
+  'internet': ['web', 'online', 'digital', 'cyber'],
+  'data': ['information', 'analytics', 'metrics', 'statistics'],
+  
+  // Common verbs
+  'improve': ['enhance', 'boost', 'increase', 'optimize'],
+  'reduce': ['decrease', 'lower', 'minimize', 'cut'],
+  'create': ['build', 'make', 'develop', 'establish'],
+  'learn': ['study', 'understand', 'master', 'discover'],
+};
+
+// Expand keywords with semantic variations
+const expandKeywordsWithSemantics = (keywords: string[]): string[] => {
+  const expanded = new Set<string>(keywords);
+  
+  for (const keyword of keywords) {
+    const lowerKeyword = keyword.toLowerCase();
+    
+    // Add direct semantic expansions
+    if (SEMANTIC_EXPANSIONS[lowerKeyword]) {
+      SEMANTIC_EXPANSIONS[lowerKeyword].forEach(syn => expanded.add(syn));
+    }
+    
+    // Check if keyword contains any semantic root
+    for (const [root, synonyms] of Object.entries(SEMANTIC_EXPANSIONS)) {
+      if (lowerKeyword.includes(root)) {
+        synonyms.forEach(syn => expanded.add(syn));
+      }
+    }
+  }
+  
+  return Array.from(expanded);
+};
+
+// Generate diverse anchor text variations
+const generateAnchorVariations = (phrase: string, pageTitle: string): string[] => {
+  const variations: string[] = [phrase];
+  
+  // Add title-based variation
+  if (pageTitle && pageTitle.length < 50) {
+    variations.push(pageTitle.toLowerCase());
+  }
+  
+  // Add shortened versions (first 2-3 words)
+  const words = phrase.split(' ');
+  if (words.length > 2) {
+    variations.push(words.slice(0, 2).join(' '));
+    if (words.length > 3) {
+      variations.push(words.slice(0, 3).join(' '));
+    }
+  }
+  
+  return variations;
+};
+
+// Calculate content zone for link distribution
+const getContentZone = (index: number, total: number): 'intro' | 'body' | 'conclusion' => {
+  const position = index / total;
+  if (position < 0.2) return 'intro';
+  if (position > 0.8) return 'conclusion';
+  return 'body';
+};
+
 
 // ==================== FORCE NATURAL INTERNAL LINKS ====================
 // This is the CRITICAL function that FORCES links to be embedded naturally
@@ -673,9 +757,11 @@ export const forceNaturalInternalLinks = (
       if (i < titleWords.length - 2) {
         phrases.push(`${titleWords[i]} ${titleWords[i + 1]} ${titleWords[i + 2]}`);
       }
+          // Apply semantic expansion to keywords for better matching
+    const baseKeywords = [...new Set([...titleWords, ...slugWords, ...phrases])];
+    const keywords = expandKeywordsWithSemantics(baseKeywords);
     }
     
-    const keywords = [...new Set([...titleWords, ...slugWords, ...phrases])];
     if (keywords.length > 0) {
       // Higher priority for more specific pages (longer titles)
       const priority = page.title.split(' ').length;
@@ -693,6 +779,9 @@ export const forceNaturalInternalLinks = (
     if (linksAdded >= targetLinks) break;
     
     const text = container.textContent?.toLowerCase() || '';
+        // Calculate zone for intelligent link distribution
+    const containerIndex = textContainers.indexOf(container);
+    const zone = getContentZone(containerIndex, textContainers.length);
     const originalHtml = container.innerHTML;
     
     // Find the best matching page for this paragraph
