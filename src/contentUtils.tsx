@@ -871,6 +871,7 @@ export const forceNaturalInternalLinks = (
       if (i < titleWords.length - 2) {
         phrases.push(`${titleWords[i]} ${titleWords[i + 1]} ${titleWords[i + 2]}`);
       }
+        }
 
       
     // Combine all keywords and expand with semantic variations
