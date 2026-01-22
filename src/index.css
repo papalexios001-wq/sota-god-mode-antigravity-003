@@ -1338,11 +1338,39 @@ a:hover {
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border-subtle);
   overflow-x: auto;
+     flex-wrap: wrap;
+  align-items: center;
+  min-height: 56px;
 }
+/* Enhanced Tab Button Styles - SOTA Enterprise Grade */
 
 .review-tabs .tab-btn {
-  padding: 0.625rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.review-tabs .tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+  border-color: var(--border-subtle);
+}
+
+.review-tabs .tab-btn.active {
+  color: var(--accent-primary);
+  background: linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(34,197,94,0.15);
 }
 
 .tab-content {
@@ -2576,6 +2604,59 @@ input:checked + .slider:before {
   border-radius: var(--radius-md);
 }
 
+
+/* Enhanced Editor Content Area - SOTA Enterprise Grade */
+.ql-editor {
+  min-height: 500px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+  background: var(--bg-deep);
+  padding: 2rem;
+}
+
+.ql-editor:focus {
+  outline: none;
+  background: var(--bg-surface);
+}
+
+.ql-editor p {
+  margin-bottom: 1rem;
+}
+
+.ql-editor h2, .ql-editor h3, .ql-editor h4 {
+  color: var(--text-primary);
+  margin: 1.5rem 0 1rem 0;
+  font-weight: 700;
+}
+
+.ql-editor a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-primary);
+}
+
+.ql-editor a:hover {
+  color: var(--accent-primary-hover);
+}
+
+.ql-editor blockquote {
+  border-left: 4px solid var(--accent-primary);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.ql-editor ul, .ql-editor ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.ql-editor li {
+  margin-bottom: 0.5rem;
+}
 /* ==================== SKELETON LOADER ==================== */
 
 .skeleton-loader {
