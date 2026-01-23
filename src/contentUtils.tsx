@@ -15,6 +15,7 @@ import {
 export interface ExistingPage {
   title: string;
   slug: string;
+  id?: string;
 }
 
 export interface AnchorValidationResult {
@@ -42,7 +43,6 @@ export interface CrawlResult {
 
 // ==================== ANCHOR TEXT VALIDATION CONSTANTS ====================
 
-// STRICT: Words that CANNOT start or end anchor text
 const ANCHOR_BOUNDARY_STOPWORDS = new Set([
   // Articles
   'the', 'a', 'an',
@@ -52,7 +52,7 @@ const ANCHOR_BOUNDARY_STOPWORDS = new Set([
   'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as',
   'into', 'through', 'during', 'before', 'after', 'above', 'below',
   'between', 'under', 'again', 'further', 'then', 'once', 'about', 'over',
-  // Be verbs (CRITICAL - these were causing "French Bulldogs are" problems)
+  // Be verbs
   'is', 'was', 'are', 'were', 'been', 'be', 'being', 'am',
   "isn't", "aren't", "wasn't", "weren't", "isn", "arent", "wasnt", "werent",
   // Have verbs
@@ -78,7 +78,6 @@ const ANCHOR_BOUNDARY_STOPWORDS = new Set([
   'own', 'same', 'than', 'if', 'unless', 'although', 'because', 'since', 'while',
 ]);
 
-// TOXIC: Generic anchors that DESTROY SEO value - INSTANT REJECTION
 const TOXIC_ANCHOR_PATTERNS = new Set([
   'click here', 'read more', 'learn more', 'find out more', 'find out',
   'check out', 'check it out', 'this article', 'this guide', 'this post',
@@ -88,29 +87,22 @@ const TOXIC_ANCHOR_PATTERNS = new Set([
   'see this', 'visit', 'visit here',
 ]);
 
-// REQUIRED: At least ONE of these words must appear for anchor to be valid
 const REQUIRED_DESCRIPTIVE_WORDS = new Set([
-  // Content type words
   'guide', 'tutorial', 'tips', 'strategies', 'techniques', 'methods', 'steps',
   'practices', 'approach', 'framework', 'system', 'process', 'checklist',
   'resources', 'tools', 'benefits', 'solutions', 'recommendations', 'insights',
   'overview', 'basics', 'fundamentals', 'essentials', 'introduction', 'advanced',
-  // Quality modifiers
   'best', 'complete', 'comprehensive', 'ultimate', 'proven', 'effective',
   'essential', 'professional', 'expert', 'beginner',
-  // Topic-related (general)
   'care', 'training', 'health', 'nutrition', 'grooming', 'behavior', 'breed',
   'puppy', 'dog', 'pet', 'animal', 'food', 'diet', 'exercise', 'wellness',
-  // Business/Marketing
   'marketing', 'seo', 'content', 'strategy', 'optimization', 'conversion',
   'analytics', 'growth', 'revenue', 'sales', 'business', 'startup',
-  // Information types
   'information', 'advice', 'secrets', 'mistakes', 'problems', 'issues', 'ways',
   'reasons', 'facts', 'myths', 'signs', 'symptoms', 'causes', 'treatments',
   'examples', 'templates', 'samples', 'ideas', 'inspiration',
 ]);
 
-// SEO power patterns that boost anchor quality score
 const SEO_POWER_PATTERNS = [
   { pattern: /\b(complete|comprehensive|ultimate|definitive)\s+\w+\s+guide\b/i, boost: 25 },
   { pattern: /\b(step[- ]by[- ]step|how[- ]to)\s+\w+/i, boost: 20 },
@@ -229,12 +221,22 @@ const stringSimilarity = (str1: string, str2: string): number => {
   return matches / longer.length;
 };
 
+/**
+ * Extract slug from URL
+ */
+export const extractSlugFromUrl = (url: string): string => {
+  try {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || '';
+  } catch {
+    const segments = url.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || url;
+  }
+};
+
 // ==================== STRICT ANCHOR TEXT VALIDATION ====================
 
-/**
- * STRICT anchor text validation - The CORE function that prevents bad anchors
- * This is called EVERYWHERE before injecting any link
- */
 export const validateAnchorTextStrict = (
   anchor: string,
   minWords: number = 4,
@@ -244,16 +246,14 @@ export const validateAnchorTextStrict = (
     return { valid: false, reason: 'Empty or invalid anchor text', score: 0 };
   }
 
-  // Clean the anchor
   const cleanAnchor = anchor.trim()
-    .replace(/[.,!?;:]+$/, '')  // Remove trailing punctuation
-    .replace(/^[.,!?;:\-–—"']+/, '')  // Remove leading punctuation
-    .replace(/\s+/g, ' ')  // Normalize whitespace
+    .replace(/[.,!?;:]+$/, '')
+    .replace(/^[.,!?;:\-–—"']+/, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
   const words = cleanAnchor.split(/\s+/).filter(w => w.length > 0);
 
-  // ========== CHECK 1: Word count (4-7 words STRICT) ==========
   if (words.length < minWords) {
     return { 
       valid: false, 
@@ -270,7 +270,6 @@ export const validateAnchorTextStrict = (
     };
   }
 
-  // ========== CHECK 2: Toxic/generic patterns - INSTANT FAIL ==========
   const anchorLower = cleanAnchor.toLowerCase();
   for (const toxic of TOXIC_ANCHOR_PATTERNS) {
     if (anchorLower.includes(toxic)) {
@@ -282,7 +281,6 @@ export const validateAnchorTextStrict = (
     }
   }
 
-  // ========== CHECK 3: First word CANNOT be a stopword ==========
   const firstWord = words[0].toLowerCase().replace(/[^a-z']/g, '');
   if (ANCHOR_BOUNDARY_STOPWORDS.has(firstWord)) {
     return { 
@@ -292,7 +290,6 @@ export const validateAnchorTextStrict = (
     };
   }
 
-  // ========== CHECK 4: Last word CANNOT be a stopword ==========
   const lastWord = words[words.length - 1].toLowerCase().replace(/[^a-z']/g, '');
   if (ANCHOR_BOUNDARY_STOPWORDS.has(lastWord)) {
     return { 
@@ -302,7 +299,6 @@ export const validateAnchorTextStrict = (
     };
   }
 
-  // ========== CHECK 5: Cannot be a sentence fragment ==========
   const fragmentPatterns = [
     /\b(is|are|was|were|isn't|aren't|wasn't|weren't)$/i,
     /\b(can|could|will|would|should|might|may|must)$/i,
@@ -324,7 +320,6 @@ export const validateAnchorTextStrict = (
     }
   }
 
-  // ========== CHECK 6: Cannot start with bad patterns ==========
   const badStartPatterns = [
     /^(and|but|or|so|yet|for|nor)\s/i,
     /^(that|which|who|whom|whose|when|where|why|how)\s/i,
@@ -342,7 +337,6 @@ export const validateAnchorTextStrict = (
     }
   }
 
-  // ========== CHECK 7: Must contain at least one descriptive word ==========
   const hasDescriptiveWord = words.some(w => 
     REQUIRED_DESCRIPTIVE_WORDS.has(w.toLowerCase().replace(/[^a-z]/g, ''))
   );
@@ -355,7 +349,6 @@ export const validateAnchorTextStrict = (
     };
   }
 
-  // ========== CHECK 8: Should have at least 2 meaningful words ==========
   const meaningfulWords = words.filter(w => 
     !ANCHOR_BOUNDARY_STOPWORDS.has(w.toLowerCase().replace(/[^a-z]/g, '')) &&
     w.length > 2
@@ -369,14 +362,11 @@ export const validateAnchorTextStrict = (
     };
   }
 
-  // ========== CALCULATE QUALITY SCORE ==========
-  let score = 50; // Base score for valid anchor
+  let score = 50;
   
-  // Word count bonus (4-6 ideal)
   if (words.length >= 4 && words.length <= 6) score += 15;
   else if (words.length === 7) score += 8;
   
-  // SEO power pattern bonus
   for (const { pattern, boost } of SEO_POWER_PATTERNS) {
     if (pattern.test(cleanAnchor)) {
       score += boost;
@@ -384,7 +374,6 @@ export const validateAnchorTextStrict = (
     }
   }
   
-  // Descriptive word density bonus
   const descriptiveCount = words.filter(w =>
     REQUIRED_DESCRIPTIVE_WORDS.has(w.toLowerCase().replace(/[^a-z]/g, ''))
   ).length;
@@ -393,9 +382,6 @@ export const validateAnchorTextStrict = (
   return { valid: true, reason: 'Passes all validation checks', score: Math.min(100, score) };
 };
 
-/**
- * Validate and potentially fix anchor text
- */
 export const validateAndFixAnchor = (
   anchor: string
 ): { valid: boolean; anchor: string; reason: string } => {
@@ -405,16 +391,13 @@ export const validateAndFixAnchor = (
     return { valid: true, anchor: anchor.trim(), reason: 'Valid' };
   }
   
-  // Try to fix common issues
   let fixed = anchor.trim();
   const words = fixed.split(/\s+/);
   
-  // Remove leading stopwords
   while (words.length > 4 && ANCHOR_BOUNDARY_STOPWORDS.has(words[0].toLowerCase().replace(/[^a-z]/g, ''))) {
     words.shift();
   }
   
-  // Remove trailing stopwords
   while (words.length > 4 && ANCHOR_BOUNDARY_STOPWORDS.has(words[words.length - 1].toLowerCase().replace(/[^a-z]/g, ''))) {
     words.pop();
   }
@@ -539,7 +522,7 @@ export const normalizeGeneratedContent = (html: string): string => {
   return normalized;
 };
 
-// ==================== MARKDOWN TABLE TO HTML CONVERTER ====================
+// ==================== MARKDOWN TABLE TO HTML ====================
 
 export const convertMarkdownTablesToHtml = (content: string): string => {
   const tablePattern = /(?:^|\n)(\|[^\n]+\|\n)(\|[-:|\s]+\|\n)((?:\|[^\n]+\|\n?)+)/gm;
@@ -585,22 +568,16 @@ export const convertMarkdownTablesToHtml = (content: string): string => {
 </div>`;
     
     result = result.replace(fullMatch, htmlTable);
-    console.log('[Table Converter] Converted markdown table to HTML');
   }
   
-  // Clean up any remaining markdown table remnants
   result = result.replace(/\|---\|---\|---\|/g, '');
   result = result.replace(/\|\s*\|\s*\|\s*\|/g, '');
   
   return result;
 };
 
-// ==================== LINK CANDIDATE PROCESSING (STRICT) ====================
+// ==================== LINK CANDIDATE PROCESSING ====================
 
-/**
- * Process [LINK_CANDIDATE: anchor text] markers with STRICT validation
- * Only injects links with valid anchor text - rejects bad anchors
- */
 export const processLinkCandidatesStrict = (
   content: string,
   availablePages: ExistingPage[],
@@ -613,23 +590,20 @@ export const processLinkCandidatesStrict = (
   const acceptedAnchors: string[] = [];
   const usedSlugs = new Set<string>();
 
-  // Sort pages by title length (longer = more specific = higher priority)
   const sortedPages = [...availablePages].sort((a, b) => b.title.length - a.title.length);
 
   const processedContent = content.replace(linkCandidateRegex, (match, anchorText) => {
     const anchor = anchorText.trim();
 
-    // STRICT VALIDATION - This is the key
     const validation = validateAnchorTextStrict(anchor);
 
     if (!validation.valid) {
       console.warn(`[LinkProcessor] ❌ REJECTED: "${anchor}" - ${validation.reason}`);
       rejectedAnchors.push(`"${anchor}" - ${validation.reason}`);
       rejectedCount++;
-      return anchor; // Return just the text without the link
+      return anchor;
     }
 
-    // Find matching page
     const anchorLower = anchor.toLowerCase();
     let matchedPage: ExistingPage | null = null;
 
@@ -639,7 +613,6 @@ export const processLinkCandidatesStrict = (
       const titleWords = page.title.toLowerCase().split(/\s+/).filter(w => w.length > 3);
       const anchorWords = anchorLower.split(/\s+/).filter(w => w.length > 3);
 
-      // Check for word overlap
       const overlap = anchorWords.filter(w =>
         titleWords.some(tw => tw.includes(w) || w.includes(tw))
       );
@@ -651,7 +624,6 @@ export const processLinkCandidatesStrict = (
     }
 
     if (!matchedPage) {
-      // Use first available page if no semantic match
       matchedPage = sortedPages.find(p => !usedSlugs.has(p.slug)) || null;
     }
 
@@ -665,7 +637,6 @@ export const processLinkCandidatesStrict = (
       return `<a href="${targetUrl}" title="${matchedPage.title}" style="color: #1E40AF; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; font-weight: 500;">${anchor}</a>`;
     }
 
-    // No matching page available
     console.warn(`[LinkProcessor] ⚠️ No target page for: "${anchor}"`);
     rejectedAnchors.push(`"${anchor}" - No available target page`);
     rejectedCount++;
@@ -683,12 +654,8 @@ export const processLinkCandidatesStrict = (
   };
 };
 
-// ==================== FORCE NATURAL INTERNAL LINKS (STRICT) ====================
+// ==================== FORCE NATURAL INTERNAL LINKS ====================
 
-/**
- * Force inject natural internal links with STRICT validation
- * This function will ONLY inject anchors that pass validation
- */
 export const forceNaturalInternalLinks = (
   content: string,
   availablePages: ExistingPage[],
@@ -708,16 +675,12 @@ export const forceNaturalInternalLinks = (
   const usedSlugs = new Set<string>();
   let linksAdded = 0;
   
-  // Check existing links to avoid duplicates
   body.querySelectorAll('a[href]').forEach(a => {
     const href = a.getAttribute('href') || '';
     const match = href.match(/\/([^\/]+)\/?$/);
     if (match) usedSlugs.add(match[1]);
   });
   
-  console.log(`[Force Links] Found ${usedSlugs.size} existing linked slugs`);
-  
-  // Get all eligible text containers
   const textContainers = Array.from(body.querySelectorAll('p, li')).filter(el => {
     const existingLinks = el.querySelectorAll('a').length;
     if (existingLinks >= 2) return false;
@@ -726,9 +689,6 @@ export const forceNaturalInternalLinks = (
     return textLength > 80;
   });
   
-  console.log(`[Force Links] Found ${textContainers.length} eligible text containers`);
-  
-  // Build keyword-to-page mapping
   interface KeywordPageMapping {
     keywords: string[];
     page: ExistingPage;
@@ -749,7 +709,6 @@ export const forceNaturalInternalLinks = (
       .split('-')
       .filter(w => w.length > 3);
     
-    // Create phrases from title
     const phrases: string[] = [];
     for (let i = 0; i < titleWords.length - 1; i++) {
       phrases.push(`${titleWords[i]} ${titleWords[i + 1]}`);
@@ -768,39 +727,30 @@ export const forceNaturalInternalLinks = (
   
   keywordPageMap.sort((a, b) => b.priority - a.priority);
   
-  console.log(`[Force Links] Built keyword map for ${keywordPageMap.length} pages`);
-  
-  // Process each text container
   for (const container of textContainers) {
     if (linksAdded >= targetLinks) break;
     
-    const text = container.textContent?.toLowerCase() || '';
     const originalHtml = container.innerHTML;
     
     for (const { keywords, page } of keywordPageMap) {
       if (usedSlugs.has(page.slug)) continue;
       if (linksAdded >= targetLinks) break;
       
-      // Find matching keywords/phrases in text
       let bestAnchor = '';
       let bestScore = 0;
       
-      // Look for topic-related phrases that could make good anchors
       const words = (container.textContent || '').split(/\s+/);
       
       for (let startIdx = 0; startIdx < words.length - 3; startIdx++) {
-        // Try 4-6 word phrases
         for (let len = 4; len <= Math.min(6, words.length - startIdx); len++) {
           const phraseWords = words.slice(startIdx, startIdx + len);
           const potentialAnchor = phraseWords.join(' ').replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').trim();
           
-          // Check if phrase contains any keyword from this page
           const phraseLower = potentialAnchor.toLowerCase();
           const hasKeyword = keywords.some(kw => phraseLower.includes(kw));
           
           if (!hasKeyword) continue;
           
-          // STRICT VALIDATION - Only accept valid anchors
           const validation = validateAnchorTextStrict(potentialAnchor);
           
           if (validation.valid && validation.score > bestScore) {
@@ -810,7 +760,6 @@ export const forceNaturalInternalLinks = (
         }
       }
       
-      // Inject the link if we found a valid anchor
       if (bestAnchor && bestScore >= 50) {
         const url = `${cleanBaseUrl}/${page.slug}/`;
         const linkHtml = `<a href="${url}" title="${page.title}" style="color: #1E40AF; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; font-weight: 500;">${bestAnchor}</a>`;
@@ -834,53 +783,65 @@ export const forceNaturalInternalLinks = (
   return body.innerHTML;
 };
 
-// ==================== PROCESS INTERNAL LINK CANDIDATES ====================
+// ==================== PROCESS INTERNAL LINKS (MAIN EXPORT) ====================
 
-export const processInternalLinkCandidates = (
+/**
+ * Main function for processing internal links - used by services.tsx
+ * Handles both [LINK_CANDIDATE:] markers and natural link injection
+ */
+export const processInternalLinks = (
   content: string,
-  availablePages: ExistingPage[],
-  baseUrl: string,
-  maxLinks: number = 12
+  existingPages: Array<{ id?: string; title: string; slug?: string }>,
+  baseUrl?: string
 ): string => {
-  // First process any [LINK_CANDIDATE:] markers with strict validation
-  const { content: processedContent, injectedCount, rejectedCount, rejectedAnchors } = 
-    processLinkCandidatesStrict(content, availablePages, baseUrl);
-  
-  console.log(`[Link Candidates] Processed markers: ${injectedCount} accepted, ${rejectedCount} rejected`);
-  
-  if (rejectedAnchors.length > 0) {
-    console.warn('[Link Candidates] Rejected anchors:');
-    rejectedAnchors.forEach(a => console.warn(`  - ${a}`));
+  if (!content || !existingPages || existingPages.length === 0) {
+    return content;
   }
 
-  // Calculate remaining links needed
-  const usedSlugs = new Set<string>();
+  const cleanBaseUrl = (baseUrl || '').replace(/\/+$/, '');
+  
+  // Normalize pages to have slug
+  const normalizedPages: ExistingPage[] = existingPages.map(p => ({
+    title: p.title,
+    slug: p.slug || extractSlugFromUrl(p.id || ''),
+  })).filter(p => p.slug && p.title);
+
+  // First process [LINK_CANDIDATE:] markers
+  const { content: processedContent, injectedCount } = processLinkCandidatesStrict(
+    content, 
+    normalizedPages, 
+    cleanBaseUrl
+  );
+
+  // Calculate how many more links to add
   const parser = new DOMParser();
   const doc = parser.parseFromString(processedContent, 'text/html');
+  const currentLinkCount = doc.body.querySelectorAll('a[href]').length;
+  const targetTotal = 12;
+  const remainingLinks = Math.max(0, targetTotal - currentLinkCount);
+
+  // Get used slugs
+  const usedSlugs = new Set<string>();
   doc.body.querySelectorAll('a[href]').forEach(a => {
     const href = a.getAttribute('href') || '';
     const match = href.match(/\/([^\/]+)\/?$/);
     if (match) usedSlugs.add(match[1]);
   });
-  
-  const remainingPages = availablePages.filter(p => !usedSlugs.has(p.slug));
-  const currentLinkCount = usedSlugs.size;
-  const remainingLinks = Math.max(0, maxLinks - currentLinkCount);
-  
+
+  const remainingPages = normalizedPages.filter(p => !usedSlugs.has(p.slug));
+
+  // Force natural links if needed
   if (remainingLinks > 0 && remainingPages.length > 0) {
-    console.log(`[Link Candidates] Now forcing ${remainingLinks} natural links...`);
-    return forceNaturalInternalLinks(
-      processedContent,
-      remainingPages,
-      baseUrl,
-      remainingLinks
-    );
+    console.log(`[processInternalLinks] Injecting ${remainingLinks} more natural links...`);
+    return forceNaturalInternalLinks(processedContent, remainingPages, cleanBaseUrl, remainingLinks);
   }
-  
+
+  console.log(`[processInternalLinks] Complete. Total links: ${currentLinkCount}`);
   return processedContent;
 };
 
 // Alias for backward compatibility
+export const processInternalLinkCandidates = processInternalLinks;
 export const injectNaturalInternalLinks = forceNaturalInternalLinks;
 
 // ==================== DUPLICATE REMOVAL ====================
@@ -945,7 +906,6 @@ export const removeDuplicateSections = (html: string): string => {
     });
   });
 
-  // Remove duplicate H2 sections
   const h2Map = new Map<string, Element>();
   body.querySelectorAll('h2').forEach(h2 => {
     const text = h2.textContent?.trim().toLowerCase() || '';
@@ -960,7 +920,6 @@ export const removeDuplicateSections = (html: string): string => {
     }
   });
 
-  // CRITICAL: Remove ANY "Internal Linking", "Related Resources" sections
   const headingsToCheck = Array.from(body.querySelectorAll('h2, h3, h4, strong'));
   headingsToCheck.forEach(heading => {
     const text = (heading.textContent || '').toLowerCase();
@@ -999,7 +958,6 @@ export const removeDuplicateSections = (html: string): string => {
     }
   });
 
-  // Clean up SOTA markers
   let resultHtml = body.innerHTML;
   resultHtml = resultHtml.replace(/<!--\s*SOTA-[A-Z]+-START\s*-->/gi, '');
   resultHtml = resultHtml.replace(/<!--\s*SOTA-[A-Z]+-END\s*-->/gi, '');
@@ -1031,15 +989,12 @@ export const extractFaqForSchema = (html: string): Array<{question: string; answ
     });
   }
   
-  console.log(`[FAQ Extractor] Found ${faqs.length} FAQ items`);
   return faqs;
 };
 
 // ==================== SMART POST-PROCESSOR ====================
 
 export const smartPostProcess = (html: string): string => {
-  console.log('[Post-Processor] Starting smart post-processing...');
-  
   let processed = html;
   
   processed = normalizeGeneratedContent(processed);
@@ -1052,7 +1007,6 @@ export const smartPostProcess = (html: string): string => {
     .replace(/<div>\s*<\/div>/g, '')
     .replace(/\n{4,}/g, '\n\n');
   
-  console.log('[Post-Processor] Complete!');
   return processed;
 };
 
@@ -1171,7 +1125,6 @@ export const performSurgicalUpdate = (
     refs.innerHTML = snippets.referencesHtml;
     refs.className = 'sota-references-wrapper';
     body.appendChild(refs);
-    console.log('[Surgical Update] ✅ Injected references section at end');
   }
 
   return body.innerHTML;
@@ -1351,7 +1304,6 @@ export const injectImagesIntoContent = (
     }
   });
 
-  console.log(`[Image Injection] Injected ${imagesToInject.length} images`);
   return body.innerHTML;
 };
 
@@ -1420,7 +1372,7 @@ export const extractYouTubeID = (url: string): string | null => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
-// ==================== CONTEXTUAL LINKING (ENTERPRISE) ====================
+// ==================== CONTEXTUAL LINKING ====================
 
 export const injectContextualInternalLinks = (
   content: string,
@@ -1428,19 +1380,13 @@ export const injectContextualInternalLinks = (
   baseUrl: string,
   targetLinks: number = 12
 ): string => {
-  console.log('[Enterprise Linking] Starting contextual link injection...');
-  console.log(`[Enterprise Linking] Target: ${targetLinks} links, Available pages: ${availablePages.length}`);
-
   if (availablePages.length === 0) {
-    console.log('[Enterprise Linking] No pages available for linking');
     return content;
   }
-
-  // Use forceNaturalInternalLinks with strict validation
   return forceNaturalInternalLinks(content, availablePages, baseUrl, targetLinks);
 };
 
-// ==================== EXPORTS ====================
+// ==================== DEFAULT EXPORT ====================
 
 export default {
   // Anchor validation
@@ -1450,6 +1396,7 @@ export default {
   // Link processing
   processLinkCandidatesStrict,
   processInternalLinkCandidates,
+  processInternalLinks,
   forceNaturalInternalLinks,
   injectNaturalInternalLinks,
   injectContextualInternalLinks,
@@ -1461,6 +1408,7 @@ export default {
   enforceWordCount,
   normalizeGeneratedContent,
   escapeRegExp,
+  extractSlugFromUrl,
   
   // Content processing
   convertMarkdownTablesToHtml,
@@ -1492,282 +1440,3 @@ export default {
   getReadabilityVerdict,
   extractYouTubeID,
 };
-
-
-
-// =============================================================================
-// MISSING EXPORTS - ADD THESE TO contentUtils.tsx
-// =============================================================================
-
-/**
- * Escape special regex characters in a string
- */
-export const escapeRegExp = (string: string): string => {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
-
-/**
- * Process internal links in HTML content
- * Replaces [LINK_CANDIDATE: anchor text] markers with actual links
- */
-export const processInternalLinks = (
-  html: string,
-  existingPages: Array<{ id: string; title: string; slug?: string }>,
-  baseUrl?: string
-): string => {
-  if (!html || !existingPages || existingPages.length === 0) {
-    return html;
-  }
-
-  let processedHtml = html;
-  const usedSlugs = new Set<string>();
-  const maxLinks = 15;
-  let linkCount = 0;
-
-  // Extract base domain for internal links
-  let domain = '';
-  if (baseUrl) {
-    try {
-      const url = new URL(baseUrl);
-      domain = url.origin;
-    } catch (e) {
-      domain = baseUrl.replace(/\/+$/, '');
-    }
-  }
-
-  // Process [LINK_CANDIDATE: anchor text] markers
-  const linkCandidateRegex = /\[LINK_CANDIDATE:\s*([^\]]+)\]/gi;
-  
-  processedHtml = processedHtml.replace(linkCandidateRegex, (match, anchorText) => {
-    if (linkCount >= maxLinks) return anchorText.trim();
-    
-    const anchor = anchorText.trim();
-    if (anchor.length < 3) return anchor;
-
-    // Find best matching page
-    const anchorLower = anchor.toLowerCase();
-    const anchorWords = anchorLower.split(/\s+/).filter(w => w.length > 2);
-
-    let bestMatch: { page: any; score: number } | null = null;
-
-    for (const page of existingPages) {
-      if (usedSlugs.has(page.slug || page.id)) continue;
-
-      const titleLower = (page.title || '').toLowerCase();
-      const slugLower = (page.slug || '').toLowerCase();
-
-      // Calculate match score
-      let score = 0;
-
-      // Exact title match
-      if (titleLower === anchorLower) {
-        score = 100;
-      }
-      // Title contains anchor
-      else if (titleLower.includes(anchorLower)) {
-        score = 80;
-      }
-      // Anchor contains title
-      else if (anchorLower.includes(titleLower) && titleLower.length > 10) {
-        score = 70;
-      }
-      // Word overlap scoring
-      else {
-        const titleWords = titleLower.split(/\s+/).filter(w => w.length > 2);
-        const matchingWords = anchorWords.filter(w => 
-          titleWords.some(tw => tw.includes(w) || w.includes(tw))
-        );
-        
-        if (matchingWords.length >= 2) {
-          score = (matchingWords.length / Math.max(anchorWords.length, titleWords.length)) * 60;
-        }
-      }
-
-      // Slug match bonus
-      if (slugLower && anchorLower.includes(slugLower.replace(/-/g, ' '))) {
-        score += 15;
-      }
-
-      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { page, score };
-      }
-    }
-
-    // Only create link if we found a good match
-    if (bestMatch && bestMatch.score >= 30) {
-      const slug = bestMatch.page.slug || extractSlugFromUrl(bestMatch.page.id);
-      const href = domain ? `${domain}/${slug}/` : `/${slug}/`;
-      
-      usedSlugs.add(slug);
-      linkCount++;
-
-      // Use original anchor text or page title
-      const linkText = anchor.length >= 15 ? anchor : bestMatch.page.title;
-      
-      return `<a href="${href}">${linkText}</a>`;
-    }
-
-    return anchor;
-  });
-
-  console.log(`[processInternalLinks] Injected ${linkCount} internal links`);
-  return processedHtml;
-};
-
-/**
- * Extract slug from URL
- */
-export const extractSlugFromUrl = (url: string): string => {
-  try {
-    const pathname = new URL(url).pathname;
-    const segments = pathname.split('/').filter(s => s.length > 0);
-    return segments[segments.length - 1] || '';
-  } catch {
-    // If not a valid URL, extract from path-like string
-    const segments = url.split('/').filter(s => s.length > 0);
-    return segments[segments.length - 1] || url;
-  }
-};
-
-/**
- * Perform surgical update on existing content
- * Injects intro, FAQ, references without destroying existing structure
- */
-export const performSurgicalUpdate = (
-  existingHtml: string,
-  snippets: {
-    introHtml?: string;
-    faqHtml?: string;
-    referencesHtml?: string;
-    conclusionHtml?: string;
-  }
-): string => {
-  if (!existingHtml) return existingHtml;
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(existingHtml, 'text/html');
-  const body = doc.body;
-
-  // Inject intro at the beginning
-  if (snippets.introHtml) {
-    const introDiv = doc.createElement('div');
-    introDiv.innerHTML = snippets.introHtml;
-    
-    // Find first heading or paragraph
-    const firstElement = body.querySelector('h1, h2, p');
-    if (firstElement) {
-      firstElement.parentNode?.insertBefore(introDiv, firstElement);
-    } else {
-      body.insertBefore(introDiv, body.firstChild);
-    }
-  }
-
-  // Inject FAQ before conclusion or at the end
-  if (snippets.faqHtml) {
-    const faqDiv = doc.createElement('div');
-    faqDiv.innerHTML = snippets.faqHtml;
-    
-    // Look for existing FAQ section and remove it
-    const existingFaq = body.querySelector('.faq-section, [class*="faq"]');
-    if (existingFaq) {
-      existingFaq.remove();
-    }
-    
-    // Find conclusion heading
-    const conclusionHeading = Array.from(body.querySelectorAll('h2')).find(h => 
-      h.textContent?.toLowerCase().includes('conclusion') ||
-      h.textContent?.toLowerCase().includes('final')
-    );
-    
-    if (conclusionHeading) {
-      conclusionHeading.parentNode?.insertBefore(faqDiv, conclusionHeading);
-    } else {
-      body.appendChild(faqDiv);
-    }
-  }
-
-  // Inject references at the very end
-  if (snippets.referencesHtml) {
-    // Remove existing references
-    const existingRefs = body.querySelector('.sota-references-section, .references-section, [class*="reference"]');
-    if (existingRefs) {
-      existingRefs.remove();
-    }
-    
-    const refsDiv = doc.createElement('div');
-    refsDiv.innerHTML = snippets.referencesHtml;
-    body.appendChild(refsDiv);
-  }
-
-  // Inject conclusion if provided
-  if (snippets.conclusionHtml) {
-    const conclusionDiv = doc.createElement('div');
-    conclusionDiv.innerHTML = snippets.conclusionHtml;
-    
-    // Insert before references if they exist, otherwise at the end
-    const refs = body.querySelector('.sota-references-section, .references-section');
-    if (refs) {
-      refs.parentNode?.insertBefore(conclusionDiv, refs);
-    } else {
-      body.appendChild(conclusionDiv);
-    }
-  }
-
-  return body.innerHTML;
-};
-
-/**
- * Calculate Flesch Reading Ease score
- */
-export const calculateFleschReadability = (text: string): number => {
-  if (!text || text.length === 0) return 0;
-
-  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const words = text.split(/\s+/).filter(w => w.length > 0);
-  
-  if (sentences.length === 0 || words.length === 0) return 0;
-
-  // Count syllables (simple approximation)
-  const countSyllables = (word: string): number => {
-    word = word.toLowerCase().replace(/[^a-z]/g, '');
-    if (word.length <= 3) return 1;
-    
-    const vowels = 'aeiouy';
-    let count = 0;
-    let prevVowel = false;
-    
-    for (const char of word) {
-      const isVowel = vowels.includes(char);
-      if (isVowel && !prevVowel) count++;
-      prevVowel = isVowel;
-    }
-    
-    // Adjust for silent e
-    if (word.endsWith('e')) count--;
-    
-    return Math.max(1, count);
-  };
-
-  const totalSyllables = words.reduce((sum, word) => sum + countSyllables(word), 0);
-  const avgSentenceLength = words.length / sentences.length;
-  const avgSyllablesPerWord = totalSyllables / words.length;
-
-  // Flesch Reading Ease formula
-  const score = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
-  
-  return Math.round(Math.max(0, Math.min(100, score)));
-};
-
-/**
- * Get readability verdict based on Flesch score
- */
-export const getReadabilityVerdict = (score: number): string => {
-  if (score >= 90) return 'Very Easy';
-  if (score >= 80) return 'Easy';
-  if (score >= 70) return 'Fairly Easy';
-  if (score >= 60) return 'Standard';
-  if (score >= 50) return 'Fairly Difficult';
-  if (score >= 30) return 'Difficult';
-  return 'Very Difficult';
-};
-
