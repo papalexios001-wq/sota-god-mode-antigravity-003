@@ -1,6 +1,5 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - SERVICES v15.0
-// Enterprise-Grade API Services with Strict Anchor Validation
+// SERVICES.TSX - IMPORTS SECTION (ADD ANY MISSING)
 // =============================================================================
 
 import { 
@@ -39,6 +38,7 @@ import {
   MIN_INTERNAL_LINKS,
   MAX_INTERNAL_LINKS,
 } from './constants';
+
 
 // ==================== TYPE DEFINITIONS ====================
 
