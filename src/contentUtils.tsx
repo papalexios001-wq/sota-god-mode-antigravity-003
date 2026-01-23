@@ -1492,3 +1492,282 @@ export default {
   getReadabilityVerdict,
   extractYouTubeID,
 };
+
+
+
+// =============================================================================
+// MISSING EXPORTS - ADD THESE TO contentUtils.tsx
+// =============================================================================
+
+/**
+ * Escape special regex characters in a string
+ */
+export const escapeRegExp = (string: string): string => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
+ * Process internal links in HTML content
+ * Replaces [LINK_CANDIDATE: anchor text] markers with actual links
+ */
+export const processInternalLinks = (
+  html: string,
+  existingPages: Array<{ id: string; title: string; slug?: string }>,
+  baseUrl?: string
+): string => {
+  if (!html || !existingPages || existingPages.length === 0) {
+    return html;
+  }
+
+  let processedHtml = html;
+  const usedSlugs = new Set<string>();
+  const maxLinks = 15;
+  let linkCount = 0;
+
+  // Extract base domain for internal links
+  let domain = '';
+  if (baseUrl) {
+    try {
+      const url = new URL(baseUrl);
+      domain = url.origin;
+    } catch (e) {
+      domain = baseUrl.replace(/\/+$/, '');
+    }
+  }
+
+  // Process [LINK_CANDIDATE: anchor text] markers
+  const linkCandidateRegex = /\[LINK_CANDIDATE:\s*([^\]]+)\]/gi;
+  
+  processedHtml = processedHtml.replace(linkCandidateRegex, (match, anchorText) => {
+    if (linkCount >= maxLinks) return anchorText.trim();
+    
+    const anchor = anchorText.trim();
+    if (anchor.length < 3) return anchor;
+
+    // Find best matching page
+    const anchorLower = anchor.toLowerCase();
+    const anchorWords = anchorLower.split(/\s+/).filter(w => w.length > 2);
+
+    let bestMatch: { page: any; score: number } | null = null;
+
+    for (const page of existingPages) {
+      if (usedSlugs.has(page.slug || page.id)) continue;
+
+      const titleLower = (page.title || '').toLowerCase();
+      const slugLower = (page.slug || '').toLowerCase();
+
+      // Calculate match score
+      let score = 0;
+
+      // Exact title match
+      if (titleLower === anchorLower) {
+        score = 100;
+      }
+      // Title contains anchor
+      else if (titleLower.includes(anchorLower)) {
+        score = 80;
+      }
+      // Anchor contains title
+      else if (anchorLower.includes(titleLower) && titleLower.length > 10) {
+        score = 70;
+      }
+      // Word overlap scoring
+      else {
+        const titleWords = titleLower.split(/\s+/).filter(w => w.length > 2);
+        const matchingWords = anchorWords.filter(w => 
+          titleWords.some(tw => tw.includes(w) || w.includes(tw))
+        );
+        
+        if (matchingWords.length >= 2) {
+          score = (matchingWords.length / Math.max(anchorWords.length, titleWords.length)) * 60;
+        }
+      }
+
+      // Slug match bonus
+      if (slugLower && anchorLower.includes(slugLower.replace(/-/g, ' '))) {
+        score += 15;
+      }
+
+      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { page, score };
+      }
+    }
+
+    // Only create link if we found a good match
+    if (bestMatch && bestMatch.score >= 30) {
+      const slug = bestMatch.page.slug || extractSlugFromUrl(bestMatch.page.id);
+      const href = domain ? `${domain}/${slug}/` : `/${slug}/`;
+      
+      usedSlugs.add(slug);
+      linkCount++;
+
+      // Use original anchor text or page title
+      const linkText = anchor.length >= 15 ? anchor : bestMatch.page.title;
+      
+      return `<a href="${href}">${linkText}</a>`;
+    }
+
+    return anchor;
+  });
+
+  console.log(`[processInternalLinks] Injected ${linkCount} internal links`);
+  return processedHtml;
+};
+
+/**
+ * Extract slug from URL
+ */
+export const extractSlugFromUrl = (url: string): string => {
+  try {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || '';
+  } catch {
+    // If not a valid URL, extract from path-like string
+    const segments = url.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || url;
+  }
+};
+
+/**
+ * Perform surgical update on existing content
+ * Injects intro, FAQ, references without destroying existing structure
+ */
+export const performSurgicalUpdate = (
+  existingHtml: string,
+  snippets: {
+    introHtml?: string;
+    faqHtml?: string;
+    referencesHtml?: string;
+    conclusionHtml?: string;
+  }
+): string => {
+  if (!existingHtml) return existingHtml;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(existingHtml, 'text/html');
+  const body = doc.body;
+
+  // Inject intro at the beginning
+  if (snippets.introHtml) {
+    const introDiv = doc.createElement('div');
+    introDiv.innerHTML = snippets.introHtml;
+    
+    // Find first heading or paragraph
+    const firstElement = body.querySelector('h1, h2, p');
+    if (firstElement) {
+      firstElement.parentNode?.insertBefore(introDiv, firstElement);
+    } else {
+      body.insertBefore(introDiv, body.firstChild);
+    }
+  }
+
+  // Inject FAQ before conclusion or at the end
+  if (snippets.faqHtml) {
+    const faqDiv = doc.createElement('div');
+    faqDiv.innerHTML = snippets.faqHtml;
+    
+    // Look for existing FAQ section and remove it
+    const existingFaq = body.querySelector('.faq-section, [class*="faq"]');
+    if (existingFaq) {
+      existingFaq.remove();
+    }
+    
+    // Find conclusion heading
+    const conclusionHeading = Array.from(body.querySelectorAll('h2')).find(h => 
+      h.textContent?.toLowerCase().includes('conclusion') ||
+      h.textContent?.toLowerCase().includes('final')
+    );
+    
+    if (conclusionHeading) {
+      conclusionHeading.parentNode?.insertBefore(faqDiv, conclusionHeading);
+    } else {
+      body.appendChild(faqDiv);
+    }
+  }
+
+  // Inject references at the very end
+  if (snippets.referencesHtml) {
+    // Remove existing references
+    const existingRefs = body.querySelector('.sota-references-section, .references-section, [class*="reference"]');
+    if (existingRefs) {
+      existingRefs.remove();
+    }
+    
+    const refsDiv = doc.createElement('div');
+    refsDiv.innerHTML = snippets.referencesHtml;
+    body.appendChild(refsDiv);
+  }
+
+  // Inject conclusion if provided
+  if (snippets.conclusionHtml) {
+    const conclusionDiv = doc.createElement('div');
+    conclusionDiv.innerHTML = snippets.conclusionHtml;
+    
+    // Insert before references if they exist, otherwise at the end
+    const refs = body.querySelector('.sota-references-section, .references-section');
+    if (refs) {
+      refs.parentNode?.insertBefore(conclusionDiv, refs);
+    } else {
+      body.appendChild(conclusionDiv);
+    }
+  }
+
+  return body.innerHTML;
+};
+
+/**
+ * Calculate Flesch Reading Ease score
+ */
+export const calculateFleschReadability = (text: string): number => {
+  if (!text || text.length === 0) return 0;
+
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  
+  if (sentences.length === 0 || words.length === 0) return 0;
+
+  // Count syllables (simple approximation)
+  const countSyllables = (word: string): number => {
+    word = word.toLowerCase().replace(/[^a-z]/g, '');
+    if (word.length <= 3) return 1;
+    
+    const vowels = 'aeiouy';
+    let count = 0;
+    let prevVowel = false;
+    
+    for (const char of word) {
+      const isVowel = vowels.includes(char);
+      if (isVowel && !prevVowel) count++;
+      prevVowel = isVowel;
+    }
+    
+    // Adjust for silent e
+    if (word.endsWith('e')) count--;
+    
+    return Math.max(1, count);
+  };
+
+  const totalSyllables = words.reduce((sum, word) => sum + countSyllables(word), 0);
+  const avgSentenceLength = words.length / sentences.length;
+  const avgSyllablesPerWord = totalSyllables / words.length;
+
+  // Flesch Reading Ease formula
+  const score = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
+  
+  return Math.round(Math.max(0, Math.min(100, score)));
+};
+
+/**
+ * Get readability verdict based on Flesch score
+ */
+export const getReadabilityVerdict = (score: number): string => {
+  if (score >= 90) return 'Very Easy';
+  if (score >= 80) return 'Easy';
+  if (score >= 70) return 'Fairly Easy';
+  if (score >= 60) return 'Standard';
+  if (score >= 50) return 'Fairly Difficult';
+  if (score >= 30) return 'Difficult';
+  return 'Very Difficult';
+};
+
