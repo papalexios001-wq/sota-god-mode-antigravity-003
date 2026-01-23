@@ -1617,6 +1617,7 @@ export const generateContent = async (
   return generateFullContent(apiKeys, topic, existingPages, wpConfig, options, onProgress);
 };
 
+export const generateContent = generateFullContent;
 
 // ==================== UPDATE THE DEFAULT EXPORT ====================
 // Make sure to add these to the default export object:
@@ -1631,6 +1632,7 @@ export default {
   callGroqAPI,
 
   // Content Generation
+  generateContent,  // <-- ADD THIS
   generateSemanticKeywords,
   generateContentStrategy,
   performGapAnalysis,
@@ -1663,7 +1665,7 @@ export default {
   generateClusterPlan,
   fetchNeuronwriterData,
 
-  // MISSING EXPORTS - ADD THESE
+  // Additional exports
   maintenanceEngine,
   generateImageWithFallback,
   fetchVerifiedReferences,
