@@ -44,37 +44,25 @@ export interface CrawlResult {
 // ==================== ANCHOR TEXT VALIDATION CONSTANTS ====================
 
 const ANCHOR_BOUNDARY_STOPWORDS = new Set([
-  // Articles
   'the', 'a', 'an',
-  // Conjunctions
   'and', 'or', 'but', 'nor', 'so', 'yet', 'for',
-  // Prepositions
   'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as',
   'into', 'through', 'during', 'before', 'after', 'above', 'below',
   'between', 'under', 'again', 'further', 'then', 'once', 'about', 'over',
-  // Be verbs
   'is', 'was', 'are', 'were', 'been', 'be', 'being', 'am',
-  "isn't", "aren't", "wasn't", "weren't", "isn", "arent", "wasnt", "werent",
-  // Have verbs
+  "isn't", "aren't", "wasn't", "weren't",
   'have', 'has', 'had', "hasn't", "haven't", "hadn't",
-  // Do verbs
   'do', 'does', 'did', "don't", "doesn't", "didn't",
-  // Modal verbs
   'will', 'would', 'could', 'should', 'may', 'might', 'must', 'shall', 'can',
   "won't", "wouldn't", "couldn't", "shouldn't", "can't", "cannot",
-  // Pronouns
   'this', 'that', 'these', 'those', 'it', 'its', 'they', 'their', 'them',
   'he', 'she', 'him', 'her', 'his', 'hers', 'we', 'us', 'our', 'ours',
   'you', 'your', 'yours', 'i', 'me', 'my', 'mine', 'who', 'whom', 'whose',
-  // Question words
   'what', 'which', 'when', 'where', 'why', 'how',
-  // Quantifiers
   'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
   'such', 'no', 'any', 'many', 'much', 'several',
-  // Adverbs
   'not', 'only', 'very', 'just', 'also', 'now', 'here', 'there',
   'too', 'really', 'quite', 'extremely', 'highly', 'already', 'still',
-  // Other
   'own', 'same', 'than', 'if', 'unless', 'although', 'because', 'since', 'while',
 ]);
 
@@ -112,8 +100,6 @@ const SEO_POWER_PATTERNS = [
   { pattern: /\bfor\s+(beginners|professionals|experts|small business|startups)/i, boost: 12 },
 ];
 
-// ==================== ENHANCED KEYWORD MATCHING ====================
-
 const ENHANCED_STOP_WORDS = new Set([
   'with', 'from', 'that', 'this', 'your', 'what', 'when', 'where', 'which', 'have',
   'been', 'were', 'will', 'would', 'could', 'should', 'about', 'into', 'through',
@@ -140,10 +126,6 @@ const SEMANTIC_VARIATIONS: Record<string, string[]> = {
   'features': ['specs', 'specifications', 'capabilities', 'functions'],
   'comparison': ['compare', 'versus', 'difference', 'alternative'],
   'alternative': ['option', 'substitute', 'replacement', 'choice'],
-  'install': ['setup', 'installation', 'configure', 'deploy'],
-  'setup': ['install', 'configure', 'installation', 'initialize'],
-  'start': ['begin', 'getting-started', 'introduction', 'basics'],
-  'learn': ['understand', 'discover', 'explore', 'study'],
   'health': ['wellness', 'wellbeing', 'medical', 'healthcare'],
   'training': ['exercise', 'workout', 'practice', 'coaching'],
   'care': ['maintenance', 'upkeep', 'looking after', 'tending'],
@@ -175,6 +157,17 @@ export const escapeRegExp = (string: string): string => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+export const extractSlugFromUrl = (url: string): string => {
+  try {
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || '';
+  } catch {
+    const segments = url.split('/').filter(s => s.length > 0);
+    return segments[segments.length - 1] || url;
+  }
+};
+
 const simpleStem = (word: string): string => {
   const w = word.toLowerCase();
   if (w.endsWith('ing') && w.length > 5) return w.slice(0, -3);
@@ -190,49 +183,6 @@ const simpleStem = (word: string): string => {
   if (w.endsWith('ly') && w.length > 4) return w.slice(0, -2);
   if (w.endsWith('s') && !w.endsWith('ss') && w.length > 3) return w.slice(0, -1);
   return w;
-};
-
-const stringSimilarity = (str1: string, str2: string): number => {
-  const s1 = str1.toLowerCase();
-  const s2 = str2.toLowerCase();
-  
-  if (s1 === s2) return 1;
-  if (s1.includes(s2) || s2.includes(s1)) return 0.9;
-  
-  const stem1 = simpleStem(s1);
-  const stem2 = simpleStem(s2);
-  if (stem1 === stem2) return 0.85;
-  if (stem1.includes(stem2) || stem2.includes(stem1)) return 0.8;
-  
-  const variations1 = SEMANTIC_VARIATIONS[s1] || [];
-  const variations2 = SEMANTIC_VARIATIONS[s2] || [];
-  if (variations1.includes(s2) || variations2.includes(s1)) return 0.75;
-  
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
-  
-  if (longer.length === 0) return 1;
-  
-  let matches = 0;
-  for (let i = 0; i < shorter.length; i++) {
-    if (longer.includes(shorter[i])) matches++;
-  }
-  
-  return matches / longer.length;
-};
-
-/**
- * Extract slug from URL
- */
-export const extractSlugFromUrl = (url: string): string => {
-  try {
-    const pathname = new URL(url).pathname;
-    const segments = pathname.split('/').filter(s => s.length > 0);
-    return segments[segments.length - 1] || '';
-  } catch {
-    const segments = url.split('/').filter(s => s.length > 0);
-    return segments[segments.length - 1] || url;
-  }
 };
 
 // ==================== STRICT ANCHOR TEXT VALIDATION ====================
@@ -255,48 +205,28 @@ export const validateAnchorTextStrict = (
   const words = cleanAnchor.split(/\s+/).filter(w => w.length > 0);
 
   if (words.length < minWords) {
-    return { 
-      valid: false, 
-      reason: `Too short: ${words.length} words, need ${minWords}-${maxWords}`,
-      score: 0
-    };
+    return { valid: false, reason: `Too short: ${words.length} words, need ${minWords}-${maxWords}`, score: 0 };
   }
   
   if (words.length > maxWords) {
-    return { 
-      valid: false, 
-      reason: `Too long: ${words.length} words, max ${maxWords}`,
-      score: 0
-    };
+    return { valid: false, reason: `Too long: ${words.length} words, max ${maxWords}`, score: 0 };
   }
 
   const anchorLower = cleanAnchor.toLowerCase();
   for (const toxic of TOXIC_ANCHOR_PATTERNS) {
     if (anchorLower.includes(toxic)) {
-      return { 
-        valid: false, 
-        reason: `Contains generic/toxic phrase: "${toxic}"`,
-        score: 0
-      };
+      return { valid: false, reason: `Contains generic/toxic phrase: "${toxic}"`, score: 0 };
     }
   }
 
   const firstWord = words[0].toLowerCase().replace(/[^a-z']/g, '');
   if (ANCHOR_BOUNDARY_STOPWORDS.has(firstWord)) {
-    return { 
-      valid: false, 
-      reason: `Cannot START with stopword: "${firstWord}"`,
-      score: 0
-    };
+    return { valid: false, reason: `Cannot START with stopword: "${firstWord}"`, score: 0 };
   }
 
   const lastWord = words[words.length - 1].toLowerCase().replace(/[^a-z']/g, '');
   if (ANCHOR_BOUNDARY_STOPWORDS.has(lastWord)) {
-    return { 
-      valid: false, 
-      reason: `Cannot END with stopword: "${lastWord}"`,
-      score: 0
-    };
+    return { valid: false, reason: `Cannot END with stopword: "${lastWord}"`, score: 0 };
   }
 
   const fragmentPatterns = [
@@ -312,11 +242,7 @@ export const validateAnchorTextStrict = (
   
   for (const pattern of fragmentPatterns) {
     if (pattern.test(cleanAnchor)) {
-      return { 
-        valid: false, 
-        reason: `Incomplete sentence fragment detected`,
-        score: 0
-      };
+      return { valid: false, reason: `Incomplete sentence fragment detected`, score: 0 };
     }
   }
 
@@ -329,11 +255,7 @@ export const validateAnchorTextStrict = (
   
   for (const pattern of badStartPatterns) {
     if (pattern.test(cleanAnchor)) {
-      return { 
-        valid: false, 
-        reason: `Cannot start with conjunction/relative/adverb word`,
-        score: 0
-      };
+      return { valid: false, reason: `Cannot start with conjunction/relative/adverb word`, score: 0 };
     }
   }
 
@@ -342,28 +264,18 @@ export const validateAnchorTextStrict = (
   );
   
   if (!hasDescriptiveWord) {
-    return { 
-      valid: false, 
-      reason: `Missing descriptive word (guide, tips, strategies, methods, care, health, etc.)`,
-      score: 0
-    };
+    return { valid: false, reason: `Missing descriptive word`, score: 0 };
   }
 
   const meaningfulWords = words.filter(w => 
-    !ANCHOR_BOUNDARY_STOPWORDS.has(w.toLowerCase().replace(/[^a-z]/g, '')) &&
-    w.length > 2
+    !ANCHOR_BOUNDARY_STOPWORDS.has(w.toLowerCase().replace(/[^a-z]/g, '')) && w.length > 2
   );
   
   if (meaningfulWords.length < 2) {
-    return { 
-      valid: false, 
-      reason: `Too few meaningful words (need 2+, found ${meaningfulWords.length})`,
-      score: 0
-    };
+    return { valid: false, reason: `Too few meaningful words (need 2+)`, score: 0 };
   }
 
   let score = 50;
-  
   if (words.length >= 4 && words.length <= 6) score += 15;
   else if (words.length === 7) score += 8;
   
@@ -535,20 +447,10 @@ export const convertMarkdownTablesToHtml = (content: string): string => {
     const headerRow = match[1].trim();
     const bodyRows = match[3].trim();
     
-    const headers = headerRow
-      .split('|')
-      .map(cell => cell.trim())
-      .filter(cell => cell.length > 0);
-    
-    const rows = bodyRows
-      .split('\n')
-      .filter(row => row.includes('|'))
-      .map(row => 
-        row
-          .split('|')
-          .map(cell => cell.trim())
-          .filter(cell => cell.length > 0 || row.split('|').length > 2)
-      );
+    const headers = headerRow.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0);
+    const rows = bodyRows.split('\n').filter(row => row.includes('|')).map(row => 
+      row.split('|').map(cell => cell.trim()).filter(cell => cell.length > 0 || row.split('|').length > 2)
+    );
     
     const htmlTable = `
 <div style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
@@ -598,7 +500,6 @@ export const processLinkCandidatesStrict = (
     const validation = validateAnchorTextStrict(anchor);
 
     if (!validation.valid) {
-      console.warn(`[LinkProcessor] ❌ REJECTED: "${anchor}" - ${validation.reason}`);
       rejectedAnchors.push(`"${anchor}" - ${validation.reason}`);
       rejectedCount++;
       return anchor;
@@ -633,25 +534,15 @@ export const processLinkCandidatesStrict = (
       const targetUrl = `${cleanBaseUrl}/${matchedPage.slug}/`;
       injectedCount++;
       acceptedAnchors.push(anchor);
-      console.log(`[LinkProcessor] ✅ INJECTED: "${anchor}" → ${matchedPage.slug}`);
       return `<a href="${targetUrl}" title="${matchedPage.title}" style="color: #1E40AF; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; font-weight: 500;">${anchor}</a>`;
     }
 
-    console.warn(`[LinkProcessor] ⚠️ No target page for: "${anchor}"`);
     rejectedAnchors.push(`"${anchor}" - No available target page`);
     rejectedCount++;
     return anchor;
   });
 
-  console.log(`[LinkProcessor] Summary: ${injectedCount} injected, ${rejectedCount} rejected`);
-
-  return {
-    content: processedContent,
-    injectedCount,
-    rejectedCount,
-    rejectedAnchors,
-    acceptedAnchors
-  };
+  return { content: processedContent, injectedCount, rejectedCount, rejectedAnchors, acceptedAnchors };
 };
 
 // ==================== FORCE NATURAL INTERNAL LINKS ====================
@@ -662,10 +553,7 @@ export const forceNaturalInternalLinks = (
   baseUrl: string,
   targetLinks: number = 10
 ): string => {
-  if (availablePages.length === 0) {
-    console.log('[Force Links] No pages available for linking');
-    return content;
-  }
+  if (availablePages.length === 0) return content;
   
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, 'text/html');
@@ -705,9 +593,7 @@ export const forceNaturalInternalLinks = (
       .split(/\s+/)
       .filter(w => w.length > 3 && !ENHANCED_STOP_WORDS.has(w));
     
-    const slugWords = page.slug.toLowerCase()
-      .split('-')
-      .filter(w => w.length > 3);
+    const slugWords = page.slug.toLowerCase().split('-').filter(w => w.length > 3);
     
     const phrases: string[] = [];
     for (let i = 0; i < titleWords.length - 1; i++) {
@@ -772,23 +658,17 @@ export const forceNaturalInternalLinks = (
           container.innerHTML = newHtml;
           usedSlugs.add(page.slug);
           linksAdded++;
-          console.log(`[Force Links] ✅ Added link: "${bestAnchor}" → ${page.slug} (score: ${bestScore})`);
           break;
         }
       }
     }
   }
   
-  console.log(`[Force Links] 🔗 Total links injected: ${linksAdded}/${targetLinks}`);
   return body.innerHTML;
 };
 
 // ==================== PROCESS INTERNAL LINKS (MAIN EXPORT) ====================
 
-/**
- * Main function for processing internal links - used by services.tsx
- * Handles both [LINK_CANDIDATE:] markers and natural link injection
- */
 export const processInternalLinks = (
   content: string,
   existingPages: Array<{ id?: string; title: string; slug?: string }>,
@@ -800,27 +680,23 @@ export const processInternalLinks = (
 
   const cleanBaseUrl = (baseUrl || '').replace(/\/+$/, '');
   
-  // Normalize pages to have slug
   const normalizedPages: ExistingPage[] = existingPages.map(p => ({
     title: p.title,
     slug: p.slug || extractSlugFromUrl(p.id || ''),
   })).filter(p => p.slug && p.title);
 
-  // First process [LINK_CANDIDATE:] markers
   const { content: processedContent, injectedCount } = processLinkCandidatesStrict(
     content, 
     normalizedPages, 
     cleanBaseUrl
   );
 
-  // Calculate how many more links to add
   const parser = new DOMParser();
   const doc = parser.parseFromString(processedContent, 'text/html');
   const currentLinkCount = doc.body.querySelectorAll('a[href]').length;
   const targetTotal = 12;
   const remainingLinks = Math.max(0, targetTotal - currentLinkCount);
 
-  // Get used slugs
   const usedSlugs = new Set<string>();
   doc.body.querySelectorAll('a[href]').forEach(a => {
     const href = a.getAttribute('href') || '';
@@ -830,18 +706,41 @@ export const processInternalLinks = (
 
   const remainingPages = normalizedPages.filter(p => !usedSlugs.has(p.slug));
 
-  // Force natural links if needed
   if (remainingLinks > 0 && remainingPages.length > 0) {
-    console.log(`[processInternalLinks] Injecting ${remainingLinks} more natural links...`);
     return forceNaturalInternalLinks(processedContent, remainingPages, cleanBaseUrl, remainingLinks);
   }
 
-  console.log(`[processInternalLinks] Complete. Total links: ${currentLinkCount}`);
   return processedContent;
 };
 
-// Alias for backward compatibility
-export const processInternalLinkCandidates = processInternalLinks;
+export const processInternalLinkCandidates = (
+  content: string,
+  availablePages: ExistingPage[],
+  baseUrl: string,
+  maxLinks: number = 12
+): string => {
+  const { content: processedContent } = processLinkCandidatesStrict(content, availablePages, baseUrl);
+
+  const usedSlugs = new Set<string>();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(processedContent, 'text/html');
+  doc.body.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    const match = href.match(/\/([^\/]+)\/?$/);
+    if (match) usedSlugs.add(match[1]);
+  });
+  
+  const remainingPages = availablePages.filter(p => !usedSlugs.has(p.slug));
+  const currentLinkCount = usedSlugs.size;
+  const remainingLinks = Math.max(0, maxLinks - currentLinkCount);
+  
+  if (remainingLinks > 0 && remainingPages.length > 0) {
+    return forceNaturalInternalLinks(processedContent, remainingPages, baseUrl, remainingLinks);
+  }
+  
+  return processedContent;
+};
+
 export const injectNaturalInternalLinks = forceNaturalInternalLinks;
 
 // ==================== DUPLICATE REMOVAL ====================
@@ -854,26 +753,10 @@ export const removeDuplicateSections = (html: string): string => {
   const seenSections = new Map<string, Element>();
   
   const sectionPatterns = [
-    { 
-      type: 'takeaways',
-      selectors: ['[class*="takeaway"]', 'div[style*="#064E3B"]', 'div[style*="#047857"]'],
-      textMatch: /key takeaways/i
-    },
-    { 
-      type: 'faq',
-      selectors: ['[class*="faq"]', '[itemtype*="FAQPage"]'],
-      textMatch: /frequently asked questions/i
-    },
-    { 
-      type: 'references',
-      selectors: ['[class*="reference"]', '[class*="sources"]', '.sota-references-section'],
-      textMatch: /references|sources|citations|further reading/i
-    },
-    { 
-      type: 'verification',
-      selectors: ['.verification-footer-sota', '[class*="verification"]'],
-      textMatch: /fact-checked|expert reviewed/i
-    },
+    { type: 'takeaways', selectors: ['[class*="takeaway"]', 'div[style*="#064E3B"]', 'div[style*="#047857"]'], textMatch: /key takeaways/i },
+    { type: 'faq', selectors: ['[class*="faq"]', '[itemtype*="FAQPage"]'], textMatch: /frequently asked questions/i },
+    { type: 'references', selectors: ['[class*="reference"]', '[class*="sources"]', '.sota-references-section'], textMatch: /references|sources|citations|further reading/i },
+    { type: 'verification', selectors: ['.verification-footer-sota', '[class*="verification"]'], textMatch: /fact-checked|expert reviewed/i },
   ];
 
   sectionPatterns.forEach(({ type, selectors, textMatch }) => {
@@ -901,7 +784,6 @@ export const removeDuplicateSections = (html: string): string => {
         seenSections.set(type, el);
       } else {
         el.remove();
-        console.log(`[Dedup] Removed duplicate ${type} section`);
       }
     });
   });
@@ -913,7 +795,6 @@ export const removeDuplicateSections = (html: string): string => {
       const parent = h2.closest('section, div.section, article > div') || h2.parentElement;
       if (parent && parent !== body) {
         parent.remove();
-        console.log(`[Dedup] Removed duplicate section: ${text}`);
       }
     } else if (text) {
       h2Map.set(text, h2);
@@ -923,21 +804,15 @@ export const removeDuplicateSections = (html: string): string => {
   const headingsToCheck = Array.from(body.querySelectorAll('h2, h3, h4, strong'));
   headingsToCheck.forEach(heading => {
     const text = (heading.textContent || '').toLowerCase();
-    if (text.includes('internal link') || 
-        text.includes('related resources') || 
-        text.includes('related links') ||
-        text.includes('more resources') ||
-        text.includes('useful links') ||
-        text.includes('helpful links')) {
+    if (text.includes('internal link') || text.includes('related resources') || text.includes('related links') ||
+        text.includes('more resources') || text.includes('useful links') || text.includes('helpful links')) {
       
       let container = heading.closest('section, div.section, article > div');
       let elementsToRemove: Element[] = [];
       
       if (container && container !== body) {
         const listItems = container.querySelectorAll('li, a').length;
-        if (listItems > 2) {
-          elementsToRemove.push(container);
-        }
+        if (listItems > 2) elementsToRemove.push(container);
       }
       
       if (elementsToRemove.length === 0) {
@@ -950,10 +825,7 @@ export const removeDuplicateSections = (html: string): string => {
       }
       
       elementsToRemove.forEach(el => {
-        if (el.parentNode) {
-          el.remove();
-          console.log('[Dedup] Removed "Internal Linking" section');
-        }
+        if (el.parentNode) el.remove();
       });
     }
   });
@@ -996,17 +868,11 @@ export const extractFaqForSchema = (html: string): Array<{question: string; answ
 
 export const smartPostProcess = (html: string): string => {
   let processed = html;
-  
   processed = normalizeGeneratedContent(processed);
   processed = convertMarkdownTablesToHtml(processed);
   processed = removeDuplicateSections(processed);
   processed = sanitizeContentHtml(processed);
-  
-  processed = processed
-    .replace(/<p>\s*<\/p>/g, '')
-    .replace(/<div>\s*<\/div>/g, '')
-    .replace(/\n{4,}/g, '\n\n');
-  
+  processed = processed.replace(/<p>\s*<\/p>/g, '').replace(/<div>\s*<\/div>/g, '').replace(/\n{4,}/g, '\n\n');
   return processed;
 };
 
@@ -1019,22 +885,11 @@ export const generateVerificationFooterHtml = (): string => {
   return `
 <div class="verification-footer-sota" style="margin-top: 4rem; padding: 2rem; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 16px; border: 1px solid #cbd5e1; text-align: center;">
   <div style="display: flex; justify-content: center; align-items: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 1rem;">
-    <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981;">
-      <span style="font-size: 1.5rem;">✅</span>
-      <span style="font-weight: 600;">Fact-Checked</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 0.5rem; color: #3b82f6;">
-      <span style="font-size: 1.5rem;">📊</span>
-      <span style="font-weight: 600;">Data-Driven</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 0.5rem; color: #8b5cf6;">
-      <span style="font-size: 1.5rem;">🔬</span>
-      <span style="font-weight: 600;">Expert Reviewed</span>
-    </div>
+    <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981;"><span style="font-size: 1.5rem;">✅</span><span style="font-weight: 600;">Fact-Checked</span></div>
+    <div style="display: flex; align-items: center; gap: 0.5rem; color: #3b82f6;"><span style="font-size: 1.5rem;">📊</span><span style="font-weight: 600;">Data-Driven</span></div>
+    <div style="display: flex; align-items: center; gap: 0.5rem; color: #8b5cf6;"><span style="font-size: 1.5rem;">🔬</span><span style="font-weight: 600;">Expert Reviewed</span></div>
   </div>
-  <p style="margin: 0; color: #64748b; font-size: 0.875rem;">
-    Last updated: ${currentDate} | Content verified for ${currentYear}
-  </p>
+  <p style="margin: 0; color: #64748b; font-size: 0.875rem;">Last updated: ${currentDate} | Content verified for ${currentYear}</p>
 </div>`;
 };
 
@@ -1057,9 +912,7 @@ export const performSurgicalUpdate = (
   if (snippets.keyTakeawaysHtml) {
     body.querySelectorAll('[class*="takeaway"], div[style*="#064E3B"], div[style*="#047857"]').forEach(el => {
       const h3 = el.querySelector('h3');
-      if (h3?.textContent?.toLowerCase().includes('takeaway')) {
-        el.remove();
-      }
+      if (h3?.textContent?.toLowerCase().includes('takeaway')) el.remove();
     });
   }
 
@@ -1067,11 +920,8 @@ export const performSurgicalUpdate = (
     const intro = doc.createElement('div');
     intro.innerHTML = snippets.introHtml;
     intro.className = 'sota-intro-section';
-    if (body.firstChild) {
-      body.insertBefore(intro, body.firstChild);
-    } else {
-      body.appendChild(intro);
-    }
+    if (body.firstChild) body.insertBefore(intro, body.firstChild);
+    else body.appendChild(intro);
   }
 
   if (snippets.keyTakeawaysHtml) {
@@ -1084,11 +934,8 @@ export const performSurgicalUpdate = (
       firstH2.parentNode.insertBefore(takeaways, firstH2);
     } else {
       const introSection = body.querySelector('.sota-intro-section');
-      if (introSection && introSection.nextSibling) {
-        body.insertBefore(takeaways, introSection.nextSibling);
-      } else {
-        body.appendChild(takeaways);
-      }
+      if (introSection && introSection.nextSibling) body.insertBefore(takeaways, introSection.nextSibling);
+      else body.appendChild(takeaways);
     }
   }
 
@@ -1104,11 +951,8 @@ export const performSurgicalUpdate = (
       h.textContent?.toLowerCase().includes('summary')
     );
     
-    if (conclusionHeading && conclusionHeading.parentNode) {
-      conclusionHeading.parentNode.insertBefore(faq, conclusionHeading);
-    } else {
-      body.appendChild(faq);
-    }
+    if (conclusionHeading && conclusionHeading.parentNode) conclusionHeading.parentNode.insertBefore(faq, conclusionHeading);
+    else body.appendChild(faq);
   }
 
   if (snippets.conclusionHtml) {
@@ -1120,7 +964,6 @@ export const performSurgicalUpdate = (
 
   if (snippets.referencesHtml && snippets.referencesHtml.trim().length > 50) {
     body.querySelectorAll('.sota-references-section, [class*="references-section"]').forEach(el => el.remove());
-    
     const refs = doc.createElement('div');
     refs.innerHTML = snippets.referencesHtml;
     refs.className = 'sota-references-wrapper';
@@ -1142,9 +985,7 @@ export const getGuaranteedYoutubeVideos = async (
   if (!serperApiKey) return [];
 
   const cacheKey = `${keyword}_${count}`;
-  if (YOUTUBE_SEARCH_CACHE.has(cacheKey)) {
-    return YOUTUBE_SEARCH_CACHE.get(cacheKey)!;
-  }
+  if (YOUTUBE_SEARCH_CACHE.has(cacheKey)) return YOUTUBE_SEARCH_CACHE.get(cacheKey)!;
 
   try {
     const response = await fetchWithProxies('https://google.serper.dev/videos', {
@@ -1167,7 +1008,6 @@ export const getGuaranteedYoutubeVideos = async (
     YOUTUBE_SEARCH_CACHE.set(cacheKey, videos);
     return videos;
   } catch (error) {
-    console.error('[getGuaranteedYoutubeVideos] Error:', error);
     return [];
   }
 };
@@ -1177,26 +1017,13 @@ export const generateYoutubeEmbedHtml = (videos: Array<{ videoId: string; title:
 
   const embedsHtml = videos.map(video => `
     <div style="margin: 1.5rem 0;">
-      <iframe 
-        width="100%" 
-        height="400" 
-        src="https://www.youtube.com/embed/${video.videoId}" 
-        title="${video.title}"
-        frameborder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-        allowfullscreen
-        loading="lazy"
-        style="border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"
-      ></iframe>
+      <iframe width="100%" height="400" src="https://www.youtube.com/embed/${video.videoId}" title="${video.title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);"></iframe>
       <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b; text-align: center;">${video.title}</p>
     </div>
   `).join('');
 
-  return `
-<div class="sota-video-section" style="margin: 3rem 0; padding: 2rem; background: #f8fafc; border-radius: 16px;">
-  <h3 style="margin-top: 0; font-size: 1.5rem; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;">
-    <span>🎬</span> Related Videos
-  </h3>
+  return `<div class="sota-video-section" style="margin: 3rem 0; padding: 2rem; background: #f8fafc; border-radius: 16px;">
+  <h3 style="margin-top: 0; font-size: 1.5rem; color: #1e293b; display: flex; align-items: center; gap: 0.5rem;"><span>🎬</span> Related Videos</h3>
   ${embedsHtml}
 </div>`;
 };
@@ -1222,9 +1049,7 @@ export const sanitizeContentHtml = (html: string): string => {
 
   const dangerousSelectors = ['script', 'style:not([type])', 'iframe[src*="javascript"]', 'object', 'embed'];
   dangerousSelectors.forEach(selector => {
-    try {
-      doc.querySelectorAll(selector).forEach(el => el.remove());
-    } catch (e) {}
+    try { doc.querySelectorAll(selector).forEach(el => el.remove()); } catch (e) {}
   });
 
   doc.querySelectorAll('*').forEach(el => {
@@ -1247,11 +1072,7 @@ export const extractImagesFromHtml = (html: string): Array<{ src: string; alt: s
   doc.querySelectorAll('img').forEach(img => {
     const src = img.getAttribute('src');
     if (src && !src.startsWith('data:image/svg')) {
-      images.push({
-        src,
-        alt: img.getAttribute('alt') || '',
-        title: img.getAttribute('title') || undefined,
-      });
+      images.push({ src, alt: img.getAttribute('alt') || '', title: img.getAttribute('title') || undefined });
     }
   });
 
@@ -1296,11 +1117,8 @@ export const injectImagesIntoContent = (
       }
       
       const nextSibling = targetH2.nextElementSibling;
-      if (nextSibling?.nextSibling) {
-        nextSibling.parentNode?.insertBefore(figure, nextSibling.nextSibling);
-      } else if (targetH2.nextSibling) {
-        targetH2.parentNode?.insertBefore(figure, targetH2.nextSibling);
-      }
+      if (nextSibling?.nextSibling) nextSibling.parentNode?.insertBefore(figure, nextSibling.nextSibling);
+      else if (targetH2.nextSibling) targetH2.parentNode?.insertBefore(figure, targetH2.nextSibling);
     }
   });
 
@@ -1326,12 +1144,8 @@ export const generateComparisonTableHtml = (
 <div style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
   ${caption ? `<p style="font-weight: 600; margin-bottom: 1rem; color: #1e293b;">${caption}</p>` : ''}
   <table style="width: 100%; border-collapse: collapse; background: white;">
-    <thead>
-      <tr style="background: linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%);">${headerHtml}</tr>
-    </thead>
-    <tbody>
-      ${rowsHtml}
-    </tbody>
+    <thead><tr style="background: linear-gradient(135deg, #1E40AF 0%, #7C3AED 100%);">${headerHtml}</tr></thead>
+    <tbody>${rowsHtml}</tbody>
   </table>
 </div>`;
 };
@@ -1380,63 +1194,8 @@ export const injectContextualInternalLinks = (
   baseUrl: string,
   targetLinks: number = 12
 ): string => {
-  if (availablePages.length === 0) {
-    return content;
-  }
+  if (availablePages.length === 0) return content;
   return forceNaturalInternalLinks(content, availablePages, baseUrl, targetLinks);
 };
 
-// ==================== DEFAULT EXPORT ====================
-
-export default {
-  // Anchor validation
-  validateAnchorTextStrict,
-  validateAndFixAnchor,
-  
-  // Link processing
-  processLinkCandidatesStrict,
-  processInternalLinkCandidates,
-  processInternalLinks,
-  forceNaturalInternalLinks,
-  injectNaturalInternalLinks,
-  injectContextualInternalLinks,
-  
-  // Core utilities
-  fetchWithProxies,
-  smartCrawl,
-  countWords,
-  enforceWordCount,
-  normalizeGeneratedContent,
-  escapeRegExp,
-  extractSlugFromUrl,
-  
-  // Content processing
-  convertMarkdownTablesToHtml,
-  generateVerificationFooterHtml,
-  performSurgicalUpdate,
-  removeDuplicateSections,
-  smartPostProcess,
-  sanitizeContentHtml,
-  
-  // FAQ & Schema
-  extractFaqForSchema,
-  
-  // YouTube
-  getGuaranteedYoutubeVideos,
-  generateYoutubeEmbedHtml,
-  
-  // Domain validation
-  isBlockedDomain,
-  
-  // Images
-  extractImagesFromHtml,
-  injectImagesIntoContent,
-  
-  // Tables
-  generateComparisonTableHtml,
-  
-  // Readability
-  calculateFleschReadability,
-  getReadabilityVerdict,
-  extractYouTubeID,
-};
+// ==================== END OF FILE ====================
