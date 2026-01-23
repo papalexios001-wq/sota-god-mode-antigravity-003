@@ -32,7 +32,7 @@ import {
   performSurgicalUpdate,
   escapeRegExp
 } from './contentUtils';
-import { getNeuronWriterData } from './neuronwriter';
+
 
 console.log('[SOTA Services] Enterprise Engine v12.0 Initialized');
 
@@ -874,20 +874,13 @@ const generateItems = async (
     });
 
     try {
-      // Step 1: Get NeuronWriter data if enabled
-      let neuronData = null;
-      if (neuronConfig?.enabled && neuronConfig?.apiKey && neuronConfig?.projectId) {
-        dispatch({
-          type: 'UPDATE_STATUS',
-          payload: { id: item.id, status: 'generating', statusText: 'Fetching NeuronWriter data...' },
-        });
+// Step 1: NeuronWriter data (placeholder - function not implemented)
+let neuronData = null;
+if (neuronConfig?.enabled && neuronConfig?.apiKey && neuronConfig?.projectId) {
+  console.log('[generateItems] NeuronWriter enabled but getNeuronWriterData not implemented');
+  // NeuronWriter integration placeholder - will proceed without NLP terms
+}
 
-        try {
-          neuronData = await getNeuronWriterData(neuronConfig.apiKey, neuronConfig.projectId, item.title);
-        } catch (e) {
-          console.warn('[generateItems] NeuronWriter fetch failed, continuing without');
-        }
-      }
 
       // Step 2: Generate semantic keywords
       dispatch({
