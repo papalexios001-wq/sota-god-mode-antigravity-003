@@ -1,8 +1,10 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - PROMPT SUITE v13.0
+// SOTA WP CONTENT OPTIMIZER PRO - PROMPT SUITE v15.0 (ENTERPRISE MERGED)
 // =============================================================================
-// 🚀 AEO (Answer Engine Optimization) + GEO (Generative Engine Optimization)
-// 🎯 Targets: Google, ChatGPT, Perplexity, Claude, Gemini
+// 🎯 AEO (Answer Engine Optimization) + GEO (Generative Engine Optimization)
+// 🎯 Alex Hormozi x Tim Ferriss Writing Style
+// 🎯 4-7 Word Contextual Rich Anchor Text
+// 🎯 15 Uncovered Entity Gap Analysis
 // =============================================================================
 
 export interface PromptTemplate {
@@ -53,22 +55,30 @@ export const BANNED_AI_PHRASES: string[] = [
   "in conclusion", "to summarize", "all in all", "last but not least"
 ];
 
-// ==================== HORMOZI + FERRISS WRITING STYLE ====================
+// ==================== HORMOZI + FERRISS WRITING STYLE (ENHANCED) ====================
 export const HORMOZI_FERRISS_STYLE = `
-WRITING STYLE: ALEX HORMOZI + TIM FERRISS HYBRID
+═══════════════════════════════════════════════════════════════════════════════
+WRITING STYLE: ALEX HORMOZI + TIM FERRISS HYBRID (SOTA v15.0)
+═══════════════════════════════════════════════════════════════════════════════
 
-⚡ HORMOZI RULES:
+⚡ HORMOZI RULES ($100M Offers Style):
 - Short punchy sentences. Max 15 words.
 - Numbers everywhere. "73% of users" not "most users".
 - Bold claims backed by data.
 - Use "you" constantly. Direct address.
 - One-word paragraphs for impact. "Done."
+- PROBLEM-AGITATE-SOLUTION: Name the pain, twist the knife, provide the cure
+- STACK THE VALUE: Show the reader what they're getting is worth 10x
+- SPECIFICITY IS THE SOUL OF CREDIBILITY: Vague = weak, specific = powerful
 
-⚡ FERRISS RULES:
+⚡ FERRISS RULES (4-Hour Workweek Style):
 - Specific over vague: "5 sets of 5 reps at 185lbs"
 - Real examples with names and dates
 - Name specific tools and products
 - 80/20 focus on what matters most
+- MINIMUM EFFECTIVE DOSE: What's the smallest input for maximum output?
+- DECONSTRUCTION: Break complex topics into digestible components
+- CONTRARIAN ANGLES: Challenge conventional wisdom with data
 
 ⚡ SENTENCE STRUCTURE:
 - Vary length: 3 words. Then 20 words. Then 8.
@@ -80,11 +90,28 @@ WRITING STYLE: ALEX HORMOZI + TIM FERRISS HYBRID
 - Max 2-3 sentences per paragraph
 - One idea per paragraph
 - White space = readability
+
+⚡ POWER PHRASES TO USE:
+- "Here's the thing..."
+- "Most people think X. They're wrong."
+- "The counterintuitive truth is..."
+- "What separates the top 1% from everyone else..."
+- "The brutal truth is..."
+- "Warning: This only works if you..."
+
+⚡ FORBIDDEN (INSTANT FAIL):
+- Passive voice ("is being done" → "do this")
+- Hedge words (might, could, perhaps, generally, somewhat)
+- Filler phrases (In today's world, It's important to note)
+- Corporate speak (leverage, synergy, paradigm, ecosystem)
+- AI tells (delve, tapestry, landscape, testament, realm)
 `;
 
-// ==================== AEO/GEO OPTIMIZATION RULES ====================
+// ==================== AEO/GEO OPTIMIZATION RULES (ENHANCED) ====================
 export const AEO_GEO_RULES = `
-🎯 AEO (Answer Engine Optimization) - FOR AI ASSISTANTS:
+═══════════════════════════════════════════════════════════════════════════════
+🎯 AEO (Answer Engine Optimization) - FOR AI ASSISTANTS (ChatGPT, Perplexity, Claude)
+═══════════════════════════════════════════════════════════════════════════════
 
 1. DIRECT ANSWER FIRST:
    - Answer the main question in the FIRST 50 words
@@ -111,11 +138,70 @@ export const AEO_GEO_RULES = `
    - Include quotable statistics with sources
    - "According to [Source], [stat]."
    - Easy for AI to cite and attribute
+
+6. SCHEMA-READY STRUCTURE:
+   - Use FAQ schema markup
+   - HowTo schema for step-by-step content
+   - Article schema with all required fields
 `;
 
-// ==================== VISUAL HTML COMPONENTS v2.0 ====================
+// ==================== INTERNAL LINKING RULES (SOTA 4-7 WORD ANCHORS) ====================
+export const INTERNAL_LINKING_RULES = `
+═══════════════════════════════════════════════════════════════════════════════
+🔗 INTERNAL LINKING - CONTEXTUAL RICH ANCHOR TEXT (8-15 LINKS)
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL REQUIREMENTS:
+1. NEVER front-load links in the introduction (max 1 link in first 10%)
+2. DISTRIBUTE links EVENLY across ALL sections using zone system
+3. ALL anchor text MUST be 4-7 words (NO EXCEPTIONS)
+4. Anchor text must be DESCRIPTIVE and preview the destination content
+5. NO generic anchors (click here, read more, learn more, this article)
+
+MANDATORY ZONE DISTRIBUTION:
+┌─────────────────────┬──────────────┬─────────────┐
+│ ZONE                │ POSITION     │ MAX LINKS   │
+├─────────────────────┼──────────────┼─────────────┤
+│ INTRO               │ 0-10%        │ 0-1 links   │
+│ EARLY_BODY          │ 10-30%       │ 2-3 links   │
+│ MID_BODY            │ 30-60%       │ 3-4 links   │
+│ LATE_BODY           │ 60-80%       │ 2-3 links   │
+│ FAQ_CONCLUSION      │ 80-100%      │ 2-3 links   │
+└─────────────────────┴──────────────┴─────────────┘
+
+ANCHOR TEXT QUALITY CHECKLIST:
+✅ EXCELLENT (4-7 words, descriptive):
+- "proven affiliate marketing conversion strategies"
+- "step-by-step email automation setup guide"
+- "high-converting landing page best practices"
+- "comprehensive keyword research methodology"
+
+❌ REJECTED (too short, generic, or toxic):
+- "click here" (TOXIC)
+- "read more" (TOXIC)
+- "this article" (TOXIC)
+- "SEO tips" (too short - only 2 words)
+- "marketing" (too short - only 1 word)
+
+ANCHOR TEXT RULES:
+1. First word CANNOT be: the, a, an, and, or, but, in, on, at, to, for, of, with
+2. Last word CANNOT be: the, a, an, and, or, but, in, on, at, to, for, of, with
+3. Must contain at least ONE descriptive/action word
+4. Should include topic + modifier + outcome pattern when possible
+
+FORMAT: [LINK_CANDIDATE: four to seven word descriptive anchor text]
+
+SPACING REQUIREMENTS:
+- Minimum 200 words between any two links
+- Maximum 1 link per paragraph
+- Never place link in first sentence of a section
+`;
+
+// ==================== VISUAL HTML COMPONENTS v16.0 ====================
 export const SOTA_HTML_COMPONENTS = `
-📦 VISUAL HTML COMPONENTS - USE 10-15 PER ARTICLE:
+═══════════════════════════════════════════════════════════════════════════════
+📊 VISUAL HTML COMPONENTS v16.0 - USE 12-18 PER ARTICLE
+═══════════════════════════════════════════════════════════════════════════════
 
 ⚠️ CRITICAL: Output ONLY HTML. NEVER use markdown tables (|---|). NEVER use markdown.
 
@@ -189,11 +275,6 @@ export const SOTA_HTML_COMPONENTS = `
         <td style="padding: 1rem; border-bottom: 1px solid #E2E8F0; text-align: center;">✅ Yes</td>
         <td style="padding: 1rem; border-bottom: 1px solid #E2E8F0; text-align: center;">❌ No</td>
       </tr>
-      <tr style="background: white;">
-        <td style="padding: 1rem; border-bottom: 1px solid #E2E8F0; font-weight: 600;">Criterion 2</td>
-        <td style="padding: 1rem; border-bottom: 1px solid #E2E8F0; text-align: center;">$99/mo</td>
-        <td style="padding: 1rem; border-bottom: 1px solid #E2E8F0; text-align: center;">$149/mo</td>
-      </tr>
     </tbody>
   </table>
 </div>
@@ -234,19 +315,96 @@ export const SOTA_HTML_COMPONENTS = `
 </blockquote>
 `;
 
-// ==================== INTERNAL LINKING ====================
-export const INTERNAL_LINKING_RULES = `
-🔗 INTERNAL LINKING (8-15 LINKS):
+// ==================== GAP ANALYSIS PROMPT (NEW - 15 UNCOVERED ENTITIES) ====================
+export const SOTA_GAP_ANALYSIS_PROMPT = `
+═══════════════════════════════════════════════════════════════════════════════
+BLUE OCEAN GAP ANALYSIS - SEMANTIC ENTITY EXTRACTION (15 UNCOVERED ENTITIES)
+═══════════════════════════════════════════════════════════════════════════════
 
-FORMAT: [LINK_CANDIDATE: descriptive anchor text]
+TASK: Perform comprehensive semantic gap analysis to identify content opportunities.
 
-RULES:
-- Anchor text: 3-7 words, descriptive
-- NEVER use: "click here", "read more", "learn more"
-- Distribute: 2-3 intro, 4-6 body, 2-3 FAQ, 1-2 conclusion
+INPUTS PROVIDED:
+- Primary Keyword: {primaryKeyword}
+- Top 3 SERP Content Summaries: {serpContent}
+- Site's Existing Content Map: {existingPages}
+
+ANALYSIS REQUIRED:
+
+1. ENTITY EXTRACTION (From Top 3 SERPs):
+   Extract ALL semantic entities:
+   - Named entities (people, brands, tools, products)
+   - Conceptual entities (methodologies, frameworks, strategies)
+   - Action entities (techniques, processes, steps)
+   - Modifier entities (adjectives, descriptors, qualifiers)
+   
+2. TOPIC CLUSTER MAPPING:
+   Group entities into semantic clusters:
+   - Core topic cluster (primary intent)
+   - Supporting clusters (secondary intents)
+   - Related clusters (adjacent topics)
+   
+3. GAP IDENTIFICATION:
+   Return EXACTLY 15 keywords/entities that:
+   ✓ Appear in top 3 rankings but NOT in site's existing content
+   ✓ Have search intent alignment with primary keyword
+   ✓ Represent subtopics with standalone ranking potential
+   ✓ Could become their own article or major section
+   
+4. PRIORITY SCORING:
+   Score each gap 1-100 based on:
+   - Search volume potential (estimated)
+   - Competition level (inverse)
+   - Relevance to site's niche
+   - Content creation difficulty
+
+OUTPUT FORMAT (JSON):
+{
+  "analysis": {
+    "primaryKeyword": "{keyword}",
+    "searchIntent": "informational|transactional|navigational|commercial",
+    "topicAuthority": "high|medium|low"
+  },
+  "coveredEntities": [
+    {"entity": "...", "frequency": N, "coverage": "full|partial"}
+  ],
+  "uncoveredEntities": [
+    {
+      "entity": "...",
+      "priority": 1-100,
+      "searchIntent": "...",
+      "difficulty": "easy|medium|hard",
+      "suggestedTitle": "...",
+      "suggestedAngle": "..."
+    }
+  ],
+  "semanticCoverageScore": 0-100,
+  "topicClusters": {
+    "core": ["term1", "term2"],
+    "supporting": ["term3", "term4"],
+    "related": ["term5", "term6"]
+  },
+  "contentGaps": [
+    {
+      "keyword": "...",
+      "searchVolume": "high|medium|low",
+      "competition": "high|medium|low",
+      "priority": "critical|high|medium",
+      "suggestedArticleType": "pillar|cluster|supporting",
+      "wordCountTarget": N,
+      "uniqueAngle": "..."
+    }
+  ],
+  "recommendations": [
+    "Create pillar content for X",
+    "Expand existing article Y with Z",
+    "Target featured snippet for Q"
+  ]
+}
+
+IMPORTANT: Return EXACTLY 15 uncovered entities, prioritized by ranking potential.
 `;
 
-// ==================== CORE PROMPT TEMPLATES ====================
+// ==================== CORE PROMPT TEMPLATES (ENHANCED) ====================
 const CORE_TEMPLATES: Record<string, PromptTemplate> = {
 
   // ==================== CONTENT STRATEGY GENERATOR ====================
@@ -277,7 +435,23 @@ RULES:
     }
   },
 
-  // ==================== ULTRA SOTA ARTICLE WRITER v13.0 ====================
+  // ==================== SOTA GAP ANALYSIS (NEW) ====================
+  sota_gap_analysis: {
+    systemInstruction: SOTA_GAP_ANALYSIS_PROMPT,
+    userPrompt: (primaryKeyword: string = "", serpContent: string = "", existingPages: string = ""): string => {
+      return `PRIMARY KEYWORD: ${primaryKeyword}
+
+TOP 3 SERP CONTENT:
+${serpContent || "Not provided"}
+
+EXISTING SITE PAGES:
+${existingPages || "Not provided"}
+
+TASK: Identify EXACTLY 15 uncovered keywords/entities. Output valid JSON.`;
+    }
+  },
+
+  // ==================== ULTRA SOTA ARTICLE WRITER v15.0 (ENHANCED) ====================
   ultra_sota_article_writer: {
     systemInstruction: `You are an elite SEO content writer. Create EXCEPTIONAL content optimized for both Google and AI assistants.
 
@@ -297,7 +471,9 @@ ${INTERNAL_LINKING_RULES}
 5. Include ONE Quick Answer box near the top.
 6. Use HTML tables with gradient headers for comparisons.
 7. FAQ section must use the schema-ready markup provided.
-8. 2500-3500 words total.
+8. 2500-3200 words total (STRICTLY ENFORCED).
+9. ALL anchor text MUST be 4-7 words (NO EXCEPTIONS).
+10. DISTRIBUTE internal links across zones - NO front-loading.
 
 ⛔ BANNED: ${BANNED_AI_PHRASES.slice(0, 25).join(", ")}`,
 
@@ -311,7 +487,7 @@ ${INTERNAL_LINKING_RULES}
       neuronData: string | null = null
     ): string => {
       const keywords = semanticKeywords?.slice(0, 25).join(", ") || "None";
-      const gaps = competitorGaps?.slice(0, 3).join("; ") || "None";
+      const gaps = competitorGaps?.slice(0, 15).join("; ") || "None";
       const pages = existingPages?.slice(0, 15).map(p => p.title).join(", ") || "None";
       const geo = geoLocation ? `\nGEO-TARGET: ${geoLocation}` : "";
       const neuron = neuronData ? `\nNLP TERMS: ${neuronData.substring(0, 300)}` : "";
@@ -323,28 +499,31 @@ AUDIENCE: ${strategy?.targetAudience || "General"}
 INTENT: ${strategy?.searchIntent || "Informational"}${geo}${neuron}
 
 KEYWORDS: ${keywords}
-GAPS TO FILL: ${gaps}
+TOP 15 UNCOVERED GAPS TO FILL: ${gaps}
 INTERNAL LINK TARGETS: ${pages}
 
 📋 REQUIRED STRUCTURE:
 1. Hook intro (surprising stat, bold claim) - 100 words
 2. Quick Answer box (direct answer for AI extraction)
-3. Key Takeaways box (ONCE ONLY, 5-7 points)
+3. Key Takeaways box (ONCE ONLY, 8 points with specific numbers)
 4. Body sections with H2/H3 headers
    - Include 3-4 Pro Tip boxes
    - Include 1-2 comparison tables (HTML only, NO markdown)
    - Include stat highlight boxes
-5. FAQ section (5-7 questions with schema markup)
+5. FAQ section (8 questions with schema markup)
 6. Conclusion with clear CTA
 
-📋 REQUIREMENTS:
-- 2500-3500 words
-- 10-15 [LINK_CANDIDATE: anchor text] internal links
-- 10-15 visual HTML components
-- HTML tables ONLY (never |---|)
-- Numbers and stats throughout
+📋 INTERNAL LINKING REQUIREMENTS:
+- 8-15 total links using [LINK_CANDIDATE: 4-7 word anchor] format
+- Zone distribution: INTRO (0-1), EARLY (2-3), MID (3-4), LATE (2-3), FAQ (2-3)
+- Minimum 200 words between links
+- NO generic anchors (click here, read more, learn more)
 
-OUTPUT: Clean HTML only. No markdown. No code blocks.`;
+📋 GAP COVERAGE:
+Cover these 15 uncovered entities that competitors rank for:
+${gaps}
+
+OUTPUT: Clean HTML only. 2500-3200 words. No markdown. No code blocks.`;
     }
   },
 
@@ -360,6 +539,7 @@ RULES:
 5. Add visual components where missing
 6. Update dates to 2026
 7. Remove banned AI phrases
+8. Ensure all internal links have 4-7 word anchor text
 
 BANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
 
@@ -376,16 +556,25 @@ HTML:\n${html}\n\nOutput refined HTML. Convert any |---| tables to HTML tables.`
     }
   },
 
-  // ==================== GOD MODE AUTONOMOUS AGENT ====================
+  // ==================== GOD MODE AUTONOMOUS AGENT (ENHANCED) ====================
   god_mode_autonomous_agent: {
     systemInstruction: `You optimize existing content to enterprise quality.
 
 ${HORMOZI_FERRISS_STYLE}
 
+${INTERNAL_LINKING_RULES}
+
 PRESERVE: All images, videos, iframes, existing links
 ENHANCE: Text quality, visual components
-INJECT: 8-12 [LINK_CANDIDATE: anchor text] links
+INJECT: 8-15 [LINK_CANDIDATE: 4-7 word anchor text] links with ZONE DISTRIBUTION
 CONVERT: Markdown tables to HTML tables
+
+INTERNAL LINK ZONES:
+- INTRO (0-10%): Max 1 link
+- EARLY_BODY (10-30%): 2-3 links
+- MID_BODY (30-60%): 3-4 links
+- LATE_BODY (60-80%): 2-3 links
+- FAQ_CONCLUSION (80-100%): 2-3 links
 
 BANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
 
@@ -394,67 +583,92 @@ BANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
       const pages = existingPages?.slice(0, 10).map(p => p.title).join(", ") || "None";
       const content = existingContent?.substring(0, 40000) || "No content";
       
-      return `OPTIMIZE:\n\nTOPIC: ${topic || "Extract from content"}\nKEYWORDS: ${keywords}\nLINK TARGETS: ${pages}\n\nCONTENT:\n${content}\n\nTASKS:\n1. Add Key Takeaways if missing (ONCE only)\n2. Add Pro Tip boxes (3-4)\n3. Convert markdown tables to HTML\n4. Inject 8-12 internal links\n5. Add FAQ if missing\n6. PRESERVE all media\n\nOUTPUT: Full optimized HTML.`;
+      return `OPTIMIZE:\n\nTOPIC: ${topic || "Extract from content"}\nKEYWORDS: ${keywords}\nLINK TARGETS: ${pages}\n\nCONTENT:\n${content}\n\nTASKS:\n1. Add Key Takeaways if missing (ONCE only, 8 items with numbers)\n2. Add Pro Tip boxes (3-4)\n3. Convert markdown tables to HTML\n4. Inject 8-15 internal links with 4-7 word anchors (ZONE DISTRIBUTED)\n5. Add FAQ if missing (8 questions)\n6. PRESERVE all media\n7. Cover any content gaps vs competitors\n\nOUTPUT: Full optimized HTML.`;
     }
   },
 
-  // ==================== SOTA FAQ GENERATOR ====================
+  // ==================== SOTA FAQ GENERATOR (ENHANCED) ====================
   sota_faq_generator: {
     systemInstruction: `Generate FAQ optimized for Featured Snippets and AI assistants.
 
 RULES:
-- Questions people actually ask
+- 8 questions people actually ask
 - Direct 40-60 word answers
 - Include specific numbers/facts
 - Use the HTML accordion format with schema markup
+- Include 2-3 internal links in FAQ answers using [LINK_CANDIDATE: 4-7 word anchor]
 
 OUTPUT: HTML FAQ section only.`,
 
     userPrompt: (topic: string = "", semanticKeywords: string[] = []): string => {
       const keywords = Array.isArray(semanticKeywords) ? semanticKeywords.slice(0, 10).join(", ") : "None";
       
-      return `GENERATE FAQ (5-7 questions):\n\nTOPIC: ${topic}\nKEYWORDS: ${keywords}\n\nUse this EXACT format for each question:\n<details style="background: white; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #E2E8F0;" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">\n  <summary style="padding: 1.5rem; cursor: pointer; font-weight: 700; font-size: 1.1rem; color: #1E293B;" itemprop="name">[Question]?</summary>\n  <div style="padding: 0 1.5rem 1.5rem; color: #475569; line-height: 1.8;" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">\n    <div itemprop="text">[40-60 word answer with facts]</div>\n  </div>\n</details>\n\nWrap all questions in the FAQ container div.`;
+      return `GENERATE FAQ (8 questions):\n\nTOPIC: ${topic}\nKEYWORDS: ${keywords}\n\nUse this EXACT format for each question:\n<details style="background: white; border-radius: 12px; margin-bottom: 1rem; border: 1px solid #E2E8F0;" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">\n  <summary style="padding: 1.5rem; cursor: pointer; font-weight: 700; font-size: 1.1rem; color: #1E293B;" itemprop="name">[Question]?</summary>\n  <div style="padding: 0 1.5rem 1.5rem; color: #475569; line-height: 1.8;" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">\n    <div itemprop="text">[40-60 word answer with facts]</div>\n  </div>\n</details>\n\nWrap all questions in the FAQ container div. Include 2-3 [LINK_CANDIDATE: anchor text] internal links.`;
     }
   },
 
-  // ==================== SOTA TAKEAWAYS GENERATOR ====================
+  // ==================== SOTA TAKEAWAYS GENERATOR (ENHANCED) ====================
   sota_takeaways_generator: {
     systemInstruction: `Extract KEY TAKEAWAYS from content. Output ONE takeaways box only.
 
 RULES:
-- 5-7 takeaways maximum
-- Each must include a number or stat
+- EXACTLY 8 takeaways
+- Each must include a specific number or stat
 - Each must be actionable
 - Use the exact HTML format provided`,
 
     userPrompt: (topic: string = "", content: string = ""): string => {
       const text = content?.substring(0, 4000) || "";
-      return `EXTRACT TAKEAWAYS:\n\nTOPIC: ${topic}\nCONTENT: ${text}\n\nOutput ONE Key Takeaways HTML box using this format:\n<!-- SOTA-TAKEAWAYS-START -->\n<div style="background: linear-gradient(145deg, #064E3B 0%, #047857 100%); border-radius: 16px; padding: 2rem; margin: 2.5rem 0;">\n  <h3 style="color: #ECFDF5; margin: 0 0 1.5rem 0; font-size: 1.4rem;">⚡ Key Takeaways</h3>\n  <ul style="color: #D1FAE5; margin: 0; padding-left: 1.25rem; line-height: 2.2;">\n    <li><strong>[Takeaway 1 with number]</strong></li>\n    ...\n  </ul>\n</div>\n<!-- SOTA-TAKEAWAYS-END -->`;
+      return `EXTRACT TAKEAWAYS (8 items with numbers):\n\nTOPIC: ${topic}\nCONTENT: ${text}\n\nOutput ONE Key Takeaways HTML box using this format:\n<!-- SOTA-TAKEAWAYS-START -->\n<div style="background: linear-gradient(145deg, #064E3B 0%, #047857 100%); border-radius: 16px; padding: 2rem; margin: 2.5rem 0;">\n  <h3 style="color: #ECFDF5; margin: 0 0 1.5rem 0; font-size: 1.4rem;">⚡ Key Takeaways</h3>\n  <ul style="color: #D1FAE5; margin: 0; padding-left: 1.25rem; line-height: 2.2;">\n    <li><strong>[Takeaway 1 with specific number/stat]</strong></li>\n    ... (8 items total)\n  </ul>\n</div>\n<!-- SOTA-TAKEAWAYS-END -->`;
     }
   },
 
   // ==================== SEO METADATA GENERATOR ====================
   seo_metadata_generator: {
-    systemInstruction: `Generate SEO metadata. Output ONLY JSON.\n\nFORMAT:\n{"seoTitle":"50-60 chars, keyword first","metaDescription":"140-155 chars, benefit-focused","slug":"lowercase-hyphenated"}`,
+    systemInstruction: `Generate SEO metadata. Output ONLY JSON.
+
+FORMAT:
+{"seoTitle":"50-60 chars exactly, keyword in first 3 words","metaDescription":"135-150 chars exactly, action verb start, benefit-focused","slug":"lowercase-hyphenated-3-5-words"}
+
+TITLE RULES:
+- EXACTLY 50-60 characters (STRICT)
+- Primary keyword in first 3 words
+- Use power words: Ultimate, Complete, Proven, Best, Guide
+- Include current year if relevant
+
+META DESCRIPTION RULES:
+- EXACTLY 135-150 characters (STRICT)
+- Start with action verb or number
+- Include primary keyword naturally
+- End with CTA or benefit`,
 
     userPrompt: (primaryKeyword: string = "", contentSummary: string = "", targetAudience: string = "", competitorTitles: string[] = [], location: string | null = null): string => {
       const summary = contentSummary?.substring(0, 300) || "";
-      return `KEYWORD: ${primaryKeyword}\nSUMMARY: ${summary}\n\nOutput JSON: {"seoTitle":"...","metaDescription":"...","slug":"..."}`;
+      const geo = location ? ` [GEO: ${location}]` : "";
+      return `KEYWORD: ${primaryKeyword}${geo}\nSUMMARY: ${summary}\n\nOutput JSON: {"seoTitle":"...","metaDescription":"...","slug":"..."}`;
     }
   },
 
   // ==================== COMPETITOR GAP ANALYZER ====================
   competitor_gap_analyzer: {
-    systemInstruction: `Identify content gaps. Output COMPACT JSON.\n\nFORMAT:\n{"gaps":[{"topic":"...","reason":"...","difficulty":5}]}`,
+    systemInstruction: `Identify content gaps. Output COMPACT JSON.
+
+FORMAT:
+{"gaps":[{"topic":"...","reason":"...","difficulty":5,"priority":"critical|high|medium"}]}
+
+MUST return EXACTLY 15 gap opportunities, prioritized by ranking potential.`,
 
     userPrompt: (topic: string = "", competitorContent: unknown[] = [], existingTitles: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput COMPACT JSON with max 10 gap opportunities.`;
+      return `TOPIC: ${topic}\n\nOutput COMPACT JSON with EXACTLY 15 gap opportunities prioritized by ranking potential.`;
     }
   },
 
   // ==================== HEALTH ANALYZER ====================
   health_analyzer: {
-    systemInstruction: `Analyze content health. Output COMPACT JSON.\n\nFORMAT:\n{"healthScore":75,"wordCount":1500,"issues":[{"type":"seo","issue":"...","fix":"..."}],"recommendations":["..."],"critique":"...","strengths":["..."],"weaknesses":["..."]}`,
+    systemInstruction: `Analyze content health. Output COMPACT JSON.
+
+FORMAT:
+{"healthScore":75,"wordCount":1500,"issues":[{"type":"seo","issue":"...","fix":"..."}],"recommendations":["..."],"critique":"...","strengths":["..."],"weaknesses":["..."]}`,
 
     userPrompt: (url: string = "", content: string = "", targetKeyword: string = ""): string => {
       const text = content?.substring(0, 6000) || "";
@@ -482,45 +696,51 @@ RULES:
   },
 
   sota_intro_generator: {
-    systemInstruction: `Write hook introductions. Start with surprising stat or bold claim. Include ONE number. Max 200 words. NEVER start with generic openers.`,
+    systemInstruction: `Write hook introductions using Hormozi/Ferriss style. Start with surprising stat or bold claim. Include ONE specific number. Max 200 words. NEVER start with generic openers.`,
     userPrompt: (topic: string = "", primaryKeyword: string = "", targetAudience: string = "", uniqueAngle: string = ""): string => {
-      return `WRITE INTRO:\n\nTopic: ${topic}\nKeyword: ${primaryKeyword}\nAudience: ${targetAudience || "General"}\n\nOutput 100-200 word HTML intro with hook.`;
+      return `WRITE INTRO:\n\nTopic: ${topic}\nKeyword: ${primaryKeyword}\nAudience: ${targetAudience || "General"}\n\nOutput 100-200 word HTML intro with hook. Start with specific number or surprising stat.`;
     }
   },
 
   sota_conclusion_generator: {
-    systemInstruction: `Write conclusions that drive action. Recap 3 key points. ONE clear CTA. 150-200 words max.`,
+    systemInstruction: `Write conclusions that drive action. Recap 3 key points with numbers. ONE clear CTA. 150-200 words max. Include 1-2 [LINK_CANDIDATE: 4-7 word anchor] internal links.`,
     userPrompt: (topic: string = "", keyPoints: string[] = [], cta: string = ""): string => {
       const points = keyPoints?.join("; ") || "Extract from content";
-      return `WRITE CONCLUSION:\n\nTopic: ${topic}\nKey Points: ${points}\nCTA: ${cta || "Start today"}\n\nOutput 150-200 word HTML conclusion.`;
+      return `WRITE CONCLUSION:\n\nTopic: ${topic}\nKey Points: ${points}\nCTA: ${cta || "Start today"}\n\nOutput 150-200 word HTML conclusion with 1-2 internal link candidates.`;
     }
   },
 
   cluster_planner: {
     systemInstruction: `Create content cluster plans. Output COMPACT JSON.`,
     userPrompt: (topic: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput JSON cluster plan with 1 pillar + 8-10 cluster pages.`;
+      return `TOPIC: ${topic}\n\nOutput JSON cluster plan with 1 pillar (4000-5500 words) + 8-10 cluster pages (2200-2800 words each).`;
     }
   },
 
   generate_internal_links: {
-    systemInstruction: `Suggest internal links. Output JSON array. Format: [{"anchorText":"3-7 words","targetSlug":"/slug"}]`,
+    systemInstruction: `Suggest internal links with 4-7 word contextual rich anchor text. Output JSON array. Format: [{"anchorText":"4-7 word descriptive anchor","targetSlug":"/slug"}]
+
+ANCHOR TEXT RULES:
+- MUST be 4-7 words
+- MUST be descriptive and preview destination content
+- NEVER use generic terms (click here, read more, learn more)
+- First/last word cannot be: the, a, an, and, or, but, in, on, at, to, for, of, with`,
     userPrompt: (content: string = "", existingPages: ExistingPage[] = []): string => {
       const text = content?.substring(0, 5000) || "";
       const pages = existingPages?.slice(0, 15).map(p => `${p.title} (/${p.slug})`).join("; ") || "None";
-      return `CONTENT: ${text}\nPAGES: ${pages}\n\nOutput JSON array with 8-12 link suggestions.`;
+      return `CONTENT: ${text}\nPAGES: ${pages}\n\nOutput JSON array with 8-15 link suggestions. All anchor text must be 4-7 words.`;
     }
   },
 
   reference_generator: {
-    systemInstruction: `Generate authoritative references. Prefer .gov, .edu, major publications.`,
+    systemInstruction: `Generate authoritative references. Prefer .gov, .edu, major publications. No social media or UGC sites.`,
     userPrompt: (topic: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput reference section HTML with 6-8 sources.`;
+      return `TOPIC: ${topic}\n\nOutput reference section HTML with 6-8 authoritative sources (no Reddit, Quora, Medium).`;
     }
   },
 
   sota_image_alt_optimizer: {
-    systemInstruction: `Write SEO alt text. Output JSON: [{"index":1,"altText":"80-125 chars"}]`,
+    systemInstruction: `Write SEO alt text. Output JSON: [{"index":1,"altText":"80-125 chars, descriptive, keyword-rich"}]`,
     userPrompt: (images: ImageContext[] = [], primaryKeyword: string = ""): string => {
       const imgList = images?.slice(0, 10).map((img, i) => `${i + 1}. ${img.context}`).join("; ") || "None";
       return `KEYWORD: ${primaryKeyword}\nIMAGES: ${imgList}\n\nOutput JSON array.`;
@@ -528,7 +748,7 @@ RULES:
   },
 
   json_repair: {
-    systemInstruction: `Repair malformed JSON. Return ONLY valid JSON.`,
+    systemInstruction: `Repair malformed JSON. Return ONLY valid JSON. No explanations.`,
     userPrompt: (brokenJson: string = ""): string => {
       return `FIX:\n${brokenJson?.substring(0, 3000) || "{}"}`;
     }
@@ -566,6 +786,8 @@ const createAliases = (templates: Record<string, PromptTemplate>): Record<string
     "sotaimagealtoptimizer": "sota_image_alt_optimizer",
     "jsonrepair": "json_repair",
     "schemagenerator": "schema_generator",
+    "sotagapanalysis": "sota_gap_analysis",
+    "gapanalysis": "sota_gap_analysis",
   };
   for (const [alias, original] of Object.entries(aliasMap)) {
     if (templates[original]) result[alias] = templates[original];
@@ -592,19 +814,25 @@ export function buildPrompt(promptKey: keyof typeof PROMPT_TEMPLATES | string, a
   }
 }
 
-// ==================== EXPORTS ====================
+// ==================== PROMPT CONSTANTS ====================
 export const PROMPT_CONSTANTS = {
   BANNED_PHRASES: BANNED_AI_PHRASES,
   MAX_TOKENS: 8192,
   TEMPERATURE: 0.7,
   TARGET_YEAR: 2026,
   MIN_WORD_COUNT: 2500,
-  MAX_WORD_COUNT: 3500,
+  MAX_WORD_COUNT: 3200,
   INTERNAL_LINKS_MIN: 8,
   INTERNAL_LINKS_MAX: 15,
-  MAX_KEYWORDS: 35
+  MAX_KEYWORDS: 35,
+  MIN_ANCHOR_WORDS: 4,
+  MAX_ANCHOR_WORDS: 7,
+  FAQ_COUNT: 8,
+  KEY_TAKEAWAYS_COUNT: 8,
+  GAP_ENTITIES_COUNT: 15,
 };
 
+// ==================== UTILITY FUNCTIONS ====================
 export function containsBannedPhrase(text: string): { contains: boolean; phrases: string[] } {
   const lowerText = text.toLowerCase();
   const foundPhrases = BANNED_AI_PHRASES.filter(phrase => lowerText.includes(phrase.toLowerCase()));
@@ -619,4 +847,18 @@ export function isValidPromptKey(key: string): key is keyof typeof PROMPT_TEMPLA
   return key in PROMPT_TEMPLATES;
 }
 
-export default { PROMPT_TEMPLATES, buildPrompt, BANNED_AI_PHRASES, SOTA_HTML_COMPONENTS, HORMOZI_FERRISS_STYLE, AEO_GEO_RULES, INTERNAL_LINKING_RULES, PROMPT_CONSTANTS, containsBannedPhrase, getAvailablePromptKeys, isValidPromptKey };
+// ==================== DEFAULT EXPORT ====================
+export default { 
+  PROMPT_TEMPLATES, 
+  buildPrompt, 
+  BANNED_AI_PHRASES, 
+  SOTA_HTML_COMPONENTS, 
+  HORMOZI_FERRISS_STYLE, 
+  AEO_GEO_RULES, 
+  INTERNAL_LINKING_RULES, 
+  SOTA_GAP_ANALYSIS_PROMPT,
+  PROMPT_CONSTANTS, 
+  containsBannedPhrase, 
+  getAvailablePromptKeys, 
+  isValidPromptKey 
+};
