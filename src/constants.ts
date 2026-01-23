@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - CONSTANTS v12.0
-// Centralized Configuration & Constants
+// SOTA WP CONTENT OPTIMIZER PRO - CONSTANTS v15.0
+// Enterprise-Grade Configuration with Anchor Text Requirements
 // =============================================================================
 
 // ==================== AI MODEL IDENTIFIERS ====================
@@ -55,11 +55,101 @@ export const FAQ_COUNT = 8;
 export const KEY_TAKEAWAYS = 8;
 export const YOUTUBE_EMBED_COUNT = 2;
 
-// SEO metadata limits
+// ==================== ANCHOR TEXT REQUIREMENTS (NEW) ====================
+
+export const ANCHOR_TEXT_CONFIG = {
+  // Word count requirements
+  MIN_ANCHOR_WORDS: 4,
+  MAX_ANCHOR_WORDS: 7,
+  IDEAL_ANCHOR_RANGE: [4, 6] as [number, number],
+  
+  // Quality thresholds
+  MIN_QUALITY_SCORE: 75,
+  MIN_SEMANTIC_SCORE: 60,
+  MIN_CONTEXTUAL_SCORE: 65,
+  
+  // Distribution requirements
+  MIN_WORDS_BETWEEN_LINKS: 200,
+  MAX_LINKS_PER_PARAGRAPH: 1,
+  
+  // Zone distribution (percentage of article)
+  ZONE_DISTRIBUTION: {
+    INTRO: { start: 0, end: 10, min: 0, max: 1 },
+    EARLY_BODY: { start: 10, end: 30, min: 2, max: 3 },
+    MID_BODY: { start: 30, end: 60, min: 3, max: 4 },
+    LATE_BODY: { start: 60, end: 80, min: 2, max: 3 },
+    FAQ_CONCLUSION: { start: 80, end: 100, min: 2, max: 3 },
+  },
+} as const;
+
+// Stopwords that should NOT start or end anchor text
+export const ANCHOR_BOUNDARY_STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of',
+  'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+  'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'this', 'that',
+  'these', 'those', 'it', 'its', 'they', 'their', 'what', 'which', 'who',
+  'when', 'where', 'why', 'how', 'all', 'each', 'every', 'both', 'few',
+  'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only',
+  'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also', 'now',
+]);
+
+// Generic anchor text that kills SEO value - NEVER USE
+export const TOXIC_ANCHOR_PATTERNS = [
+  'click here',
+  'read more',
+  'learn more',
+  'find out more',
+  'check it out',
+  'this article',
+  'this guide',
+  'this post',
+  'this page',
+  'this link',
+  'here',
+  'link',
+  'website',
+  'site',
+  'more info',
+  'more information',
+  'click',
+  'tap here',
+  'go here',
+  'see more',
+  'view more',
+  'continue reading',
+] as const;
+
+// SEO power phrases that boost anchor quality (Hormozi/Ferriss style)
+export const SEO_POWER_ANCHOR_PATTERNS = [
+  { pattern: /\b(complete|comprehensive|ultimate|definitive)\s+guide\b/i, boost: 15 },
+  { pattern: /\b(step[- ]by[- ]step|how[- ]to)\s+\w+/i, boost: 12 },
+  { pattern: /\b(best|top|proven|effective)\s+(practices|strategies|techniques|methods)/i, boost: 14 },
+  { pattern: /\b(beginner|advanced|expert|professional)\s+\w+/i, boost: 10 },
+  { pattern: /\b(optimize|boost|improve|increase|maximize)\s+\w+/i, boost: 11 },
+  { pattern: /\b\d{4}\s+(guide|tips|strategies)/i, boost: 8 },
+  { pattern: /\b(essential|critical|important|key)\s+\w+/i, boost: 9 },
+  { pattern: /\bfor\s+(beginners|professionals|experts|ecommerce|wordpress)/i, boost: 10 },
+  { pattern: /\bwithout\s+(coding|experience|spending)/i, boost: 8 },
+  { pattern: /\bin\s+\d+\s+(days|hours|minutes|steps)/i, boost: 12 },
+] as const;
+
+// ==================== SEO METADATA LIMITS ====================
+
 export const TITLE_MIN_LENGTH = 50;
 export const TITLE_MAX_LENGTH = 60;
 export const META_DESC_MIN_LENGTH = 135;
 export const META_DESC_MAX_LENGTH = 150;
+
+// ==================== GAP ANALYSIS REQUIREMENTS ====================
+
+export const GAP_ANALYSIS_CONFIG = {
+  MIN_UNCOVERED_ENTITIES: 15,
+  MAX_UNCOVERED_ENTITIES: 15,
+  MIN_COMPETITOR_PAGES: 3,
+  SEMANTIC_COVERAGE_THRESHOLD: 70,
+  PRIORITY_SCORE_THRESHOLD: 60,
+} as const;
 
 // ==================== API CONFIGURATION ====================
 
@@ -275,6 +365,26 @@ export const FEATURE_FLAGS = {
   ENABLE_GAP_ANALYSIS: true,
   ENABLE_PERFORMANCE_TRACKING: true,
   ENABLE_AEO_OPTIMIZATION: true,
+  ENABLE_STRICT_ANCHOR_VALIDATION: true,
   DEBUG_MODE: process.env.NODE_ENV === 'development',
 } as const;
 
+// ==================== EXPORTS ====================
+
+export default {
+  AI_MODELS,
+  TARGET_MIN_WORDS,
+  TARGET_MAX_WORDS,
+  MIN_INTERNAL_LINKS,
+  MAX_INTERNAL_LINKS,
+  ANCHOR_TEXT_CONFIG,
+  ANCHOR_BOUNDARY_STOPWORDS,
+  TOXIC_ANCHOR_PATTERNS,
+  SEO_POWER_ANCHOR_PATTERNS,
+  GAP_ANALYSIS_CONFIG,
+  CACHE_TTL,
+  API_TIMEOUTS,
+  PROCESSING_LIMITS,
+  STORAGE_KEYS,
+  FEATURE_FLAGS,
+};
