@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - CONSTANTS v15.0
-// Enterprise-Grade Configuration with Anchor Text Requirements
+// SOTA WP CONTENT OPTIMIZER PRO - CONSTANTS v15.0 (ENTERPRISE MERGED)
+// Enterprise-Grade Configuration with Anchor Text & Gap Analysis Requirements
 // =============================================================================
 
 // ==================== AI MODEL IDENTIFIERS ====================
@@ -55,10 +55,10 @@ export const FAQ_COUNT = 8;
 export const KEY_TAKEAWAYS = 8;
 export const YOUTUBE_EMBED_COUNT = 2;
 
-// ==================== ANCHOR TEXT REQUIREMENTS (NEW) ====================
+// ==================== ANCHOR TEXT REQUIREMENTS (SOTA v15.0) ====================
 
 export const ANCHOR_TEXT_CONFIG = {
-  // Word count requirements
+  // Word count requirements (STRICT ENFORCEMENT)
   MIN_ANCHOR_WORDS: 4,
   MAX_ANCHOR_WORDS: 7,
   IDEAL_ANCHOR_RANGE: [4, 6] as [number, number],
@@ -141,7 +141,7 @@ export const TITLE_MAX_LENGTH = 60;
 export const META_DESC_MIN_LENGTH = 135;
 export const META_DESC_MAX_LENGTH = 150;
 
-// ==================== GAP ANALYSIS REQUIREMENTS ====================
+// ==================== GAP ANALYSIS REQUIREMENTS (SOTA v15.0) ====================
 
 export const GAP_ANALYSIS_CONFIG = {
   MIN_UNCOVERED_ENTITIES: 15,
