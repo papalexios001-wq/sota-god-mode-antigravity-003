@@ -219,7 +219,10 @@ const generateAlternativeAnchors = (
   const words = paragraph.split(/\s+/);
   
   // Generate variations by adjusting word boundaries
+    // DEFENSIVE: Early return if original.text is invalid
+  if (!original?.text || typeof original.text !== 'string') return alternatives;
   const originalWords = original.text.split(/\s+/);
+    if (originalWords.length === 0) return alternatives;
   const startIdx = words.findIndex(w => w.includes(originalWords[0]));
   
   if (startIdx > 0) {
