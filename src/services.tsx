@@ -611,7 +611,7 @@ export const generateSemanticKeywords = async (
     
     const data = JSON.parse(response);
     
-    // CRITICAL FIX: Use ensureArray to guarantee we always return an array
+    // CRITICAL FIX: Use function ensureArray to guarantee we always return an array
     // This prevents the "t?.slice(...).join is not a function" error
     const rawKeywords = data.keywords || data.semanticKeywords || data.keyword_list || data;
     const keywords = ensureArray<string>(rawKeywords, fallbackKeywords);
