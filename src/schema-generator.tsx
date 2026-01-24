@@ -147,8 +147,7 @@ export const generateFullSchema = (
   schemas.push(articleSchema);
 
   // 2. Breadcrumb Schema
-  const baseUrl = url ? url.split('/').slice(0, 3).join('/') : '';
-  const breadcrumbSchema = {
+  const baseUrl = (typeof url === 'string' && url) ? url.split('/').slice(0, 3).join('/') : '';  const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
