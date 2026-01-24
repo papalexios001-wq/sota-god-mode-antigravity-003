@@ -30,6 +30,18 @@ function ensureArraySafe<T>(value: unknown, fallback: T[] = []): T[] {
   return [value] as T[];
 }
 
+// Safe slice that ensures array first
+function safeSlice<T>(value: unknown, start?: number, end?: number): T[] {
+  const arr = ensureArraySafe<T>(value, []);
+  return arr.slice(start, end);
+}
+
+// Safe join that ensures array first and filters nullish values
+function safeJoin(value: unknown, separator: string = ', '): string {
+  const arr = ensureArraySafe<unknown>(value, []);
+  return arr.filter(Boolean).join(separator);
+}
+
 export const CheckIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
 );
@@ -427,7 +439,7 @@ export const ReviewModal = ({ item, onClose, onSaveChanges, wpConfig, wpPassword
             // CRITICAL FIX: Ensure serpData is always an array
             const serpData = ensureArraySafe(item.generatedContent.serpData, []);
             const summary = editedContent.replace(/<[^>]+>/g, ' ').substring(0, 500);
-            const competitorTitles = serpData.map((d: any) => d.title).slice(0, 5);
+                  const competitorTitles = safeSlice<string>(serpData.map((d: any) => d?.title).filter(Boolean), 0, 5);
             const location = geoTargeting.enabled ? geoTargeting.location : null;
             const responseText = await callAI('seo_metadata_generator', [primaryKeyword, summary, strategy?.targetAudience, competitorTitles, location], 'json');
             const aiRepairer = (brokenText: string) => callAI('json_repair', [brokenText], 'json');
