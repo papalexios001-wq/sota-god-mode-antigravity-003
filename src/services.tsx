@@ -22,7 +22,8 @@ import {
   detectCategory,
   determineAuthorityLevel,
   REFERENCE_CATEGORIES,
-  VerifiedReference 
+  VerifiedReference,
+  ReferenceCategory
 } from './ReferenceService';
 
 // Internal Link Orchestrator
