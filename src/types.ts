@@ -460,3 +460,79 @@ export interface PromptTemplate {
 export interface PromptTemplates {
   [key: string]: PromptTemplate;
 }
+
+
+// =============================================================================
+// ADD THESE NEW TYPES TO YOUR EXISTING types.ts FILE
+// =============================================================================
+
+// YouTube Video Type
+export interface YouTubeVideo {
+  title: string;
+  videoId: string;
+  channel: string;
+  description: string;
+  thumbnail: string;
+  relevanceScore: number;
+}
+
+// Verified Reference Type
+export interface VerifiedReference {
+  title: string;
+  url: string;
+  domain: string;
+  description: string;
+  authority: 'high' | 'medium' | 'low';
+  verified: boolean;
+  category?: string;
+}
+
+// Generation Analytics Type
+export interface GenerationAnalytics {
+  phase: string;
+  progress: number;
+  details: Record<string, any>;
+  timestamp: Date;
+}
+
+// Enhanced Generated Content (update existing if present)
+export interface GeneratedContent {
+  title: string;
+  content: string;
+  metaDescription: string;
+  slug: string;
+  schemaMarkup: string;
+  primaryKeyword: string;
+  semanticKeywords: string[];
+  // NEW FIELDS:
+  youtubeVideo?: {
+    title: string;
+    videoId: string;
+    embedded: boolean;
+  } | null;
+  references?: {
+    title: string;
+    url: string;
+    verified: boolean;
+  }[];
+  internalLinks?: {
+    anchor: string;
+    targetSlug: string;
+    targetTitle: string;
+    score: number;
+    wordCount: number;
+  }[];
+}
+
+// Internal Link Candidate Type
+export interface InternalLinkCandidate {
+  anchorText: string;
+  targetSlug: string;
+  targetTitle: string;
+  qualityScore: number;
+  wordCount: number;
+  semanticRelevance: number;
+  contextualFit: number;
+  position: number;
+  paragraphIndex: number;
+}
