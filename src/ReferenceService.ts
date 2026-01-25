@@ -5,8 +5,9 @@
 import { fetchWithProxies } from './contentUtils';
 
 // ==================== EXPORTED TYPES ====================
+// Use 'export type' for interfaces to ensure they're properly exported
 
-export interface VerifiedReference {
+export type VerifiedReference = {
   title: string;
   url: string;
   domain: string;
@@ -14,13 +15,13 @@ export interface VerifiedReference {
   authority: 'high' | 'medium' | 'low';
   verified: boolean;
   category: string;
-}
+};
 
-export interface ReferenceCategory {
+export type ReferenceCategory = {
   keywords: string[];
   authorityDomains: string[];
   searchModifiers: string[];
-}
+};
 
 // ==================== CONSTANTS ====================
 
