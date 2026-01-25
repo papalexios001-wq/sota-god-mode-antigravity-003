@@ -1018,6 +1018,37 @@ const analyzeContentGaps = async (
   }
 };
 
+const polishContentHtml = (html: string): string => {
+  let polished = html;
+
+  // 1. Force Table Styling (if LLM missed it)
+  if (polished.includes('<table') && !polished.includes('border-radius: 16px')) {
+    polished = polished.replace(
+      /<table[^>]*>/i,
+      '<div style="margin: 3rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3); border: 1px solid #334155;"><table style="width: 100%; border-collapse: collapse; background: #1e293b;">'
+    );
+    polished = polished.replace(/<\/table>/i, '</table></div>');
+    polished = polished.replace(/<thead[^>]*>/i, '<thead><tr style="background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);">');
+    polished = polished.replace(/<th[^>]*>/gi, '<th style="padding: 1.25rem; text-align: left; font-weight: 800; color: #ffffff; font-size: 1.1rem; text-transform: uppercase;">');
+    polished = polished.replace(/<td[^>]*>/gi, '<td style="padding: 1.25rem; color: #cbd5e1; border-bottom: 1px solid #334155;">');
+  }
+
+  // 2. Enhance Blockquotes
+  if (polished.includes('<blockquote') && !polished.includes('linear-gradient')) {
+    polished = polished.replace(
+      /<blockquote[^>]*>/gi,
+      '<blockquote style="position: relative; margin: 2.5rem 0; padding: 2rem 2rem 2rem 3rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); border-radius: 16px; border-left: 4px solid #6366f1;">'
+    );
+  }
+
+  // 3. Enhance Lists (if they look like Key Takeaways but aren't styled)
+  // This is risky to do generally, but we can style ALL lists slightly better
+  // polished = polished.replace(/<ul>/gi, '<ul style="list-style: none; padding: 0; margin: 2rem 0;">'); 
+  // (Skipping list override to avoid breaking nav/other lists)
+
+  return polished;
+};
+
 // ==================== CONTENT GENERATION ====================
 
 export const generateContent = {
@@ -1106,10 +1137,10 @@ export const generateContent = {
           linkResult = { linkCount: linkingResult.linkCount, links: linkingResult.links };
         }
 
-        // Phase 7: Assemble
-        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📋 Assembling...' } });
+        // Phase 7: Assemble & Polish
+        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '✨ Polishing...' } });
 
-        let finalContent = contentWithLinks;
+        let finalContent = polishContentHtml(contentWithLinks);
         if (youtubeHtml) {
           const h2Match = finalContent.match(/<\/h2>/i);
           if (h2Match && h2Match.index !== undefined) {
