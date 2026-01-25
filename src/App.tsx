@@ -22,8 +22,28 @@ import {
   generateImageWithFallback, 
   publishItemToWordPress, 
   maintenanceEngine,
-  fetchVerifiedReferences 
+  fetchVerifiedReferences,
+  findRelevantYouTubeVideo,
+  generateEnhancedInternalLinks,
+  generationAnalytics
 } from './services';
+
+// NEW SERVICE IMPORTS
+import { 
+  searchYouTubeVideos, 
+  generateYouTubeEmbed 
+} from './YouTubeService';
+
+import { 
+  fetchVerifiedReferences as fetchReferences,
+  detectCategory,
+  REFERENCE_CATEGORIES 
+} from './ReferenceService';
+
+import { 
+  InternalLinkOrchestrator,
+  createLinkOrchestrator 
+} from './InternalLinkOrchestrator';
 
 import { BulkPublishModal } from './BulkPublishModal';
 
