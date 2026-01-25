@@ -6,9 +6,9 @@
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import React, { 
-  useState, useMemo, useEffect, useCallback, 
-  useReducer, useRef, Component, ErrorInfo 
+import React, {
+  useState, useMemo, useEffect, useCallback,
+  useReducer, useRef, Component, ErrorInfo
 } from 'react';
 
 // ==================== INTERNAL IMPORTS ====================
@@ -17,11 +17,11 @@ import { PROMPT_TEMPLATES } from './prompts';
 import { AI_MODELS, STORAGE_KEYS, PROCESSING_LIMITS, FEATURE_FLAGS } from './constants';
 import { itemsReducer, loadItemsFromStorage, saveItemsToStorage, computeStats } from './state';
 // REPLACE it with:
-import { 
-  callAI, 
-  generateContent, 
-  generateImageWithFallback, 
-  publishItemToWordPress, 
+import {
+  callAI,
+  generateContent,
+  generateImageWithFallback,
+  publishItemToWordPress,
   maintenanceEngine,
   fetchVerifiedReferences,
   findRelevantYouTubeVideo,
@@ -30,58 +30,58 @@ import {
 } from './services';
 
 // ADD these NEW imports after the services import:
-import { 
-  searchYouTubeVideos, 
+import {
+  searchYouTubeVideos,
   generateYouTubeEmbed,
-  findAndEmbedYouTubeVideo 
+  findAndEmbedYouTubeVideo
 } from './YouTubeService';
 
-import { 
+import {
   fetchVerifiedReferences as fetchReferencesService,
   generateReferencesHtml,
   detectCategory,
-  REFERENCE_CATEGORIES 
+  REFERENCE_CATEGORIES
 } from './ReferenceService';
 
-import { 
+import {
   InternalLinkOrchestrator,
-  createLinkOrchestrator 
+  createLinkOrchestrator
 } from './InternalLinkOrchestrator';
 
 import { BulkPublishModal } from './BulkPublishModal';
 
 import {
-  AppFooter, 
-  AnalysisModal, 
-  BulkPublishModal, 
-  ReviewModal, 
-  SidebarNav, 
-  SkeletonLoader, 
-  ApiKeyInput, 
-  CheckIcon, 
-  XIcon, 
+  AppFooter,
+  AnalysisModal,
+  BulkPublishModal,
+  ReviewModal,
+  SidebarNav,
+  SkeletonLoader,
+  ApiKeyInput,
+  CheckIcon,
+  XIcon,
   WordPressEndpointInstructions
 } from './components';
 import { LandingPage } from './LandingPage';
 import {
-  SitemapPage, 
-  ContentItem, 
-  GeneratedContent, 
-  SiteInfo, 
-  ExpandedGeoTargeting, 
-  ApiClients, 
-  WpConfig, 
-  NeuronConfig, 
-  GapAnalysisSuggestion, 
+  SitemapPage,
+  ContentItem,
+  GeneratedContent,
+  SiteInfo,
+  ExpandedGeoTargeting,
+  ApiClients,
+  WpConfig,
+  NeuronConfig,
+  GapAnalysisSuggestion,
   GenerationContext,
   ApiKeyStatusMap
 } from './types';
-import { 
-  callAiWithRetry, 
-  debounce, 
-  fetchWordPressWithRetry, 
-  sanitizeTitle, 
-  extractSlugFromUrl, 
+import {
+  callAiWithRetry,
+  debounce,
+  fetchWordPressWithRetry,
+  sanitizeTitle,
+  extractSlugFromUrl,
   parseJsonWithAiRepair,
   processConcurrently,
   getStorageItem,
@@ -140,8 +140,8 @@ export class SotaErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
           <p style={{ color: '#A0A8C2', marginBottom: '2rem', maxWidth: '600px' }}>
             {this.state.error?.message || 'An unexpected error occurred.'}
           </p>
-          <button 
-            className="btn" 
+          <button
+            className="btn"
             onClick={() => {
               localStorage.removeItem(STORAGE_KEYS.ITEMS);
               window.location.reload();
@@ -222,7 +222,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<string>('setup');
 
   // ==================== API CONFIGURATION STATE ====================
-  const [apiKeys, setApiKeys] = useState(() => 
+  const [apiKeys, setApiKeys] = useState(() =>
     getStorageItem(STORAGE_KEYS.API_KEYS, DEFAULT_API_KEYS)
   );
   const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyStatusMap>(DEFAULT_API_KEY_STATUS);
@@ -234,19 +234,19 @@ const App: React.FC = () => {
     openrouter: null,
     groq: null
   });
-  const [selectedModel, setSelectedModel] = useState(() => 
+  const [selectedModel, setSelectedModel] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.SELECTED_MODEL) || 'gemini'
   );
-  const [selectedGroqModel, setSelectedGroqModel] = useState(() => 
+  const [selectedGroqModel, setSelectedGroqModel] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.SELECTED_GROQ_MODEL) || AI_MODELS.GROQ_MODELS[0]
   );
   const [openrouterModels, setOpenrouterModels] = useState<string[]>(AI_MODELS.OPENROUTER_DEFAULT);
 
   // ==================== WORDPRESS CONFIGURATION STATE ====================
-  const [wpConfig, setWpConfig] = useState<WpConfig>(() => 
+  const [wpConfig, setWpConfig] = useState<WpConfig>(() =>
     getStorageItem(STORAGE_KEYS.WP_CONFIG, DEFAULT_WP_CONFIG)
   );
-  const [wpPassword, setWpPassword] = useState(() => 
+  const [wpPassword, setWpPassword] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.WP_PASSWORD) || ''
   );
   const [wpEndpointStatus, setWpEndpointStatus] = useState<'idle' | 'verifying' | 'valid' | 'invalid'>('idle');
@@ -255,16 +255,16 @@ const App: React.FC = () => {
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
 
   // ==================== SITE & SEO CONFIGURATION STATE ====================
-  const [siteInfo, setSiteInfo] = useState<SiteInfo>(() => 
+  const [siteInfo, setSiteInfo] = useState<SiteInfo>(() =>
     getStorageItem(STORAGE_KEYS.SITE_INFO, DEFAULT_SITE_INFO)
   );
-  const [geoTargeting, setGeoTargeting] = useState<ExpandedGeoTargeting>(() => 
+  const [geoTargeting, setGeoTargeting] = useState<ExpandedGeoTargeting>(() =>
     getStorageItem(STORAGE_KEYS.GEO_TARGETING, DEFAULT_GEO_TARGETING)
   );
   const [useGoogleSearch, setUseGoogleSearch] = useState(false);
 
   // ==================== NEURONWRITER STATE ====================
-  const [neuronConfig, setNeuronConfig] = useState<NeuronConfig>(() => 
+  const [neuronConfig, setNeuronConfig] = useState<NeuronConfig>(() =>
     getStorageItem(STORAGE_KEYS.NEURON_CONFIG, DEFAULT_NEURON_CONFIG)
   );
   const [neuronProjects, setNeuronProjects] = useState<NeuronProject[]>([]);
@@ -328,20 +328,20 @@ const App: React.FC = () => {
   const [bulkPublishLogs, setBulkPublishLogs] = useState<string[]>([]);
 
   // ==================== GOD MODE STATE ====================
-  const [isGodMode, setIsGodMode] = useState(() => 
+  const [isGodMode, setIsGodMode] = useState(() =>
     localStorage.getItem(STORAGE_KEYS.GOD_MODE) === 'true'
   );
   const [godModeLogs, setGodModeLogs] = useState<string[]>([]);
-  const [excludedUrls, setExcludedUrls] = useState<string[]>(() => 
+  const [excludedUrls, setExcludedUrls] = useState<string[]>(() =>
     getStorageItem(STORAGE_KEYS.EXCLUDED_URLS, [])
   );
-  const [excludedCategories, setExcludedCategories] = useState<string[]>(() => 
+  const [excludedCategories, setExcludedCategories] = useState<string[]>(() =>
     getStorageItem(STORAGE_KEYS.EXCLUDED_CATEGORIES, [])
   );
-  const [priorityUrls, setPriorityUrls] = useState<string[]>(() => 
+  const [priorityUrls, setPriorityUrls] = useState<string[]>(() =>
     getStorageItem(STORAGE_KEYS.PRIORITY_URLS, [])
   );
-  const [priorityOnlyMode, setPriorityOnlyMode] = useState<boolean>(() => 
+  const [priorityOnlyMode, setPriorityOnlyMode] = useState<boolean>(() =>
     localStorage.getItem(STORAGE_KEYS.PRIORITY_ONLY_MODE) === 'true'
   );
   const [optimizedHistory, setOptimizedHistory] = useState<OptimizedLog[]>([]);
@@ -434,10 +434,10 @@ const App: React.FC = () => {
         try {
           setApiKeyStatus(prev => ({ ...prev, gemini: 'validating' }));
           const geminiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
-          await callAiWithRetry(() => 
-            geminiClient.models.generateContent({ 
-              model: AI_MODELS.GEMINI_FLASH, 
-              contents: 'test' 
+          await callAiWithRetry(() =>
+            geminiClient.models.generateContent({
+              model: AI_MODELS.GEMINI_FLASH,
+              contents: 'test'
             })
           );
           setApiClients(prev => ({ ...prev, gemini: geminiClient }));
@@ -459,85 +459,85 @@ const App: React.FC = () => {
     });
   }, []);
 
-// ==================== GOD MODE INTEGRATION ====================
+  // ==================== GOD MODE INTEGRATION ====================
 
-// Setup God Mode log callback
-useEffect(() => {
-  if (maintenanceEngine && typeof maintenanceEngine.logCallback !== 'undefined') {
-    maintenanceEngine.logCallback = (msg: string) => {
-      console.log(msg);
-      
-      if (msg.startsWith('✅ GOD MODE SUCCESS|') || msg.startsWith('✅ SUCCESS|')) {
-        const parts = msg.split('|');
-        if (parts.length >= 3) {
-          setOptimizedHistory(prev => [
-            { title: parts[1], url: parts[2], timestamp: new Date().toLocaleTimeString() },
-            ...prev
-          ].slice(0, 50));
+  // Setup God Mode log callback
+  useEffect(() => {
+    if (maintenanceEngine && typeof maintenanceEngine.logCallback !== 'undefined') {
+      maintenanceEngine.logCallback = (msg: string) => {
+        console.log(msg);
+
+        if (msg.startsWith('✅ GOD MODE SUCCESS|') || msg.startsWith('✅ SUCCESS|')) {
+          const parts = msg.split('|');
+          if (parts.length >= 3) {
+            setOptimizedHistory(prev => [
+              { title: parts[1], url: parts[2], timestamp: new Date().toLocaleTimeString() },
+              ...prev
+            ].slice(0, 50));
+          }
+          setGodModeLogs(prev => [`✅ Optimized: ${parts[1]}`, ...prev].slice(0, 100));
+        } else {
+          setGodModeLogs(prev => [msg, ...prev].slice(0, 100));
         }
-        setGodModeLogs(prev => [`✅ Optimized: ${parts[1]}`, ...prev].slice(0, 100));
-      } else {
-        setGodModeLogs(prev => [msg, ...prev].slice(0, 100));
-      }
+      };
+    }
+  }, []);
+
+  // Manage God Mode lifecycle - WITH SAFETY CHECKS
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.GOD_MODE, String(isGodMode));
+
+    const context: GenerationContext = {
+      dispatch,
+      existingPages,
+      siteInfo,
+      wpConfig,
+      geoTargeting,
+      serperApiKey: apiKeys.serperApiKey,
+      apiKeyStatus,
+      apiClients,
+      selectedModel,
+      openrouterModels,
+      selectedGroqModel,
+      neuronConfig,
+      excludedUrls,
+      excludedCategories,
+      priorityUrls,
+      priorityOnlyMode
     };
-  }
-}, []);
 
-// Manage God Mode lifecycle - WITH SAFETY CHECKS
-useEffect(() => {
-  localStorage.setItem(STORAGE_KEYS.GOD_MODE, String(isGodMode));
+    // ✅ CRITICAL FIX: Add null/undefined checks before calling methods
+    try {
+      if (isGodMode) {
+        if (maintenanceEngine && typeof maintenanceEngine.start === 'function') {
+          maintenanceEngine.start(context);
+        } else {
+          console.warn('[App] maintenanceEngine.start is not available');
+        }
+      } else {
+        if (maintenanceEngine && typeof maintenanceEngine.stop === 'function') {
+          maintenanceEngine.stop();
+        }
+      }
 
-  const context: GenerationContext = {
-    dispatch,
+      // Update context when dependencies change
+      if (isGodMode && existingPages.length > 0) {
+        if (maintenanceEngine && typeof maintenanceEngine.updateContext === 'function') {
+          maintenanceEngine.updateContext(context);
+        }
+      }
+    } catch (error) {
+      console.error('[App] God Mode lifecycle error:', error);
+    }
+  }, [
+    isGodMode,
     existingPages,
-    siteInfo,
-    wpConfig,
-    geoTargeting,
-    serperApiKey: apiKeys.serperApiKey,
-    apiKeyStatus,
     apiClients,
-    selectedModel,
-    openrouterModels,
-    selectedGroqModel,
-    neuronConfig,
     excludedUrls,
     excludedCategories,
     priorityUrls,
     priorityOnlyMode
-  };
-
-  // ✅ CRITICAL FIX: Add null/undefined checks before calling methods
-  try {
-    if (isGodMode) {
-      if (maintenanceEngine && typeof maintenanceEngine.start === 'function') {
-        maintenanceEngine.start(context);
-      } else {
-        console.warn('[App] maintenanceEngine.start is not available');
-      }
-    } else {
-      if (maintenanceEngine && typeof maintenanceEngine.stop === 'function') {
-        maintenanceEngine.stop();
-      }
-    }
-
-    // Update context when dependencies change
-    if (isGodMode && existingPages.length > 0) {
-      if (maintenanceEngine && typeof maintenanceEngine.updateContext === 'function') {
-        maintenanceEngine.updateContext(context);
-      }
-    }
-  } catch (error) {
-    console.error('[App] God Mode lifecycle error:', error);
-  }
-}, [
-  isGodMode, 
-  existingPages, 
-  apiClients, 
-  excludedUrls, 
-  excludedCategories,
-  priorityUrls,
-  priorityOnlyMode
-]);
+  ]);
 
 
   // ==================== NEURONWRITER INTEGRATION ====================
@@ -599,10 +599,10 @@ useEffect(() => {
         switch (provider) {
           case 'gemini':
             client = new GoogleGenAI({ apiKey: key });
-            await callAiWithRetry(() => 
-              client.models.generateContent({ 
-                model: AI_MODELS.GEMINI_FLASH, 
-                contents: 'test' 
+            await callAiWithRetry(() =>
+              client.models.generateContent({
+                model: AI_MODELS.GEMINI_FLASH,
+                contents: 'test'
               })
             );
             isValid = true;
@@ -914,7 +914,7 @@ useEffect(() => {
       grounding
     );
 
-    const serviceGenerateImage = (prompt: string) => 
+    const serviceGenerateImage = (prompt: string) =>
       generateImageWithFallback(apiClients, prompt);
 
     const context: GenerationContext = {
@@ -960,17 +960,17 @@ useEffect(() => {
   const handleStopGeneration = (itemId: string | null = null) => {
     if (itemId) {
       stopGenerationRef.current.add(itemId);
-      dispatch({ 
-        type: 'UPDATE_STATUS', 
-        payload: { id: itemId, status: 'idle', statusText: 'Stopped' } 
+      dispatch({
+        type: 'UPDATE_STATUS',
+        payload: { id: itemId, status: 'idle', statusText: 'Stopped' }
       });
     } else {
       items.forEach(item => {
         if (item.status === 'generating') {
           stopGenerationRef.current.add(item.id);
-          dispatch({ 
-            type: 'UPDATE_STATUS', 
-            payload: { id: item.id, status: 'idle', statusText: 'Stopped' } 
+          dispatch({
+            type: 'UPDATE_STATUS',
+            payload: { id: item.id, status: 'idle', statusText: 'Stopped' }
           });
         }
       });
@@ -1071,13 +1071,13 @@ useEffect(() => {
 
     try {
       const crawledContent = await smartCrawl(refreshUrl);
-      dispatch({ 
-        type: 'SET_CRAWLED_CONTENT', 
-        payload: { id: refreshUrl, content: crawledContent } 
+      dispatch({
+        type: 'SET_CRAWLED_CONTENT',
+        payload: { id: refreshUrl, content: crawledContent }
       });
-      dispatch({ 
-        type: 'UPDATE_STATUS', 
-        payload: { id: refreshUrl, status: 'generating', statusText: 'Optimizing...' } 
+      dispatch({
+        type: 'UPDATE_STATUS',
+        payload: { id: refreshUrl, status: 'generating', statusText: 'Optimizing...' }
       });
 
       const serviceCallAI = (
@@ -1130,9 +1130,9 @@ useEffect(() => {
         aiRepairer
       );
     } catch (error: any) {
-      dispatch({ 
-        type: 'UPDATE_STATUS', 
-        payload: { id: refreshUrl, status: 'error', statusText: error.message } 
+      dispatch({
+        type: 'UPDATE_STATUS',
+        payload: { id: refreshUrl, status: 'error', statusText: error.message }
       });
     } finally {
       setIsGenerating(false);
@@ -1460,7 +1460,7 @@ useEffect(() => {
         );
 
         if (result.success) {
-          addLog(`✅ SUCCESS: ${page.title}`);
+          addLog(`✅ SUCCESS: ${page.title} -> ${result.url}`);
         } else {
           throw new Error(result.message as string);
         }
@@ -1582,7 +1582,7 @@ useEffect(() => {
     return sorted;
   }, [items, filter, sortConfig]);
 
-  const analyzableForRewrite = useMemo(() => 
+  const analyzableForRewrite = useMemo(() =>
     existingPages.filter(p => selectedHubPages.has(p.id) && p.analysis).length,
     [selectedHubPages, existingPages]
   );
@@ -1634,7 +1634,7 @@ useEffect(() => {
                 {/* API Keys Card */}
                 <div className="setup-card">
                   <h3>API Keys</h3>
-                  
+
                   <div className="form-group">
                     <label>Google Gemini API Key</label>
                     <ApiKeyInput
@@ -1711,7 +1711,7 @@ useEffect(() => {
                 {/* AI Model Configuration */}
                 <div className="setup-card">
                   <h3>AI Model Configuration</h3>
-                  
+
                   <div className="form-group">
                     <label htmlFor="model-select">Primary Generation Model</label>
                     <select
@@ -1765,7 +1765,7 @@ useEffect(() => {
                 {/* WordPress Configuration */}
                 <div className="setup-card full-width">
                   <h3>WordPress & Site Information</h3>
-                  
+
                   <div className="schema-settings-grid">
                     <div className="form-group">
                       <label htmlFor="wpUrl">WordPress Site URL</label>
@@ -1861,7 +1861,7 @@ useEffect(() => {
                 {FEATURE_FLAGS.ENABLE_NEURONWRITER && (
                   <div className="setup-card full-width">
                     <h3>NeuronWriter Integration</h3>
-                    
+
                     <div className="form-group checkbox-group">
                       <input
                         type="checkbox"
@@ -1928,7 +1928,7 @@ useEffect(() => {
                 {/* Geo-Targeting */}
                 <div className="setup-card full-width">
                   <h3>Advanced Geo-Targeting</h3>
-                  
+
                   <div className="form-group checkbox-group">
                     <input
                       type="checkbox"
@@ -2030,7 +2030,7 @@ useEffect(() => {
                   <p className="help-text">
                     Enter a broad topic to generate a pillar page and cluster content plan.
                   </p>
-                  
+
                   <div className="form-group">
                     <label htmlFor="topic">Broad Topic</label>
                     <input
@@ -2041,7 +2041,7 @@ useEffect(() => {
                       placeholder="e.g., Landscape Photography"
                     />
                   </div>
-                  
+
                   <button
                     className="btn"
                     onClick={handleGenerateClusterPlan}
@@ -2056,7 +2056,7 @@ useEffect(() => {
               {contentMode === 'single' && (
                 <div className="tab-panel">
                   <h3>Single Article</h3>
-                  
+
                   <div className="form-group">
                     <label htmlFor="primaryKeywords">Primary Keywords (one per line)</label>
                     <textarea
@@ -2067,7 +2067,7 @@ useEffect(() => {
                       placeholder="Best running shoes 2026&#10;How to train for a marathon&#10;Running gear essentials"
                     />
                   </div>
-                  
+
                   <button
                     className="btn"
                     onClick={handleGenerateMultipleFromKeywords}
@@ -2113,7 +2113,7 @@ useEffect(() => {
                           Automatically optimizes your sitemap content using AI.
                         </p>
                       </div>
-                      
+
                       <label className="switch">
                         <input
                           type="checkbox"
@@ -2149,7 +2149,7 @@ useEffect(() => {
                           <div style={{ color: '#F59E0B', fontWeight: 'bold', marginBottom: '1rem' }}>
                             🚫 Exclusion Controls
                           </div>
-                          
+
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <div>
                               <label style={{ display: 'block', color: '#94A3B8', fontSize: '0.85rem' }}>
@@ -2173,7 +2173,7 @@ useEffect(() => {
                                 }}
                               />
                             </div>
-                            
+
                             <div>
                               <label style={{ display: 'block', color: '#94A3B8', fontSize: '0.85rem' }}>
                                 Exclude Categories (one per line)
@@ -2211,7 +2211,7 @@ useEffect(() => {
                           <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.5rem 0 1rem 0' }}>
                             Add URLs that God Mode should optimize FIRST.
                           </p>
-                          
+
                           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                             <input
                               type="url"
@@ -2332,7 +2332,7 @@ useEffect(() => {
                                     marginBottom: '4px',
                                     color: log.includes('Error') ? '#EF4444'
                                       : log.includes('✅') ? '#10B981'
-                                      : '#94A3B8'
+                                        : '#94A3B8'
                                   }}
                                 >
                                   {log}
@@ -2449,7 +2449,7 @@ useEffect(() => {
               {contentMode === 'refresh' && (
                 <div className="tab-panel">
                   <h3>Quick Refresh & Validate</h3>
-                  
+
                   <div className="tabs" style={{ marginBottom: '1.5rem' }}>
                     <button
                       className={`tab-btn ${refreshMode === 'single' ? 'active' : ''}`}
@@ -3030,7 +3030,9 @@ useEffect(() => {
           wpConfig={wpConfig}
           wpPassword={wpPassword}
           onPublishSuccess={(originalUrl) => {
-            console.log(`Successfully published: ${originalUrl}`);
+            if (window.confirm(`✅ Published successfully!\n\nView post now?\n${originalUrl}`)) {
+              window.open(originalUrl, '_blank');
+            }
           }}
           publishItem={(item, pwd, status) =>
             publishItemToWordPress(item, pwd, status, fetchWordPressWithRetry, wpConfig)
@@ -3052,7 +3054,10 @@ useEffect(() => {
           }
           wpConfig={wpConfig}
           wpPassword={wpPassword}
-          onPublishSuccess={(url) => console.log(`Published ${url}`)}
+          onPublishSuccess={(url) => {
+            // Bulk modal handles its own per-item display, but we can log unique success here
+            console.log(`Published ${url}`);
+          }}
         />
       )}
 
