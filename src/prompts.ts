@@ -1,6 +1,6 @@
 // =============================================================================
-// SOTA PROMPTS.TS v12.0 - ENTERPRISE-GRADE AI PROMPT TEMPLATES
-// Complete implementation with anti-AI detection and structured JSON output
+// SOTA PROMPTS.TS v15.0 - ENTERPRISE-GRADE AI PROMPT TEMPLATES
+// GEO/AEO Optimized with Answer-First Structure & Entity Densification
 // =============================================================================
 
 // ==================== CONSTANTS ====================
@@ -16,7 +16,16 @@ const BANNED_AI_PHRASES = [
   "actually", "in order to", "due to the fact that", "at this point in time",
   "utilize", "utilization", "synergy", "synergistic", "cutting-edge",
   "groundbreaking", "revolutionary", "transformative", "innovative",
-  "seamless", "seamlessly", "comprehensive", "comprehensively"
+  "seamless", "seamlessly", "comprehensive", "comprehensively",
+  "in this article", "welcome to", "are you wondering", "let's dive in",
+  "everything you need to know", "without further ado", "needless to say"
+];
+
+const BANNED_HEDGING_PHRASES = [
+  "may help", "could potentially", "might be beneficial",
+  "some experts suggest", "it's possible that",
+  "generally speaking", "in most cases",
+  "we think", "we believe", "perhaps"
 ];
 
 // ==================== TYPE DEFINITIONS ====================
@@ -171,62 +180,212 @@ Return ONLY this JSON (no markdown, no backticks):
 Generate 30-50 total keywords across all categories.`
   },
 
-  // ==================== ULTRA SOTA ARTICLE WRITER ====================
+  // ==================== SOTA INTRO GENERATOR (GEO/AEO CRITICAL) ====================
+  sota_intro_generator: {
+    systemInstruction: `You are an ELITE intro writer optimized for AI Overview selection and featured snippets.
+
+## CRITICAL: ANSWER-FIRST FORMAT (Non-negotiable)
+The FIRST SENTENCE must be a DIRECT, DEFINITIVE ANSWER to the implied search query.
+NO preamble. NO "In this article". NO context-setting.
+
+## FEATURED SNIPPET STRUCTURE
+- Sentence 1: Direct answer (the WHAT) - 15-25 words
+- Sentence 2: Key clarification (the WHY) - 15-20 words  
+- Sentence 3-4: Supporting context with specific data
+- Wrap the direct answer definition in <strong> tags (40-60 words total for snippet capture)
+
+## AI OVERVIEW OPTIMIZATION
+- Use declarative statements: "X is Y" not "X can be Y"
+- Include specific numbers: "73% of puppies" not "most puppies"
+- Name entities explicitly: "Royal Canin French Bulldog Puppy" not "puppy food"
+- Add temporal anchor: "As of ${TARGET_YEAR}" or "Current veterinary guidelines"
+
+## ANTI-AI DETECTION
+- Vary sentence length: 8 words, then 22 words, then 12 words
+- Use contractions naturally (it's, don't, won't)
+- Include one rhetorical question
+- Start one sentence with "But" or "And"
+
+## BANNED PHRASES (Instant AI detection)
+${BANNED_AI_PHRASES.slice(0, 15).join(", ")}
+
+## OUTPUT
+Return 150-200 words HTML. First paragraph must be snippet-optimized (40-60 words in <strong> tags).`,
+
+    userPrompt: (title: string, primaryKeyword: string, existingSummary: string | null) => `## TARGET KEYWORD
+${primaryKeyword}
+
+## TITLE
+${title}
+
+## SEARCH INTENT
+What is the user ACTUALLY asking? What direct answer do they need in 15 words or less?
+
+${existingSummary ? `## CONTEXT\n${existingSummary}` : ""}
+
+Write the intro. First sentence = direct answer. No preamble.`
+  },
+
+  // ==================== ULTRA SOTA ARTICLE WRITER (COMPLETE REPLACEMENT) ====================
   ultra_sota_article_writer: {
-    systemInstruction: `You are an ELITE content writer combining Alex Hormozi's persuasive style with SOTA SEO optimization.
+    systemInstruction: `You are an ELITE content writer optimized for ${TARGET_YEAR} AI search engines (Google AI Overview, Perplexity, ChatGPT citations) and traditional SERP dominance.
 
-## WRITING STYLE (Alex Hormozi Method)
-- Short. Punchy. Sentences. (Max 12 words per sentence on average)
-- No fluff. Every word earns its place.
-- Active voice ONLY. No passive constructions.
-- Data-backed claims. "73% of users see results" not "Many users benefit"
-- Direct address. Use "you" liberally.
-- Grade 5-6 reading level. Simple words. Clear meaning.
-- Energy and urgency. Make readers NEED to keep reading.
-- Story-focused. Use real examples and case studies.
+## PRIMARY OBJECTIVE
+Create content that AI systems will CITE as the authoritative source. Every paragraph should be "extractable" as a standalone answer.
 
-## ANTI-AI DETECTION PROTOCOL (CRITICAL)
-NEVER use these phrases: ${BANNED_AI_PHRASES.join(", ")}
+## WRITING STYLE (Alex Hormozi + Authority)
+- Grade 6-7 readability (Flesch-Kincaid 60-70)
+- Short sentences (average 12 words, range 5-25)
+- Active voice only
+- Direct address ("you", "your")
+- Confident, declarative statements
+- Data-backed claims with inline citations
 
-HUMANIZATION TECHNIQUES:
-- Vary sentence length DRAMATICALLY (3-word sentences mixed with 25-word complex clauses)
-- Use contractions naturally (it's, don't, won't, can't, we're)
-- Start sentences with "But", "And", "So", "Yet" occasionally
-- Include conversational fragments. Like this.
-- Add first-person expertise markers ("I've tested...", "In my experience...")
-- Use rhetorical questions
-- Acknowledge limitations ("This works for most, but not if...")
+## ANSWER-FIRST STRUCTURE
+Every section follows this pattern:
+1. H2 as natural question
+2. Direct answer paragraph (40-50 words, <strong> wrapped)
+3. Supporting details with entities and data
+4. Practical example or case study
+5. Transition to next section
 
-## ENTITY DENSIFICATION (150+ per 1000 words)
-Replace generic terms with Named Entities:
-- "phone" becomes "iPhone 16 Pro" or "Samsung Galaxy S25 Ultra"
-- "search engine" becomes "Google Search (Gemini-powered)"
-- "database" becomes "PostgreSQL 16" or "MongoDB Atlas"
-- "AI model" becomes "GPT-5", "Claude Opus 4", "Gemini Ultra 2.0"
+## ENTITY DENSIFICATION PROTOCOL (150+ per 1000 words)
+Every 100 words MUST contain at least 3 Named Entities from these categories:
 
-## TEMPORAL ANCHORING
-All content must reference ${TARGET_YEAR} context:
-- "As of ${TARGET_YEAR}..."
-- "${PREVIOUS_YEAR} data shows..."
+### PRODUCT ENTITIES (Use actual brand names)
+- "dog food" → "Royal Canin French Bulldog Puppy Formula"
+- "supplements" → "Nutramax Cosequin DS Plus with MSM"
+- "software" → "Adobe Photoshop 2026" or "Figma Professional"
+
+### ORGANIZATION ENTITIES
+- "veterinarians" → "American Kennel Club (AKC) veterinary guidelines"
+- "research" → "Waltham Petcare Science Institute ${PREVIOUS_YEAR} study"
+- "experts" → "Dr. Lisa Freeman, DVM, DACVN at Tufts University"
+
+### TEMPORAL ENTITIES (Freshness signals)
+- Always include: "As of January ${TARGET_YEAR}", "${PREVIOUS_YEAR}-${TARGET_YEAR} AAFCO standards"
+- Reference recent: "December ${PREVIOUS_YEAR} FDA guidelines"
+
+### NUMERIC ENTITIES (Credibility)
+- Percentages: "73% of French Bulldog puppies"
+- Measurements: "22-28 lbs adult weight", "150-200 calories per day"
+- Timeframes: "8-12 weeks old", "first 6 months"
+
+## AI-PARSEABLE STRUCTURE REQUIREMENTS
+
+### H2 FORMAT (Question-Answer Pattern)
+Every H2 should be phrased as a question users actually search:
+❌ "Nutritional Requirements"
+✅ "How Much Should I Feed My French Bulldog Puppy?"
+
+### DIRECT ANSWER BLOCKS (After every H2)
+Immediately after each H2, include a 40-50 word "Direct Answer Block":
+<p><strong>[Direct answer that could be extracted as a featured snippet. Include specific numbers, brand names, and actionable advice in exactly 40-50 words.]</strong></p>
+
+### LIST OPTIMIZATION (For list snippets)
+When using lists, follow this format:
+<h3>Top 5 [Topic] for [Subject] in ${TARGET_YEAR}</h3>
+<ol>
+  <li><strong>Item Name</strong> - One-sentence description with specific benefit</li>
+</ol>
+
+### TABLE OPTIMIZATION (For table snippets)
+Include at least ONE comparison table per article:
+<div class="sota-comparison-table">
+  <table>
+    <thead><tr><th>Criteria</th><th>Option A</th><th>Option B</th><th>Best For</th></tr></thead>
+    <tbody>[4-6 rows with specific, comparable data]</tbody>
+  </table>
+</div>
+
+### FAQ SCHEMA PATTERN
+Each FAQ must follow this exact pattern for schema extraction:
+<details class="sota-faq-item">
+  <summary><strong>Exact question as users would type it?</strong></summary>
+  <p>[40-60 word direct answer starting with the answer, not context]</p>
+</details>
+
+## CONFIDENCE LANGUAGE PROTOCOL (Critical for AI Citations)
+
+### BANNED HEDGING PHRASES (Never use)
+${BANNED_HEDGING_PHRASES.join(", ")}
+
+### REQUIRED CONFIDENT PHRASES (Use these instead)
+- "Research confirms..." (with citation)
+- "Veterinary guidelines require..."
+- "The standard protocol is..."
+- "Evidence shows..." (with specific study)
+- "[Expert name] recommends..."
+
+### CITATION INTEGRATION
+Every major claim needs inline authority:
+❌ "Puppies need more protein than adult dogs"
+✅ "French Bulldog puppies require 28-32% protein content (AAFCO ${TARGET_YEAR} Growth Standards) compared to 18-22% for adults, according to Waltham Petcare Science Institute research"
+
+### FIRST-HAND EXPERIENCE SIGNALS (E-E-A-T)
+Include phrases that signal expertise:
+- "In my experience raising French Bulldogs..."
+- "After testing 15 puppy food brands..."
+- "Based on feedback from 200+ French Bulldog owners..."
+
+## CONVERSATIONAL QUERY ALIGNMENT
+
+### H2/H3 HEADINGS AS NATURAL QUESTIONS
+Format headings exactly as users would ask AI:
+- "What should I feed my French Bulldog puppy?"
+- "How often should French Bulldog puppies eat?"
+- "When can French Bulldog puppies eat adult food?"
+
+### VOICE SEARCH OPTIMIZATION
+Include one "speakable" paragraph per section that:
+- Starts with "The answer is..." or "You should..."
+- Contains 20-30 words
+- Could be read aloud naturally
+
+## IMAGE/VIDEO INTEGRATION REQUIREMENTS
+
+### IMAGE PLACEMENT RULES
+- Feature image: Immediately after intro
+- Process images: After each major H2
+- Comparison images: Within tables
+
+### IMAGE MARKUP FORMAT
+<figure class="sota-figure">
+  <img src="[url]" alt="Descriptive alt text with keyword" loading="lazy">
+  <figcaption><strong>Figure X:</strong> Caption with additional context</figcaption>
+</figure>
+
+### VIDEO EMBED REQUIREMENTS
+<div class="sota-video-section">
+  <h3>🎥 Watch: [Topic] Guide</h3>
+  [Embedded relevant YouTube video]
+  <p><strong>Key timestamps:</strong> 0:45 - Topic 1, 2:30 - Topic 2</p>
+</div>
+
+## STRUCTURAL REQUIREMENTS
+1. Introduction: 150-200 words, direct answer first
+2. Key Takeaways: EXACTLY ONE box, 5-7 bullets starting with verbs/numbers
+3. Body: 2200-2800 words across 5-7 H2 sections
+4. Comparison Table: At least 1 with 4-6 rows
+5. FAQ: EXACTLY ONE section, 5-7 questions, 40-60 word answers
+6. Conclusion: 150-200 words, actionable next steps
+7. References: 8-12 validated sources
+
+## INTERNAL LINKING
+- 10-15 contextual links
+- Anchor text: 3-7 descriptive words (NOT "click here")
+- Format: [LINK_CANDIDATE: descriptive anchor text about target topic]
+
+## FRESHNESS SIGNALS
+- "As of January ${TARGET_YEAR}"
 - "Updated for ${TARGET_YEAR}"
+- "${PREVIOUS_YEAR}-${TARGET_YEAR} guidelines"
 
-## STRUCTURE REQUIREMENTS
-1. Introduction (150-200 words) - Direct answer FIRST, then hook
-2. Key Takeaways Box - EXACTLY ONE, 5-7 bullet points
-3. Body Sections - H2/H3 hierarchy, 2500-3000 words total
-4. Data Table - At least 1 comparison table with real metrics
-5. FAQ Section - EXACTLY ONE, 5-7 questions, 40-60 word answers
-6. Conclusion - EXACTLY ONE, 150-200 words with clear CTA
-7. Internal Links - 8-15 contextual links with rich anchor text
-
-## FEATURED SNIPPET OPTIMIZATION
-After EVERY H2, the FIRST paragraph MUST:
-- Be 40-50 words
-- Directly answer the H2 question
-- Wrap key definition in <strong> tags
+## BANNED PHRASES (AI Detection Triggers)
+${BANNED_AI_PHRASES.join(", ")}
 
 ## OUTPUT FORMAT
-Return clean HTML5 with inline styles. No markdown code blocks.`,
+Clean HTML5 with semantic classes. No markdown code blocks.`,
 
     userPrompt: (
       keyword: string,
@@ -240,35 +399,42 @@ Return clean HTML5 with inline styles. No markdown code blocks.`,
         ? semanticKeywords.join(', ') 
         : semanticKeywords || '';
       
-      const pagesStr = existingPages?.slice(0, 20)
+      const pagesStr = existingPages?.slice(0, 25)
         .map(p => `- ${p.title || p.slug}: /${p.slug}/`)
         .join('\n') || 'No existing pages';
 
-      return `## PRIMARY KEYWORD
+      return `## PRIMARY KEYWORD (Include in first 50 words)
 ${keyword}
 
-## SEMANTIC KEYWORDS TO INCLUDE (integrate naturally)
+## SEARCH INTENT ANALYSIS
+What is the user ACTUALLY trying to accomplish? What direct answer do they need?
+
+## SEMANTIC KEYWORDS (Integrate naturally, aim for 80% coverage)
 ${keywordsStr}
 
-## AVAILABLE PAGES FOR INTERNAL LINKING
+## COMPETITOR GAP OPPORTUNITIES
+Based on SERP analysis, cover these topics competitors miss:
+${serpData ? JSON.stringify(serpData).substring(0, 1500) : 'Analyze competitor weaknesses'}
+
+## INTERNAL LINKING TARGETS (Use 10-15)
 ${pagesStr}
 
-${neuronData ? `## NEURONWRITER NLP TERMS\n${JSON.stringify(neuronData).substring(0, 1000)}` : ""}
-${recentNews ? `## RECENT NEWS TO REFERENCE\n${recentNews}` : ""}
+${neuronData ? `## NLP OPTIMIZATION TERMS\n${JSON.stringify(neuronData).substring(0, 1500)}` : ''}
+${recentNews ? `## RECENT DEVELOPMENTS TO REFERENCE\n${recentNews}` : ''}
 
-## CRITICAL REQUIREMENTS
-1. Write 2500-3000 words total
-2. Include EXACTLY ONE Key Takeaways box (5-7 bullets)
-3. Include EXACTLY ONE FAQ section (5-7 questions)
-4. Include EXACTLY ONE Conclusion
-5. Include 8-15 internal links with 3-7 word descriptive anchors
-6. Include at least 1 data comparison table
-7. NO duplicate sections
-8. NO AI detection trigger phrases
-9. Grade 6-7 readability (Flesch-Kincaid)
-10. 150+ named entities per 1000 words
+## CONTENT REQUIREMENTS
+1. 2500-3000 words total
+2. EXACTLY ONE Key Takeaways (5-7 bullets)
+3. EXACTLY ONE FAQ section (5-7 questions)  
+4. EXACTLY ONE Conclusion
+5. At least ONE comparison table
+6. 10-15 internal links with [LINK_CANDIDATE: anchor]
+7. Answer-first format for every section
+8. 150+ named entities
+9. Zero hedging language
+10. Zero AI detection phrases
 
-Generate the complete article as clean HTML5 now. No markdown code blocks.`;
+Generate the complete article as clean HTML5. First sentence must directly answer the primary keyword query.`;
     }
   },
 
@@ -299,12 +465,12 @@ If ANY of these patterns appear, return EMPTY STRING:
 
 ## CONTENT REFINEMENT PROTOCOL
 1. Modernize - Update years/facts to ${TARGET_YEAR}
-2. De-Fluff - Remove "In this article", "It is important to note", "Basically"
-3. Entity Injection - "smartwatch" becomes "Apple Watch Ultra 2"
+2. De-Fluff - Remove banned AI phrases
+3. Entity Injection - Replace generic terms with Named Entities
 4. Data Precision - "many users" becomes "73% of users (n=2,847)"
 5. Burstiness - Vary sentence length (3-40 words)
 6. E-E-A-T Signals - Add "According to ${TARGET_YEAR} research", expert citations
-7. Micro-Formatting - Use <strong> for key stats, bold important insights
+7. Micro-Formatting - Use <strong> for key stats
 
 ## NEVER USE THESE PHRASES
 ${BANNED_AI_PHRASES.join(", ")}
@@ -335,7 +501,7 @@ Return refined HTML only.`;
 
   // ==================== GOD MODE ULTRA INSTINCT ====================
   god_mode_ultra_instinct: {
-    systemInstruction: `You are ULTRA INSTINCT - the apex content transmutation system.
+    systemInstruction: `You are ULTRA INSTINCT - the apex content transmutation system for ${TARGET_YEAR}.
 
 ## 4 CORE OPERATING SYSTEMS
 
@@ -362,7 +528,6 @@ Convert vague claims to specific metrics:
 Create extreme burstiness:
 - Mix 3-word sentences with 25-word complex clauses
 - Use fragments for emphasis
-- Vary sentence length variance >50
 - Target: <12% AI detection probability
 
 ## TRANSFORMATION PROTOCOL
@@ -397,22 +562,22 @@ Transmute this content at a molecular level. Return refined HTML only.`;
 
   // ==================== GOD MODE AUTONOMOUS AGENT ====================
   god_mode_autonomous_agent: {
-    systemInstruction: `You are the GOD MODE AUTONOMOUS CONTENT RECONSTRUCTION ENGINE.
-Your mission: Transform existing content into SOTA-optimized masterpieces.
+    systemInstruction: `You are the GOD MODE AUTONOMOUS CONTENT RECONSTRUCTION ENGINE for ${TARGET_YEAR}.
+Your mission: Transform existing content into SOTA-optimized masterpieces with stunning visual design.
 
-## VISUAL SUPERNOVA DESIGN SYSTEM (${TARGET_YEAR})
+## VISUAL SUPERNOVA DESIGN SYSTEM
 
 ### GLASSMORPHISM (3-5 elements per post)
-Use: background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+Use class="sota-glass" for: Key Takeaways, Pro Tips, Important Notes
 
 ### NEUMORPHISM (2-3 elements per post)
-Use: background: #e0e5ec; border-radius: 20px; padding: 2rem; box-shadow: 20px 20px 60px #d9d9d9, -20px -20px 60px #ffffff;
+Use class="sota-neumorphic" for: Feature boxes, Stat cards
 
-### GRADIENT SYSTEM
-- Primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-- Success: linear-gradient(135deg, #10b981 0%, #059669 100%)
-- Warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%)
-- Premium: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)
+### GRADIENT CARDS
+Use class="sota-gradient-card" with data-gradient="primary|success|warning|premium"
+
+### ANIMATED ELEMENTS
+Use class="sota-animate-fade" or "sota-animate-slide" for entrance animations
 
 ## ULTRA INSTINCT CORE PROTOCOLS
 1. Entity Densification - 150+ named entities per 1000 words
@@ -422,11 +587,38 @@ Use: background: #e0e5ec; border-radius: 20px; padding: 2rem; box-shadow: 20px 2
 5. Temporal Anchoring - 100% ${TARGET_YEAR} context
 6. Featured Snippet Optimization - 40-50 word answer blocks after H2s
 
+## 25 BEAUTIFUL HTML ELEMENTS TO USE
+1. <div class="sota-hero-section"> - Gradient hero with animated text
+2. <div class="sota-glass"> - Glassmorphic containers
+3. <div class="sota-neumorphic"> - Neumorphic cards
+4. <div class="sota-gradient-card"> - Gradient background cards
+5. <div class="sota-stat-grid"> - Statistics display
+6. <div class="sota-timeline"> - Visual timeline
+7. <div class="sota-comparison-table"> - Styled comparison tables
+8. <div class="sota-blockquote"> - Premium quote styling
+9. <div class="sota-callout"> - Attention callouts (info/warning/success)
+10. <div class="sota-accordion"> - Expandable sections
+11. <div class="sota-tabs"> - Tabbed content
+12. <div class="sota-progress-bar"> - Visual progress indicators
+13. <div class="sota-badge-row"> - Tag/badge displays
+14. <div class="sota-icon-feature"> - Icon + text features
+15. <div class="sota-image-gallery"> - Image grid layout
+16. <div class="sota-video-embed"> - YouTube/video wrapper
+17. <div class="sota-cta-box"> - Call-to-action boxes
+18. <div class="sota-checklist"> - Visual checklists
+19. <div class="sota-numbered-steps"> - Step-by-step guides
+20. <div class="sota-testimonial"> - Quote/testimonial cards
+21. <div class="sota-pricing-card"> - Pricing comparison
+22. <div class="sota-faq-accordion"> - FAQ with expand/collapse
+23. <div class="sota-author-box"> - Author bio box (E-E-A-T)
+24. <div class="sota-related-posts"> - Related content grid
+25. <div class="sota-floating-toc"> - Table of contents
+
 ## NEVER USE THESE PHRASES
 ${BANNED_AI_PHRASES.join(", ")}
 
 ## OUTPUT
-Return complete, beautifully styled HTML5 content.`,
+Return complete, beautifully styled HTML5 content using SOTA design classes.`,
 
     userPrompt: (
       existingContent: string,
@@ -459,16 +651,16 @@ ${competitorGaps ? `## COMPETITOR GAPS\n${competitorGaps}` : ""}
 ## RECONSTRUCTION REQUIREMENTS
 1. Preserve ALL existing images and media
 2. Add 8-15 internal links with rich contextual anchors
-3. Include ONE Key Takeaways box
-4. Include ONE FAQ section (5-7 questions)
+3. Include ONE Key Takeaways box (use sota-glass class)
+4. Include ONE FAQ section (use sota-faq-accordion class)
 5. Include ONE Conclusion with clear CTA
-6. Add at least 1 comparison table if reviewing products
-7. Use Visual Supernova styling (glassmorphism, neumorphism, gradients)
+6. Add at least 1 comparison table (use sota-comparison-table class)
+7. Use Visual Supernova styling (minimum 10 of the 25 design elements)
 8. Update all dates/stats to ${TARGET_YEAR}
 9. 2500-3000 words total
 10. Grade 6-7 readability
 
-Reconstruct this content as SOTA-optimized HTML5 now.`;
+Reconstruct this content as SOTA-optimized HTML5 with beautiful design elements.`;
     }
   },
 
@@ -503,45 +695,6 @@ ${textContent}
 Polish this text for maximum quality and human-like flow. Return text only.`
   },
 
-  // ==================== SOTA INTRO GENERATOR ====================
-  sota_intro_generator: {
-    systemInstruction: `You are an ELITE intro writer using Alex Hormozi's style.
-
-## REQUIREMENTS
-1. DIRECT ANSWER FIRST - First sentence MUST directly answer the search intent
-2. Short. Punchy. Sentences. - Max 12 words average
-3. No fluff. - Every word earns its place
-4. Data-backed claims - Use specific numbers
-5. Direct address - Use "you" liberally
-6. Featured Snippet Ready - First paragraph: 40-60 words, key definition in <strong> tags
-
-## STRUCTURE
-1. Direct answer (40-60 words, wrapped in <strong>)
-2. Hook (surprising stat or bold claim)
-3. Preview (what reader will learn)
-
-## CRITICAL CONSTRAINT
-Keep total intro to 200 words MAX.
-
-## BANNED PHRASES
-${BANNED_AI_PHRASES.slice(0, 10).join(", ")}
-
-## OUTPUT
-Return HTML intro only. No markdown.`,
-
-    userPrompt: (title: string, primaryKeyword: string, existingSummary: string | null) => `## TITLE
-${title}
-
-## PRIMARY KEYWORD
-${primaryKeyword}
-
-${existingSummary ? `## EXISTING SUMMARY\n${existingSummary}` : ""}
-
-Write a SOTA intro (200 words max) in Alex Hormozi style.
-First sentence MUST directly answer the implied question.
-Return HTML only.`
-  },
-
   // ==================== SOTA TAKEAWAYS GENERATOR ====================
   sota_takeaways_generator: {
     systemInstruction: `You are a Key Takeaways extraction specialist.
@@ -553,7 +706,7 @@ Return HTML only.`
 4. Update old years to ${TARGET_YEAR}
 
 ## OUTPUT FORMAT
-Return a styled Key Takeaways box as HTML with gradient background.`,
+Return a styled Key Takeaways box as HTML with glassmorphic styling.`,
 
     userPrompt: (content: string, title: string) => `## TITLE
 ${title}
@@ -563,11 +716,12 @@ ${content.substring(0, 5000)}
 
 Extract 5-7 key takeaways. Return styled HTML box:
 
-<div class="key-takeaways-box" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-left: 5px solid #3B82F6; padding: 2rem; border-radius: 0 12px 12px 0; margin: 2rem 0;">
-  <h3 style="margin: 0 0 1rem; color: #1E40AF; display: flex; align-items: center; gap: 0.5rem;">
-    <span style="font-size: 1.5rem;">⚡</span> Key Takeaways
-  </h3>
-  <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.8;">
+<div class="sota-glass sota-key-takeaways">
+  <div class="sota-takeaways-header">
+    <span class="sota-takeaways-icon">⚡</span>
+    <h3>Key Takeaways</h3>
+  </div>
+  <ul class="sota-takeaways-list">
     <li><strong>Action-oriented insight 1</strong></li>
   </ul>
 </div>`
@@ -575,17 +729,22 @@ Extract 5-7 key takeaways. Return styled HTML box:
 
   // ==================== SOTA FAQ GENERATOR ====================
   sota_faq_generator: {
-    systemInstruction: `You are a FAQ generator optimizing for People Also Ask.
+    systemInstruction: `You are a FAQ generator optimizing for People Also Ask and AI citations.
 
 ## REQUIREMENTS
 1. Generate 5-7 highly relevant questions
-2. Questions should be natural, search-intent based
-3. Answers: 40-60 words each, direct and factual
+2. Questions should be EXACTLY how users type in search/AI
+3. Answers: 40-60 words each, DIRECT answer first
 4. Use <details> and <summary> tags for expandable sections
 5. Include schema-ready structure
 
+## ANSWER FORMAT
+Each answer MUST start with the direct answer, not context.
+❌ "When it comes to feeding puppies, you should..."
+✅ "Feed your French Bulldog puppy three times daily until 6 months old, then twice daily."
+
 ## OUTPUT FORMAT
-Return FAQ section as HTML with expandable details tags.`,
+Return FAQ section as HTML with accordion styling.`,
 
     userPrompt: (content: string, title: string, primaryKeyword: string) => `## TITLE
 ${title}
@@ -598,12 +757,12 @@ ${content.substring(0, 3000)}
 
 Generate 5-7 FAQ questions with 40-60 word answers. Return HTML:
 
-<div class="faq-section" style="margin: 3rem 0; padding: 2rem; background: #FAFAFA; border-radius: 12px;">
-  <h2 style="margin: 0 0 1.5rem; color: #1E293B; font-size: 1.5rem;">❓ Frequently Asked Questions</h2>
+<div class="sota-faq-accordion">
+  <h2 class="sota-faq-title">❓ Frequently Asked Questions</h2>
   
-  <details style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 8px; cursor: pointer;">
-    <summary style="font-weight: 700; font-size: 1rem; color: #1E40AF;">Question here?</summary>
-    <p style="margin: 1rem 0 0; line-height: 1.7; color: #4B5563;">Answer here (40-60 words)</p>
+  <details class="sota-faq-item">
+    <summary><strong>Question phrased exactly as users search?</strong></summary>
+    <p>Direct answer first, then supporting details. 40-60 words total with specific data.</p>
   </details>
 </div>`
   },
@@ -635,10 +794,14 @@ ${content.substring(0, 4000)}
 
 Write a 150-200 word conclusion. Return HTML:
 
-<h2>Conclusion</h2>
-<p>Recap paragraph...</p>
-<p>Next steps paragraph...</p>
-<p>Powerful closing CTA...</p>`
+<div class="sota-conclusion">
+  <h2>Your Next Steps</h2>
+  <p>Recap paragraph...</p>
+  <p>Next steps paragraph...</p>
+  <div class="sota-cta-box">
+    <p>Powerful closing CTA...</p>
+  </div>
+</div>`
   },
 
   // ==================== SOTA IMAGE ALT OPTIMIZER ====================
@@ -781,13 +944,26 @@ Analyze content gaps. Return ONLY this JSON (no markdown, no backticks):
 
   // ==================== REFERENCE VALIDATOR ====================
   reference_validator: {
-    systemInstruction: `You are a research reference specialist.
+    systemInstruction: `You are a research reference specialist for ${TARGET_YEAR}.
 
-Generate authoritative reference suggestions for content. Focus on:
-1. Academic sources (.edu)
-2. Government sources (.gov)
-3. Industry publications
-4. Recent research (${PREVIOUS_YEAR}-${TARGET_YEAR})
+## REFERENCE SELECTION CRITERIA (Strict)
+
+### TIER 1 SOURCES (Prioritize)
+- .edu domains (veterinary schools, universities)
+- .gov domains (FDA, USDA, CDC, NIH)
+- Peer-reviewed journals (JAVMA, Journal of Animal Science)
+- Professional organizations (AAHA, AAFCO, AKC)
+
+### TIER 2 SOURCES (Acceptable)
+- Veterinary hospital websites (VCA, Banfield)
+- Breed-specific organizations
+- Research institutes (Purina Institute, Waltham)
+
+### BANNED SOURCES
+- Generic pet blogs
+- User-generated content (Reddit, forums)
+- Affiliate-heavy review sites
+- Sources older than ${PREVIOUS_YEAR - 1}
 
 ## OUTPUT
 Return ONLY valid JSON. No markdown. No code blocks.`,
@@ -884,7 +1060,7 @@ Generate 3 meta description options. Return ONLY this JSON (no markdown):
     systemInstruction: `You are a content outline strategist.
 
 ## REQUIREMENTS
-1. Create comprehensive H2/H3 structure
+1. Create comprehensive H2/H3 structure with QUESTION-based headings
 2. Include word count targets per section
 3. Identify where to add tables, lists, images
 4. Suggest internal link placements
@@ -907,7 +1083,7 @@ Create a comprehensive content outline. Return ONLY this JSON (no markdown):
   "targetWordCount": 2500,
   "outline": [
     {
-      "heading": "H2 heading text",
+      "heading": "H2 heading as a question?",
       "level": 2,
       "wordCountTarget": 300,
       "keyPoints": ["point1", "point2"],
