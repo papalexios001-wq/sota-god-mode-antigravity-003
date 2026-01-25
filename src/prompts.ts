@@ -1,708 +1,95 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - PROMPT SUITE v20.0 ULTRA PREMIUM
+// SOTA PROMPT TEMPLATES v12.0 - Enterprise Grade
+// Ultimate Content Generation & Optimization System
 // =============================================================================
-// 🎯 HUMAN-WRITTEN QUALITY - Reads like top 0.1% professional writers
-// 🎯 25+ BEAUTIFUL HTML ELEMENTS - Modern, visually stunning formatting
-// 🎯 4-8 INTERNAL LINKS - Contextual anchor text optimization
-// 🎯 YOUTUBE VIDEO INTEGRATION - Highly relevant educational videos
-// 🎯 AEO + GEO Optimization - AI & Search Engine ready
-// =============================================================================
+
+// ==================== TYPE DEFINITIONS ====================
 
 export interface PromptTemplate {
   systemInstruction: string;
   userPrompt: (...args: any[]) => string;
 }
 
-export interface BuildPromptResult {
-  systemInstruction: string;
-  userPrompt: string;
-  system: string;
-  user: string;
-}
+// ==================== CONSTANTS ====================
 
-export interface ExistingPage {
-  title: string;
-  slug: string;
-}
+const TARGET_YEAR = 2026;
+const PREVIOUS_YEAR = 2025;
 
-export interface ImageContext {
-  src: string;
-  context: string;
-  currentAlt?: string;
-}
-
-export interface SerpDataItem {
-  title: string;
-  snippet?: string;
-  link?: string;
-}
-
-// =============================================================================
-// SOTA SAFE ARRAY UTILITIES - ENTERPRISE GRADE RUNTIME PROTECTION
-// =============================================================================
-function toSafeArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function safeSliceJoin(
-  arr: unknown,
-  start: number,
-  end: number,
-  separator: string = ", ",
-  fallback: string = "None"
-): string {
-  if (!Array.isArray(arr) || arr.length === 0) return fallback;
-  const result = arr.slice(start, end).join(separator);
-  return result || fallback;
-}
-
-function safeSliceMapJoin<T>(
-  arr: unknown,
-  start: number,
-  end: number,
-  mapFn: (item: T) => string,
-  separator: string = ", ",
-  fallback: string = "None"
-): string {
-  if (!Array.isArray(arr) || arr.length === 0) return fallback;
-  const result = arr.slice(start, end).map(mapFn).join(separator);
-  return result || fallback;
-}
-
-function safeJoin(
-  arr: unknown,
-  separator: string = ", ",
-  fallback: string = ""
-): string {
-  if (!Array.isArray(arr) || arr.length === 0) return fallback;
-  return arr.join(separator) || fallback;
-}
-
-// ==================== BANNED AI PHRASES ====================
-export const BANNED_AI_PHRASES: string[] = [
-  "delve", "delving", "tapestry", "rich tapestry", "landscape", "digital landscape",
-  "realm", "in the realm of", "testament", "symphony", "beacon", "paradigm",
-  "synergy", "leverage", "utilize", "facilitate", "endeavor", "comprehensive",
-  "robust", "holistic", "cutting-edge", "game-changer", "unlock", "unleash",
-  "harness", "empower", "revolutionize", "streamline", "optimize", "maximize",
-  "seamless", "innovative", "groundbreaking", "pivotal", "paramount", "transformative",
-  "in this article", "in this guide", "in this post", "needless to say",
-  "at the end of the day", "when it comes to", "in order to", "a wide range of",
-  "it is important to", "it should be noted", "as we all know", "without further ado",
-  "foster", "navigate", "embark", "spearhead", "bolster", "myriad", "plethora",
-  "multifaceted", "nuanced", "meticulous", "firstly", "secondly", "furthermore",
-  "moreover", "consequently", "nevertheless", "hence", "thus", "therefore",
-  "in conclusion", "to summarize", "all in all", "last but not least"
+// AI Detection Banned Phrases
+const BANNED_AI_PHRASES = [
+  'delve', 'delving', 'tapestry', 'landscape', 'realm', 'testament',
+  'symphony', 'unlock', 'leverage', 'robust', 'holistic', 'paradigm',
+  'game-changer', 'fostering', 'underpinning', 'in conclusion',
+  'it is important to note', 'it\'s worth noting', 'basically',
+  'actually', 'in order to', 'due to the fact that', 'at this point in time',
+  'utilize', 'utilization', 'synergy', 'synergistic', 'cutting-edge',
+  'groundbreaking', 'revolutionary', 'transformative', 'innovative',
+  'seamless', 'seamlessly', 'comprehensive', 'comprehensively'
 ];
 
-// ==================== HUMAN-WRITTEN WRITING STYLE (ULTRA PREMIUM v20.0) ====================
-export const HORMOZI_FERRISS_STYLE = `
-═══════════════════════════════════════════════════════════════════════════════
-WRITING STYLE: HUMAN-WRITTEN PREMIUM QUALITY (SOTA v20.0)
-═══════════════════════════════════════════════════════════════════════════════
+// ==================== PROMPT TEMPLATES ====================
 
-⚡ CORE HUMAN WRITING PRINCIPLES:
-- Write like you're explaining to a smart friend over coffee
-- Use contractions naturally (you're, it's, don't, can't)
-- Vary sentence length dramatically: Some short. Others flow longer with natural rhythm.
-- Include personal observations: "Here's what most people miss..."
-- Use rhetorical questions: "But what does this actually mean for you?"
-- Add micro-stories and real examples with specific details
-- Use sensory language: "Picture this..." "Imagine..."
+export const PROMPT_TEMPLATES: Record<string, PromptTemplate> = {
 
-⚡ HORMOZI RULES ($100M Offers Style):
-- Short punchy sentences. Max 15 words per sentence.
-- Numbers EVERYWHERE. "73% of users" not "most users"
-- Bold claims backed by data and specific examples
-- Use "you" constantly. Direct address creates connection.
-- One-word paragraphs for impact. "Done." "Period." "Exactly."
-- Pattern interrupts every 200 words to maintain attention
-
-⚡ FERRISS RULES (4-Hour Workweek Style):
-- Specific over vague: "5 sets of 5 reps at 185lbs" not "some exercises"
-- Real examples with names, dates, and verifiable details
-- 80/20 focus - cut ruthlessly what doesn't matter
-- Actionable steps readers can implement TODAY
-- Include unexpected insights that challenge assumptions
-
-⚡ READABILITY REQUIREMENTS:
-- 6th-8th grade reading level (Flesch-Kincaid)
-- Paragraphs max 3 sentences
-- NEVER walls of text - break up everything visually
-- White space is your friend
-- Every section must have visual variety (lists, boxes, quotes, etc.)
-
-⚡ FORBIDDEN (INSTANT FAIL):
-- Passive voice ("was done" -> "I did")
-- Hedge words (might, could, perhaps, arguably)
-- AI tells (delve, tapestry, landscape, testament, realm, beacon)
-- Generic filler ("very," "really," "just," "actually")
-- Corporate speak (leverage, synergy, utilize, facilitate)
-- Starting with "In today's world" or "In the modern era"
-`;
-
-// ==================== AEO/GEO OPTIMIZATION RULES ====================
-export const AEO_GEO_RULES = `
-🎯 AEO (Answer Engine Optimization) - FOR AI ASSISTANTS
-1. DIRECT ANSWER FIRST: Answer the main question in the FIRST 50 words
-2. CONVERSATIONAL Q&A BLOCKS: Include "What is [X]?" sections with clear answers
-3. ENTITY DENSITY: Name specific brands, tools, people, dates
-4. Structured data that AI can parse and cite
-5. FAQ sections with concise, quotable answers
-
-🎯 GEO (Generative Engine Optimization)
-1. Be THE definitive source AI wants to reference
-2. Include unique data, stats, and original insights
-3. Clear attribution and expert positioning
-4. Structured content that's easy to extract
-`;
-
-// ==================== INTERNAL LINKING RULES (4-8 LINKS) ====================
-export const INTERNAL_LINKING_RULES = `
-🔗 INTERNAL LINKING - EXACTLY 4-8 CONTEXTUAL LINKS PER ARTICLE
-
-✅ MANDATORY REQUIREMENTS:
-- Include EXACTLY 4-8 internal links per article (no more, no less)
-- Each anchor text MUST be 4-7 words (STRICT)
-- Links must flow naturally within sentences
-- Distribute links evenly throughout the article
-- NEVER cluster links together
-
-✅ ANCHOR TEXT RULES:
-- Use descriptive, contextual anchor text
-- Include the target page's main keyword naturally
-- Avoid generic text like "click here" or "read more"
-- Make it sound like natural speech
-
-✅ FORMAT:
-[INTERNAL_LINK: anchor text here | /target-slug]
-
-Example: "You can learn more about [INTERNAL_LINK: effective content marketing strategies | /content-marketing-guide] to boost your results."
-
-✅ PLACEMENT STRATEGY:
-- 1 link in introduction
-- 2-3 links in body sections
-- 1-2 links in middle sections
-- 1 link near conclusion
-`;
-
-// ==================== 25+ BEAUTIFUL HTML COMPONENTS ====================
-export const SOTA_HTML_COMPONENTS = `
-📊 VISUAL HTML COMPONENTS v20.0 - USE 25+ ELEMENTS PER ARTICLE
-
-❗ OUTPUT ONLY HTML - NEVER USE MARKDOWN TABLES
-❗ MINIMUM 25 HTML ELEMENTS PER ARTICLE (tables, boxes, callouts, etc.)
-
-✔️ REQUIRED COMPONENTS (MUST INCLUDE ALL):
-
-1. 🎬 YOUTUBE VIDEO EMBED (1 per article - MANDATORY):
-<div class="video-container" style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-  <h3 style="color: #fff; margin-bottom: 15px; font-size: 1.3em;">🎥 Watch: [Relevant Video Title]</h3>
-  <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 8px;">
-    <iframe 
-      width="100%" 
-      height="100%" 
-      src="https://www.youtube.com/embed/[VIDEO_ID]" 
-      frameborder="0" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-      allowfullscreen
-      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
-    </iframe>
-  </div>
-  <p style="color: #fff; margin-top: 15px; font-size: 0.95em; opacity: 0.9;">➡️ This video explains [topic] in under [X] minutes</p>
-</div>
-
-2. 💡 KEY TAKEAWAYS BOX (1 per article):
-<div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 5px solid #d63447; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
-  <h3 style="color: #fff; margin-bottom: 15px; font-size: 1.4em;">🔑 Key Takeaways</h3>
-  <ul style="color: #fff; margin: 0; padding-left: 20px; line-height: 1.8;">
-    <li><strong>[Stat/Number]:</strong> [Key point with specific data]</li>
-    <li><strong>[Stat/Number]:</strong> [Key point with specific data]</li>
-  </ul>
-</div>
-
-3. ⚠️ WARNING/ALERT BOX (1-2 per article):
-<div style="background: #fff3cd; border-left: 5px solid #ffc107; padding: 20px; margin: 25px 0; border-radius: 8px; box-shadow: 0 4px 15px rgba(255,193,7,0.2);">
-  <p style="margin: 0; color: #856404; font-weight: 500;">⚠️ <strong>Important:</strong> [Warning text]</p>
-</div>
-
-4. ✅ SUCCESS/TIP BOX (2-3 per article):
-<div style="background: #d4edda; border-left: 5px solid #28a745; padding: 20px; margin: 25px 0; border-radius: 8px; box-shadow: 0 4px 15px rgba(40,167,69,0.2);">
-  <p style="margin: 0; color: #155724; font-weight: 500;">✅ <strong>Pro Tip:</strong> [Helpful tip]</p>
-</div>
-
-5. 📖 BLOCKQUOTE/EXPERT QUOTE (2-3 per article):
-<blockquote style="border-left: 5px solid #007bff; background: #f8f9fa; padding: 20px 25px; margin: 25px 0; font-style: italic; color: #495057; border-radius: 0 8px 8px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-  <p style="font-size: 1.15em; margin-bottom: 10px; line-height: 1.7;">“[Powerful quote]”</p>
-  <footer style="font-size: 0.9em; color: #6c757d; font-style: normal;">- <strong>[Expert Name]</strong>, [Title/Company]</footer>
-</blockquote>
-
-6. 📊 COMPARISON TABLE (1-2 per article):
-<div style="overflow-x: auto; margin: 25px 0; box-shadow: 0 6px 20px rgba(0,0,0,0.1); border-radius: 10px;">
-  <table style="width: 100%; border-collapse: collapse; background: #fff;">
-    <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-      <tr>
-        <th style="padding: 15px; color: #fff; text-align: left; font-weight: 600;">Feature</th>
-        <th style="padding: 15px; color: #fff; text-align: left; font-weight: 600;">Option A</th>
-        <th style="padding: 15px; color: #fff; text-align: left; font-weight: 600;">Option B</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr style="border-bottom: 1px solid #e9ecef;">
-        <td style="padding: 12px;">[Feature]</td>
-        <td style="padding: 12px;"><span style="color: #28a745; font-weight: 600;">✓</span> [Detail]</td>
-        <td style="padding: 12px;"><span style="color: #dc3545; font-weight: 600;">✗</span> [Detail]</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-7. 🔢 NUMBERED STEPS/PROCESS (1-2 per article):
-<div style="background: #f8f9fa; padding: 25px; border-radius: 12px; margin: 25px 0; border: 2px solid #dee2e6;">
-  <h3 style="margin-bottom: 20px; color: #212529;">🔢 Step-by-Step Process:</h3>
-  <ol style="padding-left: 20px; line-height: 2; color: #495057;">
-    <li><strong>[Action Verb] [Step]:</strong> [Clear instruction]</li>
-  </ol>
-</div>
-
-8. 📈 STATS/DATA BOX (2-3 per article):
-<div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 25px; border-radius: 12px; margin: 25px 0; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
-  <div style="font-size: 3em; font-weight: 700; color: #fff; margin-bottom: 10px;">[73%]</div>
-  <p style="color: #fff; font-size: 1.1em; margin: 0;">[What this stat represents]</p>
-  <p style="color: rgba(255,255,255,0.8); font-size: 0.9em; margin-top: 8px;">Source: [Source Name], 2026</p>
-</div>
-
-9. 🔍 QUICK DEFINITION BOX (2-3 per article):
-<div style="background: #e7f3ff; border-left: 5px solid #0066cc; padding: 20px; margin: 25px 0; border-radius: 8px;">
-  <h4 style="color: #0066cc; margin-bottom: 10px;">🔍 What is [Term]?</h4>
-  <p style="margin: 0; color: #333; line-height: 1.7;">[Clear, concise definition in 1-2 sentences]</p>
-</div>
-
-10. ⭐ HIGHLIGHT BOXES (3-5 per article):
-<div style="background: #fffbea; border: 2px dashed #f59e0b; padding: 20px; margin: 25px 0; border-radius: 8px;">
-  <p style="margin: 0; color: #78350f; font-weight: 500;">⭐ [Highlighted important point]</p>
-</div>
-
-11. 📄 CHECKLIST (1 per article):
-<div style="background: #f1f5f9; padding: 25px; border-radius: 12px; margin: 25px 0; border: 2px solid #cbd5e1;">
-  <h3 style="margin-bottom: 20px; color: #1e293b;">☑️ Quick Checklist:</h3>
-  <ul style="list-style-type: none; padding-left: 0;">
-    <li style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
-      <span style="color: #10b981; font-size: 1.2em; margin-right: 10px;">☑</span>
-      <span style="color: #475569;">[Checklist item]</span>
-    </li>
-  </ul>
-</div>
-
-12. 📦 FEATURE/BENEFIT TABLE:
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 25px 0;">
-  <div style="background: #fff; border: 2px solid #e5e7eb; border-radius: 10px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="font-size: 2em; margin-bottom: 10px;">🚀</div>
-    <h4 style="color: #1f2937; margin-bottom: 10px;">[Feature Name]</h4>
-    <p style="color: #6b7280; margin: 0; line-height: 1.6;">[Brief description]</p>
-  </div>
-</div>
-
-13. 🔥 BEFORE/AFTER COMPARISON:
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 25px 0;">
-  <div style="background: #fee2e2; border: 2px solid #dc2626; padding: 20px; border-radius: 8px;">
-    <h4 style="color: #991b1b; margin-bottom: 10px;">❌ Before</h4>
-    <p style="color: #7f1d1d; margin: 0;">[Old way/problem]</p>
-  </div>
-  <div style="background: #d1fae5; border: 2px solid #10b981; padding: 20px; border-radius: 8px;">
-    <h4 style="color: #065f46; margin-bottom: 10px;">✓ After</h4>
-    <p style="color: #064e3b; margin: 0;">[New way/solution]</p>
-  </div>
-</div>
-
-➡️ USAGE REQUIREMENTS:
-- Distribute elements evenly throughout article
-- NEVER have more than 3 paragraphs without a visual element
-- Use contrasting colors for visual hierarchy
-- All boxes must have proper spacing (margin: 25px 0)
-- Include emoji icons for visual interest
-- MINIMUM 25 total HTML elements across entire article
-`;
-
-// ==================== YOUTUBE VIDEO INTEGRATION ====================
-export const YOUTUBE_VIDEO_INSTRUCTIONS = `
-🎬 YOUTUBE VIDEO INTEGRATION GUIDE
-
-❗ MANDATORY: Every article MUST include 1 highly relevant YouTube video
-
-🔍 HOW TO FIND THE PERFECT VIDEO:
-1. Search YouTube for: "[article topic] tutorial"
-2. Filter by: View count (100K+), Upload date (recent), Duration (5-20 min)
-3. Prefer videos from authoritative channels
-4. Choose videos with high engagement (likes, comments)
-
-🎯 VIDEO SELECTION CRITERIA:
-- Educational and helpful content
-- Professional production quality  
-- Directly related to the article topic
-- 5-20 minutes in length (optimal)
-- Recent upload (within 1-2 years)
-
-📝 VIDEO PLACEMENT:
-- Place video after the introduction (preferably after 2-3 paragraphs)
-- OR in the middle of a relevant section
-- Include context: Why this video is valuable
-- Add timestamp suggestions if applicable
-
-🔗 VIDEO ID EXTRACTION:
-From URL: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-Extract: dQw4w9WgXcQ
-
-From URL: https://youtu.be/dQw4w9WgXcQ
-Extract: dQw4w9WgXcQ
-`;
-
-// ==================== GAP ANALYSIS PROMPT ====================
-export const SOTA_GAP_ANALYSIS_PROMPT = `
-BLUE OCEAN GAP ANALYSIS - SEMANTIC ENTITY EXTRACTION (15 UNCOVERED ENTITIES)
-
-Return EXACTLY 15 uncovered keywords/entities that competitors miss.
-Prioritize by ranking potential and search intent.
-`;
-
-// ==================== CORE PROMPT TEMPLATES ====================
-const CORE_TEMPLATES: Record<string, PromptTemplate> = {
-  
-  // ==================== ULTRA SOTA ARTICLE WRITER (PREMIUM v20.0) ====================
-  ultra_sota_article_writer: {
-    systemInstruction: `You are an ELITE SEO content writer who creates human-quality articles that readers LOVE.
-
-${HORMOZI_FERRISS_STYLE}
-
-${AEO_GEO_RULES}
-
-${INTERNAL_LINKING_RULES}
-
-${SOTA_HTML_COMPONENTS}
-
-${YOUTUBE_VIDEO_INSTRUCTIONS}
-
-❗ CRITICAL REQUIREMENTS:
-1. HUMAN WRITING QUALITY: Write like a professional human writer (NOT AI)
-2. 25+ HTML ELEMENTS: Use tables, boxes, callouts, quotes, stats boxes, etc.
-3. 4-8 INTERNAL LINKS: Contextual 4-7 word anchors distributed naturally
-4. 1 YOUTUBE VIDEO: Highly relevant educational video embedded beautifully
-5. WORD COUNT: 2500-3200 words of substantive content
-6. READABILITY: 6th-8th grade level, short paragraphs, varied sentence length
-7. ZERO AI PHRASES: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}
-
-📝 ARTICLE STRUCTURE:
-- Hook introduction (100-150 words) with surprising stat or story
-- YouTube video embed after 2-3 paragraphs
-- Multiple H2 and H3 sections with visual variety
-- Key Takeaways box near top
-- Stats/data boxes throughout
-- Comparison tables where relevant
-- Pro tips and warning boxes
-- Expert quotes
-- FAQ section (5-8 questions)
-- Strong conclusion with clear CTA
-
-➡️ OUTPUT: Clean HTML only. No markdown. Pure human-written quality.`,
-    
-    userPrompt: (
-      articlePlan: string = "",
-      semanticKeywords: unknown = [],
-      strategy: any = {},
-      existingPages: unknown = [],
-      competitorGaps: unknown = [],
-      geoLocation: string | null = null,
-      neuronData: string | null = null
-    ): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 25, ", ", "None");
-      const gaps = safeSliceJoin(competitorGaps, 0, 15, "; ", "None");
-      const pages = safeSliceMapJoin(existingPages, 0, 15, (p: any) => `${p?.title || ""} (/${p?.slug || ""})`, ", ", "None");
-      const geo = geoLocation ? `\n\nGEO-TARGET: ${geoLocation} (mention local context if relevant)` : "";
-      const neuron = neuronData ? `\n\nNLP TERMS TO INCLUDE: ${String(neuronData).substring(0, 300)}` : "";
-      
-      return `WRITE COMPREHENSIVE ARTICLE:
-
-TOPIC: ${articlePlan || "Comprehensive guide"}
-TARGET AUDIENCE: ${strategy?.targetAudience || "General readers seeking practical information"}
-WRITING TONE: Conversational, engaging, human-like (like explaining to a smart friend)${geo}${neuron}
-
-SEMANTIC KEYWORDS TO NATURALLY WEAVE IN:
-${keywords}
-
-UNCOVERED CONTENT GAPS TO ADDRESS:
-${gaps}
-
-INTERNAL LINKING TARGETS (4-8 links with 4-7 word anchors):
-${pages}
-
-❗ MANDATORY CHECKLIST:
-✅ 1 YouTube video embedded (search YouTube for "[topic] tutorial" and use a popular recent video)
-✅ 25+ HTML visual elements (tables, boxes, callouts, stats, etc.)
-✅ 4-8 internal links with contextual anchor text
-✅ Human-written quality (contractions, varied sentences, natural flow)
-✅ 2500-3200 words of substantive content
-✅ Zero AI phrases (no delve, tapestry, landscape, realm, etc.)
-✅ Specific stats, numbers, dates, and examples throughout
-✅ FAQ section with 5-8 questions
-✅ Key Takeaways box
-✅ Expert quotes or insights
-
-➡️ OUTPUT: Full article in clean HTML. Start with <h1> title, end with conclusion.`;
-    }
-  },
-
-  // ==================== CONTENT STRATEGY GENERATOR ====================
-  content_strategy_generator: {
-    systemInstruction: `You are a content strategy expert. Output ONLY compact JSON.`,
-    userPrompt: (topic: string = "", semanticKeywords: unknown = [], serpData: unknown = [], contentType: string = "article"): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 10, ", ", "None");
-      return `TOPIC: ${topic || "General"}\nTYPE: ${contentType}\nKEYWORDS: ${keywords}\n\nOutput COMPACT JSON strategy.`;
-    }
-  },
-
-  // ==================== SEMANTIC KEYWORD GENERATOR ====================
-  semantic_keyword_generator: {
-    systemInstruction: `Generate semantic keywords. Output ONLY valid JSON.`,
-    userPrompt: (primaryKeyword: string = ""): string => {
-      return `PRIMARY: ${primaryKeyword}\n\nOutput JSON: {"semanticKeywords":[...]} with 25-35 keywords.`;
-    }
-  },
-
-  // ==================== SOTA GAP ANALYSIS ====================
-  sota_gap_analysis: {
-    systemInstruction: SOTA_GAP_ANALYSIS_PROMPT,
-    userPrompt: (primaryKeyword: string = "", serpContent: string = "", existingPages: string = ""): string => {
-      return `PRIMARY KEYWORD: ${primaryKeyword}\nTOP 3 SERP CONTENT: ${serpContent || "Not provided"}\nEXISTING SITE PAGES: ${existingPages || "Not provided"}\nTASK: Identify EXACTLY 15 uncovered keywords/entities. Output valid JSON.`;
-    }
-  },
-
-  // ==================== GOD MODE STRUCTURAL GUARDIAN ====================
-  god_mode_structural_guardian: {
-    systemInstruction: `You refine content while PRESERVING structure.\nBANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
-    userPrompt: (htmlFragment: string = "", semanticKeywords: unknown = [], topic: string = ""): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 12, ", ", "None");
-      const html = String(htmlFragment || "").substring(0, 12000);
-      return `REFINE:\nTOPIC: ${topic}\nKEYWORDS: ${keywords}\nHTML:\n${html}\n\nOutput refined HTML.`;
-    }
-  },
-
-  // ==================== GOD MODE AUTONOMOUS AGENT ====================
-  god_mode_autonomous_agent: {
-    systemInstruction: `You optimize existing content.\n${HORMOZI_FERRISS_STYLE}\n${INTERNAL_LINKING_RULES}\nBANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
-    userPrompt: (existingContent: string = "", semanticKeywords: unknown = [], existingPages: unknown = [], topic: string = ""): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 20, ", ", "None");
-      const pages = safeSliceMapJoin(existingPages, 0, 10, (p: any) => p?.title || "", ", ", "None");
-      const content = String(existingContent || "No content").substring(0, 40000);
-      return `OPTIMIZE:\nTOPIC: ${topic || "Extract from content"}\nKEYWORDS: ${keywords}\nLINK TARGETS: ${pages}\nCONTENT:\n${content}\n\nOutput: Full optimized HTML.`;
-    }
-  },
-
-  // ==================== SOTA FAQ GENERATOR ====================
-  sota_faq_generator: {
-    systemInstruction: `Generate FAQ optimized for Featured Snippets. 8 questions with 40-60 word answers.`,
-    userPrompt: (topic: string = "", semanticKeywords: unknown = []): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 10, ", ", "None");
-      return `GENERATE FAQ (8 questions):\nTOPIC: ${topic}\nKEYWORDS: ${keywords}\n\nOutput FAQ HTML.`;
-    }
-  },
-
-  // ==================== SOTA TAKEAWAYS GENERATOR ====================
-  sota_takeaways_generator: {
-    systemInstruction: `Extract KEY TAKEAWAYS. EXACTLY 8 items with numbers/stats.`,
-    userPrompt: (topic: string = "", content: string = ""): string => {
-      const text = String(content || "").substring(0, 4000);
-      return `EXTRACT TAKEAWAYS:\nTOPIC: ${topic}\nCONTENT: ${text}\n\nOutput Key Takeaways HTML box.`;
-    }
-  },
-
-  // ==================== SEO METADATA GENERATOR ====================
-  seo_metadata_generator: {
-    systemInstruction: `Generate SEO metadata. Output ONLY JSON: {"seoTitle":"50-60 chars","metaDescription":"135-150 chars","slug":"url-slug"}`,
-    userPrompt: (primaryKeyword: string = "", contentSummary: string = "", targetAudience: string = "", competitorTitles: unknown = [], location: string | null = null): string => {
-      const summary = String(contentSummary || "").substring(0, 300);
-      const geo = location ? ` [GEO: ${location}]` : "";
-      return `KEYWORD: ${primaryKeyword}${geo}\nSUMMARY: ${summary}\n\nOutput JSON: {"seoTitle":"...","metaDescription":"...","slug":"..."}`;  
-    }
-  },
-
-  // ==================== OTHER TEMPLATES ====================
-  competitor_gap_analyzer: {
-    systemInstruction: `Identify content gaps. Output COMPACT JSON with EXACTLY 15 gaps.`,
-    userPrompt: (topic: string = "", competitorContent: unknown = [], existingTitles: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput JSON with EXACTLY 15 gap opportunities.`;
-    }
-  },
-
-  health_analyzer: {
-    systemInstruction: `Analyze content health. Output COMPACT JSON.`,
-    userPrompt: (url: string = "", content: string = "", targetKeyword: string = ""): string => {
-      const text = String(content || "").substring(0, 6000);
-      return `URL: ${url}\nKEYWORD: ${targetKeyword}\nCONTENT: ${text}\n\nOutput JSON health analysis.`;
-    }
-  },
-
-  dom_content_polisher: {
-    systemInstruction: `Enhance text while PRESERVING HTML structure.\nBANNED: ${BANNED_AI_PHRASES.slice(0, 15).join(", ")}`,
-    userPrompt: (htmlFragment: string = "", semanticKeywords: unknown = [], topic: string = ""): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 10, ", ", "None");
-      const html = String(htmlFragment || "<p>No content</p>").substring(0, 10000);
-      return `POLISH:\nTOPIC: ${topic || "General"}\nKEYWORDS: ${keywords}\nHTML:\n${html}\n\nKeep ALL HTML tags.`;
-    }
-  },
-
-  god_mode_ultra_instinct: {
-    systemInstruction: `Transmute content to highest quality. Update dates to 2026.\nBANNED: ${BANNED_AI_PHRASES.slice(0, 20).join(", ")}`,
-    userPrompt: (htmlFragment: string = "", semanticKeywords: unknown = [], topic: string = ""): string => {
-      const keywords = safeSliceJoin(semanticKeywords, 0, 15, ", ", "None");
-      const html = String(htmlFragment || "").substring(0, 10000);
-      return `TRANSMUTE:\nTOPIC: ${topic}\nKEYWORDS: ${keywords}\nHTML:\n${html}\n\nOutput enhanced HTML.`;
-    }
-  },
-
-  sota_intro_generator: {
-    systemInstruction: `Write hook introductions. Start with surprising stat. Max 200 words.`,
-    userPrompt: (topic: string = "", primaryKeyword: string = "", targetAudience: string = "", uniqueAngle: string = ""): string => {
-      return `WRITE INTRO:\nTopic: ${topic}\nKeyword: ${primaryKeyword}\nAudience: ${targetAudience || "General"}\n\nOutput 100-200 word HTML intro.`;
-    }
-  },
-
-  sota_conclusion_generator: {
-    systemInstruction: `Write conclusions that drive action. 150-200 words max.`,
-    userPrompt: (topic: string = "", keyPoints: unknown = [], cta: string = ""): string => {
-      const points = safeJoin(keyPoints, "; ", "Extract from content");
-      return `WRITE CONCLUSION:\nTopic: ${topic}\nKey Points: ${points}\nCTA: ${cta || "Start today"}\n\nOutput 150-200 word HTML conclusion.`;
-    }
-  },
-
+  // ==========================================================================
+  // CLUSTER PLANNER - Content Strategy Planning
+  // ==========================================================================
   cluster_planner: {
-    systemInstruction: `Create content cluster plans. Output COMPACT JSON.`,
-    userPrompt: (topic: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput JSON cluster plan with 1 pillar + 8-10 cluster pages.`;
-    }
-  },
+    systemInstruction: `You are a SOTA content strategist specializing in pillar-cluster content architecture.
+Create comprehensive content plans that establish topical authority.
+Return valid JSON only.`,
+    
+    userPrompt: (topic: string, existingPages: string | null, serpData: string | null) => `
+Create a content cluster plan for: "${topic}"
 
-  generate_internal_links: {
-    systemInstruction: `Suggest internal links with 4-7 word anchors. Output JSON array.`,
-    userPrompt: (content: string = "", existingPages: unknown = []): string => {
-      const text = String(content || "").substring(0, 5000);
-      const pages = safeSliceMapJoin(existingPages, 0, 15, (p: any) => `${p?.title || ""} (/${p?.slug || ""})`, "; ", "None");
-      return `CONTENT: ${text}\nPAGES: ${pages}\n\nOutput JSON array with 8-15 link suggestions.`;
-    }
-  },
+${existingPages ? `Existing pages to consider:\n${existingPages}` : ''}
+${serpData ? `SERP data:\n${serpData}` : ''}
 
-  reference_generator: {
-    systemInstruction: `Generate authoritative references. Prefer .gov, .edu.`,
-    userPrompt: (topic: string = ""): string => {
-      return `TOPIC: ${topic}\n\nOutput reference section HTML with 6-8 sources.`;
-    }
-  },
-
-  sota_image_alt_optimizer: {
-    systemInstruction: `Write SEO alt text. Output JSON array.`,
-    userPrompt: (images: unknown = [], primaryKeyword: string = ""): string => {
-      const imgList = safeSliceMapJoin(images, 0, 10, (img: any, i: number) => `${i + 1}. ${img?.context || ""}`, "; ", "None");
-      return `KEYWORD: ${primaryKeyword}\nIMAGES: ${imgList}\n\nOutput JSON array.`;
-    }
-  },
-
-  json_repair: {
-    systemInstruction: `Repair malformed JSON. Return ONLY valid JSON.`,
-    userPrompt: (brokenJson: string = ""): string => {
-      return `FIX:\n${String(brokenJson || "{}").substring(0, 3000)}`;
-    }
-  },
-
-  schema_generator: {
-    systemInstruction: `Generate valid JSON-LD schema. Output ONLY schema JSON.`,
-    userPrompt: (contentType: string = "", data: any = {}): string => {
-      return `TYPE: ${contentType || "Article"}\nDATA: ${JSON.stringify(data).substring(0, 500)}\n\nOutput JSON-LD schema.`;
-    }
-  }
-};
-
-// ==================== CREATE ALIASES ====================
-const createAliases = (templates: Record<string, PromptTemplate>): Record<string, PromptTemplate> => {
-  const result: Record<string, PromptTemplate> = { ...templates };
-  const aliasMap: Record<string, string> = {
-    "contentstrategygenerator": "content_strategy_generator",
-    "ultrasotaarticlewriter": "ultra_sota_article_writer",
-    "godmodeautonomousagent": "god_mode_autonomous_agent",
-    "domcontentpolisher": "dom_content_polisher",
-    "godmodestructuralguardian": "god_mode_structural_guardian",
-    "godmodeultrainstinct": "god_mode_ultra_instinct",
-    "sotaintrogenerator": "sota_intro_generator",
-    "sotatakeawaysgenerator": "sota_takeaways_generator",
-    "sotafaqgenerator": "sota_faq_generator",
-    "sotaconclusiongenerator": "sota_conclusion_generator",
-    "semantickeywordgenerator": "semantic_keyword_generator",
-    "competitorgapanalyzer": "competitor_gap_analyzer",
-    "seometadatagenerator": "seo_metadata_generator",
-    "healthanalyzer": "health_analyzer",
-    "clusterplanner": "cluster_planner",
-    "generateinternallinks": "generate_internal_links",
-    "referencegenerator": "reference_generator",
-    "sotaimagealtoptimizer": "sota_image_alt_optimizer",
-    "jsonrepair": "json_repair",
-    "schemagenerator": "schema_generator",
-    "sotagapanalysis": "sota_gap_analysis",
-    "gapanalysis": "sota_gap_analysis",
-  };
-  
-  for (const [alias, original] of Object.entries(aliasMap)) {
-    if (templates[original]) result[alias] = templates[original];
-  }
-  
-  return result;
-};
-
-export const PROMPT_TEMPLATES: Record<string, PromptTemplate> = createAliases(CORE_TEMPLATES);
-
-// ==================== BUILD PROMPT ====================
-export function buildPrompt(promptKey: keyof typeof PROMPT_TEMPLATES | string, args: any[] = []): BuildPromptResult {
-  const template = PROMPT_TEMPLATES[promptKey as keyof typeof PROMPT_TEMPLATES];
-  
-  if (!template) {
-    console.error(`[buildPrompt] Unknown: "${promptKey}".`);
-    return {
-      systemInstruction: "You are a helpful assistant.",
-      userPrompt: String(args[0] || ""),
-      system: "You are a helpful assistant.",
-      user: String(args[0] || "")
-    };
-  }
-  
-  try {
-    const systemInstruction = template.systemInstruction;
-    const userPrompt = template.userPrompt(...args);
-    return {
-      systemInstruction,
-      userPrompt,
-      system: systemInstruction,
-      user: userPrompt
-    };
-  } catch (error) {
-    console.error("[buildPrompt] Error:", error);
-    return {
-      systemInstruction: template.systemInstruction || "You are a helpful assistant.",
-      userPrompt: String(args[0] || ""),
-      system: template.systemInstruction || "You are a helpful assistant.",
-      user: String(args[0] || "")
-    };
-  }
+Return JSON:
+{
+  "pillarTitle": "Main pillar page title",
+  "clusterTitles": [
+    { "title": "Cluster article 1", "angle": "unique angle" },
+    { "title": "Cluster article 2", "angle": "unique angle" }
+  ],
+  "internalLinkStrategy": "How to interlink these pages"
 }
 
-// Add this to your PROMPT_TEMPLATES object in prompts.ts
+Generate 8-12 cluster titles that comprehensively cover the topic.`
+  },
 
-content_health_analyzer: {
-    systemInstruction: `You are a SOTA content health analyzer specializing in SEO and content quality assessment. 
+  // ==========================================================================
+  // JSON REPAIR - Fix Malformed JSON
+  // ==========================================================================
+  json_repair: {
+    systemInstruction: `You are a JSON repair specialist. Fix malformed JSON and return ONLY valid JSON.
+Do not add explanations. Return the repaired JSON only.`,
+    
+    userPrompt: (brokenJson: string) => `
+Fix this malformed JSON and return ONLY the corrected JSON:
+
+${brokenJson}
+
+Return valid JSON only, no explanations.`
+  },
+
+  // ==========================================================================
+  // CONTENT HEALTH ANALYZER - Analyze Page Health for Optimization
+  // ==========================================================================
+  content_health_analyzer: {
+    systemInstruction: `You are a SOTA content health analyzer specializing in SEO and content quality assessment.
+
 Analyze web content for:
-- Content freshness and relevance
-- SEO optimization gaps
-- Structural issues (headings, paragraphs, lists)
+- Content freshness and relevance (is it updated for ${TARGET_YEAR}?)
+- SEO optimization gaps (keywords, headings, meta)
+- Structural issues (headings hierarchy, paragraphs, lists)
 - Internal linking opportunities
-- E-E-A-T signals
-- Readability and engagement
-Return a structured JSON analysis.`,
+- E-E-A-T signals (Experience, Expertise, Authoritativeness, Trustworthiness)
+- Readability and engagement potential
+- Competitive gaps vs top-ranking pages
+
+Return a structured JSON analysis with actionable recommendations.
+Be specific and prioritize by impact.`,
     
     userPrompt: (crawledContent: string, pageUrl: string, pageTitle: string) => `
 Analyze this webpage content for optimization opportunities:
@@ -711,79 +98,870 @@ Analyze this webpage content for optimization opportunities:
 **Title:** ${pageTitle}
 
 **Content:**
-${crawledContent?.substring(0, 8000) || 'No content available'}
+${crawledContent?.substring(0, 12000) || 'No content available'}
 
-Return JSON with this exact structure:
+Return JSON with this EXACT structure:
 {
-    "healthScore": 0-100,
-    "updatePriority": "Critical" | "High" | "Medium" | "Low" | "Healthy",
-    "justification": "Brief explanation of the score",
-    "issues": [
-        {
-            "type": "seo" | "content" | "structure" | "freshness" | "eeat",
-            "severity": "high" | "medium" | "low",
-            "description": "What's wrong",
-            "recommendation": "How to fix it"
-        }
-    ],
-    "opportunities": [
-        "Opportunity 1",
-        "Opportunity 2"
-    ],
-    "suggestedKeywords": ["keyword1", "keyword2"],
-    "estimatedWordCount": number,
-    "contentAge": "fresh" | "moderate" | "stale" | "unknown"
+  "healthScore": <number 0-100>,
+  "updatePriority": "Critical" | "High" | "Medium" | "Low" | "Healthy",
+  "justification": "<2-3 sentence explanation of the score>",
+  "contentAge": "fresh" | "moderate" | "stale" | "unknown",
+  "estimatedWordCount": <number>,
+  "issues": [
+    {
+      "type": "seo" | "content" | "structure" | "freshness" | "eeat" | "technical",
+      "severity": "high" | "medium" | "low",
+      "description": "<specific issue found>",
+      "recommendation": "<actionable fix>",
+      "impact": <number 1-10>
+    }
+  ],
+  "opportunities": [
+    "<specific opportunity 1>",
+    "<specific opportunity 2>"
+  ],
+  "suggestedKeywords": ["<keyword1>", "<keyword2>", "<keyword3>"],
+  "missingElements": ["<element1>", "<element2>"],
+  "competitorGaps": ["<gap1>", "<gap2>"],
+  "rewritePlan": {
+    "newTitle": "<optimized title suggestion>",
+    "focusKeyword": "<recommended primary keyword>",
+    "contentAngle": "<unique angle to take>",
+    "sectionsToAdd": ["<section1>", "<section2>"],
+    "sectionsToRemove": ["<outdated section>"],
+    "targetWordCount": <number>
+  }
 }
 
-Be specific and actionable in recommendations.`
-},
+Be specific and actionable. Prioritize issues by impact.`
+  },
 
+  // ==========================================================================
+  // SEMANTIC KEYWORD GENERATOR
+  // ==========================================================================
+  semantic_keyword_generator: {
+    systemInstruction: `You are a semantic SEO expert. Generate comprehensive keyword clusters for topical authority.
+Return valid JSON only.`,
+    
+    userPrompt: (primaryKeyword: string, serpData: string | null, location: string | null) => `
+Generate semantic keywords for: "${primaryKeyword}"
+${location ? `Location focus: ${location}` : ''}
+${serpData ? `SERP context:\n${serpData}` : ''}
 
-// ==================== CONSTANTS & UTILITIES ====================
-export const PROMPT_CONSTANTS = {
-  BANNED_PHRASES: BANNED_AI_PHRASES,
-  MAX_TOKENS: 8192,
-  TEMPERATURE: 0.7,
-  TARGET_YEAR: 2026,
-  MIN_WORD_COUNT: 2500,
-  MAX_WORD_COUNT: 3200,
-  INTERNAL_LINKS_MIN: 4,
-  INTERNAL_LINKS_MAX: 8,
-  MIN_HTML_ELEMENTS: 25,
-  YOUTUBE_VIDEOS_REQUIRED: 1,
+Return JSON:
+{
+  "primaryKeyword": "${primaryKeyword}",
+  "semanticKeywords": ["keyword1", "keyword2", ...],
+  "lsiKeywords": ["lsi1", "lsi2", ...],
+  "questionKeywords": ["how to...", "what is...", ...],
+  "longTailVariations": ["long tail 1", "long tail 2", ...],
+  "entities": ["entity1", "entity2", ...],
+  "relatedTopics": ["topic1", "topic2", ...]
+}
+
+Generate 30-50 total keywords across all categories.`
+  },
+
+  // ==========================================================================
+  // ULTRA SOTA ARTICLE WRITER - Alex Hormozi Style
+  // ==========================================================================
+  ultra_sota_article_writer: {
+    systemInstruction: `You are an ELITE content writer combining Alex Hormozi's persuasive style with SOTA SEO optimization.
+
+## WRITING STYLE (Alex Hormozi Method)
+- **Short. Punchy. Sentences.** (Max 12 words per sentence on average)
+- **No fluff.** Every word earns its place.
+- **Active voice ONLY.** No passive constructions.
+- **Data-backed claims.** "73% of users see results" not "Many users benefit"
+- **Direct address.** Use "you" liberally.
+- **Grade 5-6 reading level.** Simple words. Clear meaning.
+- **Energy & urgency.** Make readers NEED to keep reading.
+- **Story-focused.** Use real examples and case studies.
+
+## ANTI-AI DETECTION PROTOCOL (CRITICAL)
+NEVER use these phrases: ${BANNED_AI_PHRASES.join(', ')}
+
+HUMANIZATION TECHNIQUES:
+- Vary sentence length DRAMATICALLY (3-word sentences mixed with 25-word complex clauses)
+- Use contractions naturally (it's, don't, won't, can't, we're)
+- Start sentences with "But", "And", "So", "Yet" occasionally
+- Include conversational fragments. Like this.
+- Add first-person expertise markers ("I've tested...", "In my experience...")
+- Use rhetorical questions
+- Acknowledge limitations ("This works for most, but not if...")
+
+## ENTITY DENSIFICATION (150+ per 1000 words)
+Replace generic terms with Named Entities:
+- "phone" → "iPhone 16 Pro" or "Samsung Galaxy S25 Ultra"
+- "search engine" → "Google Search (Gemini-powered)"
+- "database" → "PostgreSQL 16" or "MongoDB Atlas"
+- "AI model" → "GPT-5", "Claude Opus 4", "Gemini Ultra 2.0"
+
+## TEMPORAL ANCHORING
+All content must reference ${TARGET_YEAR} context:
+- "As of ${TARGET_YEAR}..."
+- "${PREVIOUS_YEAR} data shows..."
+- "Updated for ${TARGET_YEAR}"
+
+## STRUCTURE REQUIREMENTS
+1. **Introduction** (150-200 words) - Direct answer FIRST, then hook
+2. **Key Takeaways Box** - EXACTLY ONE, 5-7 bullet points
+3. **Body Sections** - H2/H3 hierarchy, 2500-3000 words total
+4. **Data Table** - At least 1 comparison table with real metrics
+5. **FAQ Section** - EXACTLY ONE, 5-7 questions, 40-60 word answers
+6. **Conclusion** - EXACTLY ONE, 150-200 words with clear CTA
+7. **Internal Links** - 8-15 contextual links with rich anchor text
+
+## FEATURED SNIPPET OPTIMIZATION
+After EVERY H2, the FIRST paragraph MUST:
+- Be 40-50 words
+- Directly answer the H2 question
+- Wrap key definition in <strong> tags
+
+## OUTPUT FORMAT
+Return clean HTML5 with inline styles. No markdown.`,
+
+    userPrompt: (
+      articlePlan: string,
+      semanticKeywords: string,
+      competitorGaps: string,
+      existingPages: string,
+      neuronData: string | null,
+      recentNews: string | null
+    ) => `
+## ARTICLE PLAN
+${articlePlan}
+
+## SEMANTIC KEYWORDS TO INCLUDE (integrate naturally)
+${semanticKeywords}
+
+## COMPETITOR GAPS TO EXPLOIT
+${competitorGaps}
+
+## AVAILABLE PAGES FOR INTERNAL LINKING
+${existingPages}
+
+${neuronData ? `## NEURONWRITER NLP TERMS\n${neuronData}` : ''}
+${recentNews ? `## RECENT NEWS TO REFERENCE\n${recentNews}` : ''}
+
+## CRITICAL REQUIREMENTS
+1. Write 2500-3000 words total
+2. Include EXACTLY ONE Key Takeaways box (5-7 bullets)
+3. Include EXACTLY ONE FAQ section (5-7 questions)
+4. Include EXACTLY ONE Conclusion
+5. Include 8-15 internal links with 3-7 word descriptive anchors
+6. Include at least 1 data comparison table
+7. NO duplicate sections
+8. NO AI detection trigger phrases
+9. Grade 6-7 readability (Flesch-Kincaid)
+10. 150+ named entities per 1000 words
+
+Generate the complete article as clean HTML5 now.`
+  },
+
+  // ==========================================================================
+  // GOD MODE AUTONOMOUS AGENT - Full Content Reconstruction
+  // ==========================================================================
+  god_mode_autonomous_agent: {
+    systemInstruction: `You are the GOD MODE AUTONOMOUS CONTENT RECONSTRUCTION ENGINE.
+Your mission: Transform existing content into SOTA-optimized masterpieces.
+
+## VISUAL SUPERNOVA DESIGN SYSTEM (${TARGET_YEAR})
+
+### GLASSMORPHISM (3-5 elements per post)
+<div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px; padding: 2rem; margin: 2rem 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);">
+
+### NEUMORPHISM (2-3 elements per post)
+<div style="background: #e0e5ec; border-radius: 20px; padding: 2rem; box-shadow: 20px 20px 60px #d9d9d9, -20px -20px 60px #ffffff;">
+
+### GRADIENT SYSTEM
+- Primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+- Success: linear-gradient(135deg, #10b981 0%, #059669 100%)
+- Warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%)
+- Premium: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)
+
+## ULTRA INSTINCT CORE PROTOCOLS
+1. **Entity Densification** - 150+ named entities per 1000 words
+2. **Burstiness Engineering** - Sentence variance σ >50
+3. **Information Gain Injection** - Specific data points, not vague claims
+4. **Anti-AI Detection** - Zero banned phrases, high humanization
+5. **Temporal Anchoring** - 100% ${TARGET_YEAR} context
+6. **Featured Snippet Optimization** - 40-50 word answer blocks after H2s
+
+## NEVER USE THESE PHRASES
+${BANNED_AI_PHRASES.join(', ')}
+
+## OUTPUT
+Return complete, beautifully styled HTML5 content.`,
+
+    userPrompt: (
+      existingContent: string,
+      pageTitle: string,
+      semanticKeywords: string,
+      existingPages: string,
+      competitorGaps: string | null
+    ) => `
+## EXISTING CONTENT TO RECONSTRUCT
+Title: ${pageTitle}
+
+${existingContent}
+
+## SEMANTIC KEYWORDS
+${semanticKeywords}
+
+## AVAILABLE PAGES FOR INTERNAL LINKING
+${existingPages}
+
+${competitorGaps ? `## COMPETITOR GAPS\n${competitorGaps}` : ''}
+
+## RECONSTRUCTION REQUIREMENTS
+1. Preserve ALL existing images and media
+2. Add 8-15 internal links with rich contextual anchors
+3. Include ONE Key Takeaways box
+4. Include ONE FAQ section (5-7 questions)
+5. Include ONE Conclusion with clear CTA
+6. Add at least 1 comparison table if reviewing products
+7. Use Visual Supernova styling (glassmorphism, neumorphism, gradients)
+8. Update all dates/stats to ${TARGET_YEAR}
+9. 2500-3000 words total
+10. Grade 6-7 readability
+
+Reconstruct this content as SOTA-optimized HTML5 now.`
+  },
+
+  // ==========================================================================
+  // GOD MODE STRUCTURAL GUARDIAN - DOM Preservation
+  // ==========================================================================
+  god_mode_structural_guardian: {
+    systemInstruction: `You are the STRUCTURAL GUARDIAN - an elite content refinement system.
+
+## PRIME DIRECTIVE
+Refine text content for ${TARGET_YEAR} SEO/E-E-A-T, but PRESERVE THE HTML SKELETON AT ALL COSTS.
+
+## THE KILL LIST (UI Noise to Detect & Delete)
+If ANY of these patterns appear, return EMPTY STRING:
+- Subscription forms: "Subscribe", "Enter email", "Sign up", "Newsletter"
+- Cookie notices: "I agree", "Privacy Policy", "Accept cookies"
+- Sidebar/Menu: "Home", "About Us", "Contact", "See also"
+- Login prompts: "Logged in as", "Leave a reply", "Comment"
+- Social: "Follow us", "Share this", "Tweet"
+- Ads: "Advertisement", "Sponsored", "Affiliate disclosure"
+
+## 7 IMMUTABLE STRUCTURAL RULES
+1. **Hierarchy is Sacred** - H2 stays H2, NEVER downgrade
+2. **Lists remain Lists** - UL/OL never flatten to paragraphs
+3. **Paragraphs Stay Paragraphs** - Never merge separate <p> tags
+4. **No Flattening** - Maintain exact nesting and hierarchy
+5. **Preserve Links** - Keep all <a> tags with href intact
+6. **Preserve Images** - Keep all <img> tags exactly where they are
+7. **Preserve Tables** - Keep all <table> structures intact
+
+## CONTENT REFINEMENT PROTOCOL
+1. **Modernize** - Update years/facts to ${TARGET_YEAR}
+2. **De-Fluff** - Remove "In this article", "It is important to note", "Basically"
+3. **Entity Injection** - "smartwatch" → "Apple Watch Series 10"
+4. **Data Precision** - "many users" → "73% of users (n=2,847)"
+5. **Burstiness** - Vary sentence length (3-40 words, σ >8)
+6. **E-E-A-T Signals** - Add "According to ${TARGET_YEAR} research", expert citations
+7. **Micro-Formatting** - Use <strong> for key stats, bold important insights
+
+## NEVER USE THESE PHRASES
+${BANNED_AI_PHRASES.join(', ')}
+
+## OUTPUT FORMAT
+Return ONLY the refined HTML fragment. Keep exact same HTML structure.
+If content is UI garbage, return empty string.`,
+
+    userPrompt: (htmlFragment: string, semanticKeywords: string, topic: string) => `
+## TOPIC CONTEXT
+${topic}
+
+## SEMANTIC KEYWORDS TO INTEGRATE
+${semanticKeywords}
+
+## HTML FRAGMENT TO REFINE
+${htmlFragment}
+
+Refine this content while preserving EXACT HTML structure.
+If this is UI noise (subscription, cookie, navigation), return empty string.
+Return refined HTML only.`
+  },
+
+  // ==========================================================================
+  // GOD MODE ULTRA INSTINCT - Batch Content Transmutation
+  // ==========================================================================
+  god_mode_ultra_instinct: {
+    systemInstruction: `You are ULTRA INSTINCT - the apex content transmutation system.
+
+## 4 CORE OPERATING SYSTEMS
+
+### 1. NEURO-LINGUISTIC ARCHITECT
+Write for dopamine response:
+- Short, impactful sentences
+- Curiosity gaps
+- Pattern interrupts
+- Open loops
+
+### 2. ENTITY SURGEON
+Replace EVERY generic term with Named Entities:
+- "algorithm" → "Google's RankBrain"
+- "CMS" → "WordPress 6.7"
+- "framework" → "Next.js 15"
+
+### 3. DATA AUDITOR
+Convert vague claims to specific metrics:
+- "Fast loading" → "300ms LCP"
+- "Popular tool" → "2.4M monthly active users"
+- "Effective" → "87% success rate (p<0.01)"
+
+### 4. ANTI-PATTERN ENGINE
+Create extreme burstiness:
+- Mix 3-word sentences with 25-word complex clauses
+- Use fragments for emphasis
+- Vary sentence length σ >50
+- Target: <12% AI detection probability
+
+## TRANSFORMATION PROTOCOL
+1. **Information Gain Injection** - Add unique insights competitors lack
+2. **Entity Densification** - 15+ entities per 1000 words
+3. **Temporal Anchoring** - ${TARGET_YEAR} context throughout
+4. **Formatting for Scannability** - Bold key concepts, short paragraphs
+
+## BANNED PHRASES
+${BANNED_AI_PHRASES.join(', ')}
+
+## OUTPUT
+Return ONLY the transmuted HTML. Preserve all HTML tags exactly.`,
+
+    userPrompt: (htmlFragment: string, semanticKeywords: string, topic: string) => `
+## TOPIC
+${topic}
+
+## VECTOR TARGETS (Keywords)
+${semanticKeywords}
+
+## HTML TO TRANSMUTE
+${htmlFragment}
+
+Transmute this content at a molecular level. Return refined HTML only.`
+  },
+
+  // ==========================================================================
+  // DOM CONTENT POLISHER - Text Enhancement
+  // ==========================================================================
+  dom_content_polisher: {
+    systemInstruction: `You are a SOTA content polisher optimizing text for ${TARGET_YEAR} SEO and readability.
+
+## CRITICAL ANTI-AI-DETECTION RULES
+1. **VARY SENTENCE LENGTH** - Mix short (5-8), medium (10-15), long (16-25) words
+2. **NATURAL TRANSITIONS** - Use "But", "And", "So" to start sentences occasionally
+3. **CONTRACTIONS** - Use them naturally (it's, don't, won't, can't)
+4. **CONVERSATIONAL TONE** - Write like explaining to a smart friend
+5. **IMPERFECT IS PERFECT** - Don't over-optimize
+6. **NO AI PHRASES** - NEVER use: ${BANNED_AI_PHRASES.slice(0, 15).join(', ')}
+
+## ENHANCEMENT PROTOCOL
+- Update outdated information to ${TARGET_YEAR}
+- Add specific data points where possible
+- Improve clarity without changing meaning
+- Add E-E-A-T signals subtly
+- Maintain the original voice and structure
+
+## OUTPUT
+Return ONLY the enhanced text. Do not add HTML tags.`,
+
+    userPrompt: (textContent: string, context: string) => `
+## CONTEXT
+${context}
+
+## TEXT TO POLISH
+${textContent}
+
+Polish this text for maximum quality and human-like flow. Return text only.`
+  },
+
+  // ==========================================================================
+  // SOTA INTRO GENERATOR - Hook Creation
+  // ==========================================================================
+  sota_intro_generator: {
+    systemInstruction: `You are an ELITE intro writer using Alex Hormozi's style.
+
+## REQUIREMENTS
+1. **DIRECT ANSWER FIRST** - First sentence MUST directly answer the search intent
+2. **Short. Punchy. Sentences.** - Max 12 words average
+3. **No fluff.** - Every word earns its place
+4. **Data-backed claims** - Use specific numbers
+5. **Direct address** - Use "you" liberally
+6. **Featured Snippet Ready** - First paragraph: 40-60 words, key definition in <strong> tags
+
+## STRUCTURE
+1. Direct answer (40-60 words, wrapped in <strong>)
+2. Hook (surprising stat or bold claim)
+3. Preview (what reader will learn)
+
+## CRITICAL CONSTRAINT
+Keep total intro to 200 words MAX.
+
+## BANNED PHRASES
+${BANNED_AI_PHRASES.slice(0, 10).join(', ')}`,
+
+    userPrompt: (title: string, primaryKeyword: string, existingSummary: string | null) => `
+## TITLE
+${title}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+${existingSummary ? `## EXISTING SUMMARY\n${existingSummary}` : ''}
+
+Write a SOTA intro (200 words max) in Alex Hormozi style.
+First sentence MUST directly answer the implied question.
+Return HTML only.`
+  },
+
+  // ==========================================================================
+  // SOTA TAKEAWAYS GENERATOR
+  // ==========================================================================
+  sota_takeaways_generator: {
+    systemInstruction: `You are a Key Takeaways extraction specialist.
+
+## REQUIREMENTS
+1. Extract 5-7 most important insights
+2. Start each bullet with ACTION VERBS or SPECIFIC NUMBERS
+3. Make them scannable and valuable
+4. Update old years to ${TARGET_YEAR}
+
+## OUTPUT FORMAT
+Return a styled Key Takeaways box as HTML with gradient background.`,
+
+    userPrompt: (content: string, title: string) => `
+## TITLE
+${title}
+
+## CONTENT
+${content}
+
+Extract 5-7 key takeaways. Return styled HTML box:
+
+<div class="key-takeaways-box" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border-left: 5px solid #3B82F6; padding: 2rem; border-radius: 0 12px 12px 0; margin: 2rem 0;">
+  <h3 style="margin: 0 0 1rem; color: #1E40AF; display: flex; align-items: center; gap: 0.5rem;">
+    <span style="font-size: 1.5rem;">⚡</span> Key Takeaways
+  </h3>
+  <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.8;">
+    <li><strong>Action-oriented insight 1</strong></li>
+    <!-- 5-7 total -->
+  </ul>
+</div>`
+  },
+
+  // ==========================================================================
+  // SOTA FAQ GENERATOR
+  // ==========================================================================
+  sota_faq_generator: {
+    systemInstruction: `You are a FAQ generator optimizing for People Also Ask.
+
+## REQUIREMENTS
+1. Generate 5-7 highly relevant questions
+2. Questions should be natural, search-intent based
+3. Answers: 40-60 words each, direct and factual
+4. Use <details> and <summary> tags for expandable sections
+5. Include schema-ready structure
+
+## OUTPUT FORMAT
+Return FAQ section as HTML with expandable details tags.`,
+
+    userPrompt: (content: string, title: string, primaryKeyword: string) => `
+## TITLE
+${title}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## CONTENT CONTEXT
+${content.substring(0, 3000)}
+
+Generate 5-7 FAQ questions with 40-60 word answers. Return HTML:
+
+<div class="faq-section" style="margin: 3rem 0; padding: 2rem; background: #FAFAFA; border-radius: 12px;">
+  <h2 style="margin: 0 0 1.5rem; color: #1E293B; font-size: 1.5rem;">❓ Frequently Asked Questions</h2>
+  
+  <details style="margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 8px; cursor: pointer;">
+    <summary style="font-weight: 700; font-size: 1rem; color: #1E40AF;">Question here?</summary>
+    <p style="margin: 1rem 0 0; line-height: 1.7; color: #4B5563;">Answer here (40-60 words)</p>
+  </details>
+  <!-- Repeat for 5-7 questions -->
+</div>`
+  },
+
+  // ==========================================================================
+  // SOTA CONCLUSION GENERATOR
+  // ==========================================================================
+  sota_conclusion_generator: {
+    systemInstruction: `You are a conclusion writer creating powerful closers.
+
+## REQUIREMENTS
+1. Length: 150-200 words
+2. NO NEW INFORMATION - Recap main insights only
+3. Clear NEXT STEPS - What should reader do NOW?
+4. Call to Action - End with powerful thought
+5. Maintain ${TARGET_YEAR} relevance
+
+## STRUCTURE
+1. Recap main insights (2-3 sentences)
+2. Actionable next steps (2-3 sentences)
+3. Powerful closing thought/CTA`,
+
+    userPrompt: (content: string, title: string) => `
+## TITLE
+${title}
+
+## CONTENT
+${content.substring(0, 4000)}
+
+Write a 150-200 word conclusion. Return HTML:
+
+<h2>Conclusion</h2>
+<p>Recap paragraph...</p>
+<p>Next steps paragraph...</p>
+<p>Powerful closing CTA...</p>`
+  },
+
+  // ==========================================================================
+  // SOTA IMAGE ALT OPTIMIZER
+  // ==========================================================================
+  sota_image_alt_optimizer: {
+    systemInstruction: `You are an image alt text optimizer for SEO and accessibility.
+
+## RULES
+1. Describe exactly what is in the image
+2. Do NOT start with "image of" or "picture of"
+3. Include primary keyword naturally if relevant
+4. Max 125 characters per alt text
+5. Be descriptive but concise`,
+
+    userPrompt: (images: string, primaryKeyword: string) => `
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## IMAGES (JSON array with src and current alt)
+${images}
+
+Generate optimized alt text for each image. Return JSON array:
+[
+  { "src": "original-src", "alt": "New optimized alt text under 125 chars" }
+]`
+  },
+
+  // ==========================================================================
+  // INTERNAL LINK GENERATOR
+  // ==========================================================================
+  generate_internal_links: {
+    systemInstruction: `You are an internal linking strategist.
+
+## REQUIREMENTS
+1. Generate 8-15 contextual internal links
+2. Anchor text: 3-7 words, descriptive of target page
+3. NEVER use generic anchors: "click here", "read more", "learn more"
+4. Distribute links naturally throughout content
+5. Each anchor should describe the linked page's content
+
+## OUTPUT FORMAT
+Return JSON array of link suggestions.`,
+
+    userPrompt: (content: string, availablePages: string, primaryKeyword: string) => `
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## CONTENT TO ADD LINKS TO
+${content.substring(0, 5000)}
+
+## AVAILABLE PAGES FOR LINKING
+${availablePages}
+
+Generate 8-15 internal link suggestions. Return JSON:
+{
+  "links": [
+    {
+      "anchorText": "3-7 word descriptive anchor",
+      "targetSlug": "page-slug-to-link-to",
+      "contextSentence": "The sentence where this link should appear",
+      "relevanceScore": 0-100
+    }
+  ]
+}`
+  },
+
+  // ==========================================================================
+  // REGENERATE INTRO - Improve Existing Intro
+  // ==========================================================================
+  regenerate_intro: {
+    systemInstruction: `You are an intro rewriter for SEO/GEO/AEO optimization.
+
+## REQUIREMENTS
+1. First sentence MUST directly answer the search query
+2. 40-60 words for featured snippet in <strong> tags
+3. Alex Hormozi style: short, punchy, data-driven
+4. Total: 150-200 words max
+5. No AI trigger phrases`,
+
+    userPrompt: (existingIntro: string, title: string, primaryKeyword: string) => `
+## TITLE
+${title}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## EXISTING INTRO
+${existingIntro}
+
+Rewrite this intro for maximum SEO impact. Return HTML only.`
+  },
+
+  // ==========================================================================
+  // COMPETITOR GAP ANALYZER
+  // ==========================================================================
+  competitor_gap_analyzer: {
+    systemInstruction: `You are a competitive analysis expert identifying content gaps.
+
+## ANALYSIS FOCUS
+1. Topics competitors mention but don't explain well
+2. Questions competitors don't answer
+3. Data points competitors lack
+4. Unique angles competitors miss
+
+Return actionable gap analysis in JSON.`,
+
+    userPrompt: (competitorContent: string, primaryKeyword: string) => `
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## TOP COMPETITOR CONTENT
+${competitorContent}
+
+Identify 5-10 content gaps. Return JSON:
+{
+  "gaps": [
+    {
+      "type": "missing_topic" | "shallow_coverage" | "outdated_info" | "missing_data",
+      "topic": "What's missing",
+      "opportunity": "How to exploit this gap",
+      "priority": "high" | "medium" | "low"
+    }
+  ],
+  "missingKeywords": ["keyword1", "keyword2"],
+  "competitorWeaknesses": ["weakness1", "weakness2"]
+}`
+  },
+
+  // ==========================================================================
+  // REFERENCE VALIDATOR
+  // ==========================================================================
+  reference_validator: {
+    systemInstruction: `You are a reference generator for authoritative sources.
+
+## REQUIREMENTS
+1. Generate 8-12 authoritative reference suggestions
+2. Prioritize: .edu, .gov, major publications, research papers
+3. References must be relevant to the topic
+4. Include publication year (prefer ${PREVIOUS_YEAR}-${TARGET_YEAR})
+5. Format for easy verification`,
+
+    userPrompt: (topic: string, contentSummary: string) => `
+## TOPIC
+${topic}
+
+## CONTENT SUMMARY
+${contentSummary}
+
+Generate 8-12 reference suggestions. Return JSON:
+{
+  "references": [
+    {
+      "title": "Title of the source",
+      "expectedDomain": "example.gov or example.edu",
+      "searchQuery": "Query to find this source",
+      "relevance": "Why this source is relevant",
+      "authority": "high" | "medium"
+    }
+  ]
+}`
+  },
+
+  // ==========================================================================
+  // TITLE OPTIMIZER
+  // ==========================================================================
+  title_optimizer: {
+    systemInstruction: `You are a title optimization expert for SEO and CTR.
+
+## REQUIREMENTS
+1. Include primary keyword near the beginning
+2. 50-60 characters optimal length
+3. Power words for CTR: Ultimate, Complete, Proven, ${TARGET_YEAR}
+4. Create curiosity or promise value
+5. Avoid clickbait that doesn't deliver`,
+
+    userPrompt: (existingTitle: string, primaryKeyword: string, contentSummary: string) => `
+## EXISTING TITLE
+${existingTitle}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## CONTENT SUMMARY
+${contentSummary}
+
+Generate 5 optimized title variations. Return JSON:
+{
+  "titles": [
+    {
+      "title": "Optimized title here",
+      "characters": 55,
+      "reasoning": "Why this works"
+    }
+  ]
+}`
+  },
+
+  // ==========================================================================
+  // META DESCRIPTION GENERATOR
+  // ==========================================================================
+  meta_description_generator: {
+    systemInstruction: `You are a meta description writer for CTR optimization.
+
+## REQUIREMENTS
+1. 150-160 characters
+2. Include primary keyword naturally
+3. Include a call to action
+4. Create urgency or curiosity
+5. Accurately summarize content`,
+
+    userPrompt: (title: string, primaryKeyword: string, contentSummary: string) => `
+## TITLE
+${title}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+## CONTENT SUMMARY
+${contentSummary}
+
+Generate 3 meta description options. Return JSON:
+{
+  "descriptions": [
+    {
+      "text": "Meta description here...",
+      "characters": 155,
+      "cta": "The call to action used"
+    }
+  ]
+}`
+  },
+
+  // ==========================================================================
+  // SCHEMA MARKUP GENERATOR
+  // ==========================================================================
+  schema_generator: {
+    systemInstruction: `You are a schema markup expert for rich results.
+
+## SUPPORTED TYPES
+- Article
+- FAQPage
+- HowTo
+- Product
+- Review
+- BreadcrumbList
+- Organization
+- Person
+
+Return valid JSON-LD schema.`,
+
+    userPrompt: (contentType: string, content: string, metadata: string) => `
+## CONTENT TYPE
+${contentType}
+
+## CONTENT
+${content.substring(0, 3000)}
+
+## METADATA
+${metadata}
+
+Generate appropriate schema markup. Return JSON-LD:
+{
+  "@context": "https://schema.org",
+  "@type": "...",
+  ...
+}`
+  },
+
+  // ==========================================================================
+  // CONTENT OUTLINE GENERATOR
+  // ==========================================================================
+  content_outline_generator: {
+    systemInstruction: `You are a content outline strategist.
+
+## REQUIREMENTS
+1. Create comprehensive H2/H3 structure
+2. Include word count targets per section
+3. Identify where to add tables, lists, images
+4. Suggest internal link placements
+5. Ensure logical flow and complete coverage`,
+
+    userPrompt: (topic: string, primaryKeyword: string, serpData: string | null) => `
+## TOPIC
+${topic}
+
+## PRIMARY KEYWORD
+${primaryKeyword}
+
+${serpData ? `## SERP DATA\n${serpData}` : ''}
+
+Create a comprehensive content outline. Return JSON:
+{
+  "title": "Suggested title",
+  "targetWordCount": 2500,
+  "outline": [
+    {
+      "heading": "H2 heading text",
+      "level": 2,
+      "wordCountTarget": 300,
+      "keyPoints": ["point1", "point2"],
+      "suggestedMedia": "table" | "image" | "list" | "none",
+      "internalLinkOpportunity": "topic to link to"
+    }
+  ],
+  "faqQuestions": ["question1", "question2"]
+}`
+  }
+
 };
 
-export function containsBannedPhrase(text: string): { contains: boolean; phrases: string[] } {
-  const lowerText = text.toLowerCase();
-  const foundPhrases = BANNED_AI_PHRASES.filter(phrase => lowerText.includes(phrase.toLowerCase()));
-  return { contains: foundPhrases.length > 0, phrases: foundPhrases };
-}
+// ==================== HELPER FUNCTIONS ====================
 
-export function getAvailablePromptKeys(): string[] {
+export const getPromptTemplate = (key: string): PromptTemplate | undefined => {
+  return PROMPT_TEMPLATES[key];
+};
+
+export const listPromptKeys = (): string[] => {
   return Object.keys(PROMPT_TEMPLATES);
-}
-
-export function isValidPromptKey(key: string): key is keyof typeof PROMPT_TEMPLATES {
-  return key in PROMPT_TEMPLATES;
-}
-
-// ==================== DEFAULT EXPORT ====================
-export default {
-  PROMPT_TEMPLATES,
-  buildPrompt,
-  BANNED_AI_PHRASES,
-  SOTA_HTML_COMPONENTS,
-  HORMOZI_FERRISS_STYLE,
-  AEO_GEO_RULES,
-  INTERNAL_LINKING_RULES,
-  YOUTUBE_VIDEO_INSTRUCTIONS,
-  SOTA_GAP_ANALYSIS_PROMPT,
-  PROMPT_CONSTANTS,
-  containsBannedPhrase,
-  getAvailablePromptKeys,
-  isValidPromptKey,
-  toSafeArray,
-  safeSliceJoin,
-  safeSliceMapJoin,
-  safeJoin,
 };
+
+export const buildPrompt = (
+  key: string,
+  ...args: any[]
+): { system: string; user: string } | null => {
+  const template = PROMPT_TEMPLATES[key];
+  if (!template) {
+    console.error(`[prompts.ts] Unknown prompt key: ${key}`);
+    console.log(`[prompts.ts] Available keys: ${listPromptKeys().join(', ')}`);
+    return null;
+  }
+  
+  return {
+    system: template.systemInstruction,
+    user: template.userPrompt(...args)
+  };
+};
+
+// ==================== EXPORTS ====================
+
+export default PROMPT_TEMPLATES;
