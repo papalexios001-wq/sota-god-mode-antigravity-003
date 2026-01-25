@@ -4,8 +4,7 @@
 
 import { fetchWithProxies } from './contentUtils';
 
-// ==================== EXPORTED TYPES ====================
-// Use 'export type' for interfaces to ensure they're properly exported
+// ==================== EXPORTED TYPES (using 'type' keyword for proper export) ====================
 
 export type VerifiedReference = {
   title: string;
