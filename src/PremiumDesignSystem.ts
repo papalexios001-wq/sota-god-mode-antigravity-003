@@ -396,10 +396,10 @@ export const generateComparisonTableHTML = (
   rows: string[][],
   theme: BlogPostTheme
 ): string => {
-  const headerBg = theme.id.includes('dark') 
+  const headerBg = theme.id.includes('dark')
     ? 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)'
     : 'linear-gradient(135deg, #1A1A1A 0%, #333333 100%)';
-  
+
   return `
     <div class="comparison-table" style="${theme.styles.comparisonTable}">
       <table style="width: 100%; border-collapse: collapse;">
@@ -466,7 +466,7 @@ export const generateStepByStepHTML = (
   const numberBg = theme.id.includes('dark')
     ? 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)'
     : '#1A1A1A';
-  
+
   return `
     <div class="step-by-step-guide" style="margin: 3rem 0;">
       ${steps.map((step, idx) => `
@@ -510,7 +510,7 @@ export const generateProgressBarHTML = (
   const barColor = theme.id.includes('dark')
     ? 'linear-gradient(90deg, #8B5CF6 0%, #EC4899 100%)'
     : theme.colors.accent;
-  
+
   return `
     <div style="margin: 1.5rem 0;">
       <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
@@ -543,7 +543,7 @@ export const generateQuoteBlockHTML = (
     background: rgba(139, 92, 246, 0.1);
     border-radius: 0 12px 12px 0;
   `;
-  
+
   return `
     <blockquote style="${theme?.styles.quoteBlock || defaultStyle}">
       <p style="margin: 0 0 1rem 0; font-size: 1.15rem; font-style: italic;">
@@ -585,7 +585,7 @@ export const generateProductCardHTML = (
   theme: BlogPostTheme
 ): string => {
   const stars = '★'.repeat(Math.floor(product.rating)) + '☆'.repeat(5 - Math.floor(product.rating));
-  
+
   return `
     <div style="${theme.styles.productCard}">
       <div style="display: flex; gap: 24px;">
@@ -689,5 +689,438 @@ export const ThemeSelectorHTML = (currentThemeId: string): string => {
           >
             ${theme.name}
           </button>
-        
+        `).join('')}
+      </div>
+    </div>
+  `;
+};
 
+// ==================== CALLOUT BOX GENERATORS ====================
+
+export const generateCalloutBoxHTML = (
+  type: 'info' | 'warning' | 'success' | 'danger' | 'tip',
+  title: string,
+  content: string,
+  theme: BlogPostTheme
+): string => {
+  const icons: Record<string, string> = {
+    info: '💡',
+    warning: '⚠️',
+    success: '✅',
+    danger: '🚨',
+    tip: '💎'
+  };
+
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    info: { bg: 'rgba(59, 130, 246, 0.1)', border: '#3B82F6', text: '#93C5FD' },
+    warning: { bg: 'rgba(245, 158, 11, 0.1)', border: '#F59E0B', text: '#FCD34D' },
+    success: { bg: 'rgba(16, 185, 129, 0.1)', border: '#10B981', text: '#6EE7B7' },
+    danger: { bg: 'rgba(239, 68, 68, 0.1)', border: '#EF4444', text: '#FCA5A5' },
+    tip: { bg: 'rgba(139, 92, 246, 0.1)', border: '#8B5CF6', text: '#C4B5FD' }
+  };
+
+  const colorSet = colors[type] || colors.info;
+
+  return `
+    <div class="callout-box callout-${type}" style="
+      background: ${colorSet.bg};
+      border-left: 4px solid ${colorSet.border};
+      border-radius: 0 12px 12px 0;
+      padding: 1.5rem;
+      margin: 2rem 0;
+    ">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <span style="font-size: 1.5rem;">${icons[type]}</span>
+        <strong style="font-size: 1.1rem; color: ${colorSet.text};">${title}</strong>
+      </div>
+      <div style="color: ${theme.colors.textMuted}; line-height: 1.8;">
+        ${content}
+      </div>
+    </div>
+  `;
+};
+
+// ==================== CTA BUTTON GENERATOR ====================
+
+export const generateCTAButtonHTML = (
+  text: string,
+  href: string,
+  variant: 'primary' | 'secondary' | 'outline' = 'primary',
+  theme: BlogPostTheme
+): string => {
+  const styles: Record<string, string> = {
+    primary: `
+      background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary || theme.colors.accent} 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    `,
+    secondary: `
+      background: ${theme.colors.surface};
+      color: ${theme.colors.text};
+      border: 1px solid ${theme.colors.primary};
+    `,
+    outline: `
+      background: transparent;
+      color: ${theme.colors.primary};
+      border: 2px solid ${theme.colors.primary};
+    `
+  };
+
+  return `
+    <a href="${href}" target="_blank" rel="noopener noreferrer" style="
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      ${styles[variant]}
+    " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+      ${text}
+      <span style="margin-left: 8px;">→</span>
+    </a>
+  `;
+};
+
+// ==================== BADGE GENERATOR ====================
+
+export const generateBadgeHTML = (
+  text: string,
+  variant: 'default' | 'success' | 'warning' | 'danger' | 'premium' = 'default',
+  theme: BlogPostTheme
+): string => {
+  const colors: Record<string, { bg: string; text: string }> = {
+    default: { bg: 'rgba(255, 255, 255, 0.1)', text: theme.colors.text },
+    success: { bg: 'rgba(16, 185, 129, 0.2)', text: '#10B981' },
+    warning: { bg: 'rgba(245, 158, 11, 0.2)', text: '#F59E0B' },
+    danger: { bg: 'rgba(239, 68, 68, 0.2)', text: '#EF4444' },
+    premium: { bg: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)', text: 'white' }
+  };
+
+  const colorSet = colors[variant] || colors.default;
+
+  return `
+    <span style="
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: ${colorSet.bg};
+      color: ${colorSet.text};
+    ">
+      ${text}
+    </span>
+  `;
+};
+
+// ==================== STAT CARD GENERATOR ====================
+
+export const generateStatCardHTML = (
+  stats: Array<{ label: string; value: string; icon?: string }>,
+  theme: BlogPostTheme
+): string => {
+  return `
+    <div style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin: 2rem 0;
+    ">
+      ${stats.map(stat => `
+        <div style="
+          background: ${theme.colors.surface};
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 1.5rem;
+          text-align: center;
+        ">
+          ${stat.icon ? `<span style="font-size: 2rem; margin-bottom: 8px; display: block;">${stat.icon}</span>` : ''}
+          <div style="font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary || theme.colors.accent} 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            ${stat.value}
+          </div>
+          <div style="font-size: 0.85rem; color: ${theme.colors.textMuted}; margin-top: 4px;">
+            ${stat.label}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+};
+
+// ==================== TIMELINE GENERATOR ====================
+
+export const generateTimelineHTML = (
+  events: Array<{ date: string; title: string; description: string }>,
+  theme: BlogPostTheme
+): string => {
+  return `
+    <div style="position: relative; margin: 3rem 0; padding-left: 40px;">
+      <div style="
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, ${theme.colors.primary}, ${theme.colors.secondary || theme.colors.accent});
+      "></div>
+      ${events.map((event, idx) => `
+        <div style="position: relative; margin-bottom: 2rem;">
+          <div style="
+            position: absolute;
+            left: -32px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: ${theme.colors.primary};
+            border: 3px solid ${theme.colors.background};
+          "></div>
+          <div style="
+            background: ${theme.colors.surface};
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+          ">
+            <div style="font-size: 0.8rem; color: ${theme.colors.primary}; font-weight: 600; margin-bottom: 4px;">
+              ${event.date}
+            </div>
+            <h4 style="margin: 0 0 8px 0; font-weight: 700;">${event.title}</h4>
+            <p style="margin: 0; color: ${theme.colors.textMuted}; line-height: 1.6;">${event.description}</p>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+};
+
+// ==================== IMAGE GALLERY GENERATOR ====================
+
+export const generateImageGalleryHTML = (
+  images: Array<{ src: string; alt: string; caption?: string }>,
+  theme: BlogPostTheme
+): string => {
+  return `
+    <div style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 2.5rem 0;
+    ">
+      ${images.map(img => `
+        <figure style="margin: 0;">
+          <div style="
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          ">
+            <img 
+              src="${img.src}" 
+              alt="${img.alt}"
+              loading="lazy"
+              style="width: 100%; height: 200px; object-fit: cover; transition: transform 0.3s ease;"
+              onmouseover="this.style.transform='scale(1.05)'"
+              onmouseout="this.style.transform='scale(1)'"
+            />
+          </div>
+          ${img.caption ? `
+            <figcaption style="
+              margin-top: 8px;
+              font-size: 0.85rem;
+              color: ${theme.colors.textMuted};
+              text-align: center;
+            ">
+              ${img.caption}
+            </figcaption>
+          ` : ''}
+        </figure>
+      `).join('')}
+    </div>
+  `;
+};
+
+// ==================== AUTHOR BIO BOX ====================
+
+export const generateAuthorBioHTML = (
+  author: {
+    name: string;
+    avatar?: string;
+    title: string;
+    bio: string;
+    socials?: Array<{ platform: string; url: string }>;
+  },
+  theme: BlogPostTheme
+): string => {
+  return `
+    <div style="
+      background: ${theme.colors.surface};
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 3rem 0;
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    ">
+      <div style="
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary || theme.colors.accent} 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        ${author.avatar ? `background-image: url('${author.avatar}'); background-size: cover;` : ''}
+      ">
+        ${!author.avatar ? `<span style="font-size: 2rem; color: white; font-weight: 700;">${author.name.charAt(0)}</span>` : ''}
+      </div>
+      <div style="flex: 1;">
+        <h4 style="margin: 0 0 4px 0; font-weight: 700; font-size: 1.2rem;">${author.name}</h4>
+        <div style="color: ${theme.colors.primary}; font-size: 0.9rem; margin-bottom: 12px;">${author.title}</div>
+        <p style="margin: 0 0 16px 0; color: ${theme.colors.textMuted}; line-height: 1.7;">${author.bio}</p>
+        ${author.socials ? `
+          <div style="display: flex; gap: 12px;">
+            ${author.socials.map(s => `
+              <a href="${s.url}" target="_blank" rel="noopener noreferrer" style="
+                color: ${theme.colors.textMuted};
+                text-decoration: none;
+                font-size: 0.85rem;
+                transition: color 0.2s ease;
+              " onmouseover="this.style.color='${theme.colors.primary}'" onmouseout="this.style.color='${theme.colors.textMuted}'">
+                ${s.platform}
+              </a>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+};
+
+// ==================== READING PROGRESS BAR ====================
+
+export const generateReadingProgressBarCSS = (theme: BlogPostTheme): string => {
+  return `
+    <style>
+      .reading-progress-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 0%;
+        height: 4px;
+        background: linear-gradient(90deg, ${theme.colors.primary} 0%, ${theme.colors.secondary || theme.colors.accent} 100%);
+        z-index: 9999;
+        transition: width 0.1s ease;
+      }
+    </style>
+    <div class="reading-progress-bar" id="reading-progress"></div>
+    <script>
+      window.addEventListener('scroll', function() {
+        var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        var scrolled = (winScroll / height) * 100;
+        document.getElementById('reading-progress').style.width = scrolled + '%';
+      });
+    </script>
+  `;
+};
+
+// ==================== THEME UTILITIES ====================
+
+export const getThemeById = (id: string): BlogPostTheme | undefined => {
+  return PREMIUM_THEMES.find(theme => theme.id === id);
+};
+
+export const getDefaultTheme = (): BlogPostTheme => {
+  return PREMIUM_THEMES[0];
+};
+
+export const applyThemeToContent = (content: string, theme: BlogPostTheme): string => {
+  return `
+    <div class="themed-content" style="${theme.styles.container}">
+      ${content}
+    </div>
+  `;
+};
+
+export const generateThemeStylesheet = (theme: BlogPostTheme): string => {
+  return `
+    <style>
+      .themed-content { ${theme.styles.container} }
+      .themed-content h1, .themed-content h2, .themed-content h3 { ${theme.styles.heading} }
+      .themed-content p { ${theme.styles.paragraph} }
+      .themed-content .key-takeaways-box { ${theme.styles.keyTakeaways} }
+      .themed-content .comparison-table { ${theme.styles.comparisonTable} }
+      .themed-content .faq-section details { ${theme.styles.faqAccordion} }
+      .themed-content blockquote { ${theme.styles.quoteBlock} }
+      .themed-content .product-card { ${theme.styles.productCard} }
+      .themed-content .floating-toc { ${theme.styles.tableOfContents} }
+      
+      /* Smooth scrolling */
+      html { scroll-behavior: smooth; }
+      
+      /* FAQ accordion animation */
+      .themed-content details[open] summary span:last-child {
+        transform: rotate(45deg);
+      }
+      
+      /* Product card hover */
+      .themed-content .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+      }
+      
+      /* Link hover effects */
+      .themed-content a:not(.btn) {
+        color: ${theme.colors.primary};
+        text-decoration: none;
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.2s ease;
+      }
+      .themed-content a:not(.btn):hover {
+        border-bottom-color: ${theme.colors.primary};
+      }
+      
+      /* Selection color */
+      ::selection {
+        background: ${theme.colors.primary};
+        color: white;
+      }
+    </style>
+  `;
+};
+
+// ==================== EXPORT ALL ====================
+
+export default {
+  PREMIUM_THEMES,
+  generateKeyTakeawaysHTML,
+  generateComparisonTableHTML,
+  generateFAQHTML,
+  generateStepByStepHTML,
+  generateProgressBarHTML,
+  generateQuoteBlockHTML,
+  generateProductCardHTML,
+  generateTableOfContentsHTML,
+  generateCalloutBoxHTML,
+  generateCTAButtonHTML,
+  generateBadgeHTML,
+  generateStatCardHTML,
+  generateTimelineHTML,
+  generateImageGalleryHTML,
+  generateAuthorBioHTML,
+  generateReadingProgressBarCSS,
+  getThemeById,
+  getDefaultTheme,
+  applyThemeToContent,
+  generateThemeStylesheet,
+  ThemeSelectorHTML
+};

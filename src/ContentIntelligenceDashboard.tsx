@@ -92,45 +92,45 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'seo' | 'ai' | 'competitors' | 'entities'>('seo');
 
   // ==================== ANALYSIS FUNCTIONS ====================
-  
+
   // Real-time SEO Score Calculator
   const calculateSEOScore = useCallback((html: string, keyword: string): SEOMetrics => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const textContent = doc.body.textContent || '';
     const words = textContent.split(/\s+/).filter(w => w.length > 0);
-    
+
     // Word count analysis
     const wordCount = words.length;
     const wordCountScore = wordCount >= 2500 && wordCount <= 3500 ? 100 :
-                          wordCount >= 2000 && wordCount <= 4000 ? 80 :
-                          wordCount >= 1500 ? 60 : 40;
-    
+      wordCount >= 2000 && wordCount <= 4000 ? 80 :
+        wordCount >= 1500 ? 60 : 40;
+
     // Keyword density analysis
     const keywordLower = keyword.toLowerCase();
     const keywordOccurrences = (textContent.toLowerCase().match(new RegExp(keywordLower, 'g')) || []).length;
     const keywordDensity = (keywordOccurrences / wordCount) * 100;
     const densityScore = keywordDensity >= 0.5 && keywordDensity <= 2.5 ? 100 :
-                        keywordDensity >= 0.3 && keywordDensity <= 3.0 ? 70 : 40;
-    
+      keywordDensity >= 0.3 && keywordDensity <= 3.0 ? 70 : 40;
+
     // Heading structure analysis
     const h1s = doc.querySelectorAll('h1');
     const h2s = doc.querySelectorAll('h2');
     const h3s = doc.querySelectorAll('h3');
     const h4s = doc.querySelectorAll('h4');
-    
+
     const headingIssues: string[] = [];
     if (h1s.length !== 1) headingIssues.push(`Found ${h1s.length} H1 tags (should be exactly 1)`);
     if (h2s.length < 4) headingIssues.push(`Only ${h2s.length} H2 tags (recommend 4-10)`);
     if (h2s.length > 0 && h3s.length === 0) headingIssues.push('No H3 subheadings found');
-    
+
     const headingScore = h1s.length === 1 ? (h2s.length >= 4 ? 100 : 70) : 40;
-    
+
     // Internal link analysis
     const links = doc.querySelectorAll('a[href]');
     let internalCount = 0;
     let externalCount = 0;
-    
+
     links.forEach(link => {
       const href = link.getAttribute('href') || '';
       if (href.startsWith('/') || href.includes(window.location.hostname)) {
@@ -139,10 +139,10 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
         externalCount++;
       }
     });
-    
+
     const linkScore = internalCount >= 8 && internalCount <= 15 ? 100 :
-                     internalCount >= 5 ? 70 : 40;
-    
+      internalCount >= 5 ? 70 : 40;
+
     // Entity density calculation
     const entityPatterns = [
       /\b(Google|Apple|Microsoft|Amazon|Meta|OpenAI|Anthropic)\b/gi,
@@ -151,35 +151,35 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       /\b(202[4-6]|Q[1-4] 202[4-6]|January|February|March|April|May|June|July|August|September|October|November|December 202[4-6])\b/gi,
       /\b(\d+%|\$[\d,]+|\d+\.\d+x|\d+ million|\d+ billion)\b/gi
     ];
-    
+
     let entityMatches = 0;
     entityPatterns.forEach(pattern => {
       const matches = textContent.match(pattern);
       if (matches) entityMatches += matches.length;
     });
-    
+
     const entityDensity = (entityMatches / wordCount) * 1000;
     const entityScore = entityDensity >= 15 ? 100 : entityDensity >= 10 ? 80 : entityDensity >= 5 ? 60 : 40;
-    
+
     // Readability score (Flesch-Kincaid approximation)
     const sentences = textContent.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const avgWordsPerSentence = words.length / sentences.length;
     const syllables = words.reduce((acc, word) => acc + countSyllables(word), 0);
     const avgSyllablesPerWord = syllables / words.length;
-    
+
     const fleschScore = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * avgSyllablesPerWord);
     const readabilityScore = fleschScore >= 60 ? 100 : fleschScore >= 50 ? 80 : fleschScore >= 40 ? 60 : 40;
-    
+
     // Title analysis
     const titleLength = title.length;
     const titleScore = titleLength >= 50 && titleLength <= 60 ? 100 :
-                      titleLength >= 40 && titleLength <= 70 ? 80 : 50;
-    
+      titleLength >= 40 && titleLength <= 70 ? 80 : 50;
+
     // Meta description analysis
     const metaLength = metaDescription.length;
     const metaScore = metaLength >= 150 && metaLength <= 160 ? 100 :
-                     metaLength >= 120 && metaLength <= 170 ? 80 : 50;
-    
+      metaLength >= 120 && metaLength <= 170 ? 80 : 50;
+
     // Content gaps detection
     const contentGaps: string[] = [];
     if (!html.includes('key-takeaways') && !html.includes('Key Takeaways')) {
@@ -194,7 +194,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
     if (doc.querySelectorAll('img').length < 2) {
       contentGaps.push('Insufficient images (recommend 3-5)');
     }
-    
+
     // Calculate overall score
     const weights = {
       wordCount: 0.10,
@@ -206,7 +206,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       title: 0.10,
       meta: 0.10
     };
-    
+
     const overallScore = Math.round(
       wordCountScore * weights.wordCount +
       densityScore * weights.density +
@@ -217,7 +217,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       titleScore * weights.title +
       metaScore * weights.meta
     );
-    
+
     return {
       overallScore,
       titleScore,
@@ -244,16 +244,16 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
   const analyzeAIDetection = useCallback((text: string): AIDetectionResult => {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const words = text.split(/\s+/).filter(w => w.length > 0);
-    
+
     // Sentence length variance (burstiness)
     const sentenceLengths = sentences.map(s => s.split(/\s+/).length);
     const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
     const variance = sentenceLengths.reduce((acc, len) => acc + Math.pow(len - avgLength, 2), 0) / sentenceLengths.length;
     const stdDev = Math.sqrt(variance);
-    
+
     // High variance = more human-like
     const burstinessScore = Math.min(100, stdDev * 5);
-    
+
     // Check for AI trigger phrases
     const aiPhrases = [
       'delve into', 'tapestry', 'landscape', 'testament', 'realm', 'symphony',
@@ -261,7 +261,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       'in conclusion', 'it is important to note', 'furthermore', 'moreover',
       'in this article', 'this comprehensive guide', 'without further ado'
     ];
-    
+
     const flaggedPhrases: string[] = [];
     const textLower = text.toLowerCase();
     aiPhrases.forEach(phrase => {
@@ -269,20 +269,20 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
         flaggedPhrases.push(phrase);
       }
     });
-    
+
     // Calculate perplexity variance (simplified)
     const uniqueWords = new Set(words.map(w => w.toLowerCase()));
     const vocabularyRichness = uniqueWords.size / words.length;
     const perplexityVariance = vocabularyRichness * 100;
-    
+
     // Overall AI probability
     const phrasesPenalty = flaggedPhrases.length * 10;
     const burstinessBonus = burstinessScore > 50 ? 20 : 0;
     const vocabularyBonus = vocabularyRichness > 0.4 ? 15 : 0;
-    
+
     let probability = 50 + phrasesPenalty - burstinessBonus - vocabularyBonus;
     probability = Math.max(0, Math.min(100, probability));
-    
+
     // Humanization tips
     const humanizationTips: string[] = [];
     if (burstinessScore < 40) {
@@ -297,7 +297,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
     if (avgLength > 20) {
       humanizationTips.push('Add more short, punchy sentences for impact');
     }
-    
+
     return {
       probability,
       burstinessScore,
@@ -318,9 +318,9 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       { pattern: /\b(\d+%|\$[\d,]+|\d+\.\d+x|\d+ million|\d+ billion|#\d+)\b/gi, type: 'METRIC' },
       { pattern: /\b(New York|San Francisco|Silicon Valley|London|Tokyo|California|USA|UK)\b/gi, type: 'LOCATION' }
     ];
-    
+
     const entities: Map<string, EntityHighlight> = new Map();
-    
+
     entityPatterns.forEach(({ pattern, type }) => {
       let match;
       while ((match = pattern.exec(text)) !== null) {
@@ -340,7 +340,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
         }
       }
     });
-    
+
     // Calculate salience based on position and frequency
     const textLength = text.length;
     const result = Array.from(entities.values()).map(e => {
@@ -348,7 +348,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
       e.salience = Math.min(100, (e.count * 10 * positionWeight));
       return e;
     });
-    
+
     return result.sort((a, b) => b.salience - a.salience);
   }, []);
 
@@ -357,16 +357,16 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
     const TITLE_PIXEL_LIMIT = 600;
     const avgPixelPerChar = 8;
     const titlePixelWidth = title.length * avgPixelPerChar;
-    
-    const truncatedTitle = titlePixelWidth > TITLE_PIXEL_LIMIT 
+
+    const truncatedTitle = titlePixelWidth > TITLE_PIXEL_LIMIT
       ? title.substring(0, Math.floor(TITLE_PIXEL_LIMIT / avgPixelPerChar) - 3) + '...'
       : title;
-    
+
     const descriptionTruncated = metaDescription.length > 160;
     const truncatedDescription = descriptionTruncated
       ? metaDescription.substring(0, 157) + '...'
       : metaDescription;
-    
+
     // Estimate CTR based on title and description quality
     let estimatedCTR = 3.0; // baseline
     if (title.includes(targetKeyword)) estimatedCTR += 1.5;
@@ -374,7 +374,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
     if (title.match(/\b(best|top|ultimate|complete|guide)\b/i)) estimatedCTR += 0.8;
     if (metaDescription.includes(targetKeyword)) estimatedCTR += 0.5;
     if (metaDescription.length >= 150) estimatedCTR += 0.3;
-    
+
     return {
       title: truncatedTitle,
       url: `https://yourdomain.com/${targetKeyword.toLowerCase().replace(/\s+/g, '-')}`,
@@ -387,47 +387,47 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
   }, [title, metaDescription, targetKeyword, content]);
 
   // ==================== EFFECTS ====================
-  
+
   // Run analysis when content changes (debounced)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (content && content.length > 100) {
         setIsAnalyzing(true);
-        
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(content, 'text/html');
         const textContent = doc.body.textContent || '';
-        
+
         // Calculate all metrics
         const metrics = calculateSEOScore(content, targetKeyword);
         const aiResult = analyzeAIDetection(textContent);
         const entityList = extractEntities(textContent);
         const serp = generateSERPPreview();
-        
+
         setSeoMetrics(metrics);
         setAiDetection(aiResult);
         setEntities(entityList);
         setSerpPreview(serp);
-        
+
         if (onMetricsUpdate) {
           onMetricsUpdate(metrics);
         }
-        
+
         setIsAnalyzing(false);
       }
     }, 500); // 500ms debounce
-    
+
     return () => clearTimeout(timeoutId);
   }, [content, targetKeyword, calculateSEOScore, analyzeAIDetection, extractEntities, generateSERPPreview, onMetricsUpdate]);
 
   // ==================== RENDER HELPERS ====================
-  
+
   const getScoreColor = (score: number): string => {
     if (score >= 80) return '#10B981';
     if (score >= 60) return '#F59E0B';
     return '#EF4444';
   };
-  
+
   const getScoreLabel = (score: number): string => {
     if (score >= 90) return 'Excellent';
     if (score >= 80) return 'Good';
@@ -462,7 +462,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
         }}>
           📊 Content Intelligence Dashboard
         </h2>
-        
+
         {isAnalyzing && (
           <div style={{
             display: 'flex',
@@ -508,7 +508,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
               fontWeight: '600',
               fontSize: '0.9rem',
               transition: 'all 0.2s ease',
-              background: activeTab === tab.id 
+              background: activeTab === tab.id
                 ? 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)'
                 : 'rgba(255, 255, 255, 0.05)',
               color: activeTab === tab.id ? 'white' : 'rgba(255, 255, 255, 0.7)'
@@ -521,7 +521,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
 
       {/* Tab Content */}
       <div style={{ minHeight: '400px' }}>
-        
+
         {/* SEO Score Tab */}
         {activeTab === 'seo' && seoMetrics && (
           <div>
@@ -566,7 +566,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
                   </span>
                 </div>
               </div>
-              
+
               {/* SERP Preview */}
               {serpPreview && (
                 <div style={{
@@ -576,8 +576,8 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
                   padding: '20px',
                   maxWidth: '600px'
                 }}>
-                  <div style={{ 
-                    fontSize: '0.75rem', 
+                  <div style={{
+                    fontSize: '0.75rem',
                     color: '#5F6368',
                     marginBottom: '4px'
                   }}>
@@ -806,7 +806,7 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
                       }} />
                     </div>
                     <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.4)', marginTop: '4px' }}>
-                      Target: σ > 8
+                      Target: σ &gt; 8
                     </div>
                   </div>
                 </div>
@@ -1001,10 +1001,10 @@ export const ContentIntelligenceDashboard: React.FC<DashboardProps> = ({
 function countSyllables(word: string): number {
   word = word.toLowerCase();
   if (word.length <= 3) return 1;
-  
+
   word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
   word = word.replace(/^y/, '');
-  
+
   const matches = word.match(/[aeiouy]{1,2}/g);
   return matches ? matches.length : 1;
 }

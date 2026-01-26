@@ -43,6 +43,11 @@ import {
   REFERENCE_CATEGORIES
 } from './ReferenceService';
 
+import { ContentIntelligenceDashboard } from './ContentIntelligenceDashboard';
+import { TopicAuthorityHub } from './TopicAuthorityHub';
+import { ThemeSelector } from './ThemeSelector';
+import { ContentLifecycleManager } from './ContentLifecycleManager';
+
 import {
   InternalLinkOrchestrator,
   createLinkOrchestrator
@@ -53,7 +58,6 @@ import { BulkPublishModal } from './BulkPublishModal';
 import {
   AppFooter,
   AnalysisModal,
-  BulkPublishModal,
   ReviewModal,
   SidebarNav,
   SkeletonLoader,
@@ -155,6 +159,89 @@ export class SotaErrorBoundary extends Component<ErrorBoundaryProps, ErrorBounda
     return this.props.children;
   }
 }
+
+// ==================== SOTA WIDGETS ====================
+
+// 1. Real-time word count with reading time
+const WordCountWidget: React.FC<{ content: string }> = ({ content }) => {
+  const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+  const readingTime = Math.ceil(wordCount / 200);
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: '16px',
+      padding: '8px 16px',
+      background: 'rgba(139, 92, 246, 0.1)',
+      borderRadius: '8px'
+    }}>
+      <span>📝 {wordCount.toLocaleString()} words</span>
+      <span>⏱️ {readingTime} min read</span>
+    </div>
+  );
+};
+
+// 2. Entity counter widget
+const EntityCounterWidget: React.FC<{ content: string; target?: number }> = ({ content, target = 150 }) => {
+  const entityPatterns = [
+    /\b(Google|Apple|Microsoft|Amazon|Meta|OpenAI|Anthropic)\b/gi,
+    /\b(iPhone \d+|Galaxy S\d+|MacBook|iPad)\b/gi,
+    /\b(\d+%|\$[\d,]+|\d+ million|\d+ billion)\b/gi
+  ];
+
+  let entityCount = 0;
+  entityPatterns.forEach(pattern => {
+    const matches = content.match(pattern);
+    if (matches) entityCount += matches.length;
+  });
+
+  const percentage = Math.min(100, (entityCount / target) * 100);
+
+  return (
+    <div style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <span>🏷️ Entities</span>
+        <span>{entityCount}/{target}</span>
+      </div>
+      <div style={{ height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px' }}>
+        <div style={{
+          width: `${percentage}%`,
+          height: '100%',
+          background: percentage >= 80 ? '#10B981' : percentage >= 50 ? '#F59E0B' : '#EF4444',
+          borderRadius: '3px'
+        }} />
+      </div>
+    </div>
+  );
+};
+
+// 3. Sentence length variance meter (burstiness)
+const BurstinessWidget: React.FC<{ content: string }> = ({ content }) => {
+  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const lengths = sentences.map(s => s.split(/\s+/).length);
+  const avg = lengths.reduce((a, b) => a + b, 0) / lengths.length;
+  const variance = lengths.reduce((acc, len) => acc + Math.pow(len - avg, 2), 0) / lengths.length;
+  const stdDev = Math.sqrt(variance);
+
+  const isGood = stdDev > 8;
+
+  return (
+    <div style={{
+      padding: '12px',
+      background: isGood ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+      borderRadius: '8px',
+      border: `1px solid ${isGood ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '1.2rem' }}>{isGood ? '✅' : '⚠️'}</span>
+        <span>Burstiness (σ): <strong>{stdDev.toFixed(1)}</strong></span>
+        <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.8rem' }}>
+          (target: &gt;8)
+        </span>
+      </div>
+    </div>
+  );
+};
 
 // ==================== TYPES ====================
 
@@ -1622,6 +1709,15 @@ const App: React.FC = () => {
         </aside>
 
         <main className="main-content">
+          {/* Theme Selector Integration */}
+          <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100 }}>
+            <ThemeSelector
+              currentThemeId="glassmorphism-dark"
+              onThemeChange={(theme) => console.log('Theme changed:', theme)}
+              previewContent=""
+            />
+          </div>
+
           {/* SETUP VIEW */}
           {activeView === 'setup' && (
             <div className="setup-view">
@@ -2012,14 +2108,24 @@ const App: React.FC = () => {
                   >
                     Content Hub
                   </button>
-                  {FEATURE_FLAGS.ENABLE_IMAGE_GENERATION && (
-                    <button
-                      className={`tab-btn ${contentMode === 'imageGenerator' ? 'active' : ''}`}
-                      onClick={() => setContentMode('imageGenerator')}
-                    >
-                      Image Generator
-                    </button>
-                  )}
+                  <button
+                    className={`tab-btn ${contentMode === 'imageGenerator' ? 'active' : ''}`}
+                    onClick={() => setContentMode('imageGenerator')}
+                  >
+                    Image Generator
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'topicAuthority' ? 'active' : ''}`}
+                    onClick={() => setContentMode('topicAuthority')}
+                  >
+                    Topic Authority
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'lifecycle' ? 'active' : ''}`}
+                    onClick={() => setContentMode('lifecycle')}
+                  >
+                    Lifecycle Manager
+                  </button>
                 </div>
               </div>
 
@@ -2859,147 +2965,197 @@ const App: React.FC = () => {
                       ))}
                     </div>
                   )}
+                  {/* Topic Authority Hub */}
+                  {contentMode === 'topicAuthority' && (
+                    <div className="tab-panel">
+                      <h3>Topic Authority Hub</h3>
+                      <TopicAuthorityHub
+                        existingPages={existingPages}
+                        onCreateContent={(topic) => {
+                          setTopic(topic);
+                          setContentMode('bulk');
+                        }}
+                        aiClient={apiClients[selectedModel as keyof ApiClients] || apiClients.gemini}
+                        model={selectedModel}
+                      />
+                    </div>
+                  )}
+
+                  {/* Content Lifecycle Manager */}
+                  {contentMode === 'lifecycle' && (
+                    <div className="tab-panel">
+                      <h3>Content Lifecycle Manager</h3>
+                      <ContentLifecycleManager
+                        existingPages={existingPages}
+                        onRefreshContent={(pageId) => {
+                          setRefreshUrl(pageId);
+                          setContentMode('refresh');
+                          setRefreshMode('single');
+                        }}
+                        onUpdateTitle={(pageId, title) => console.log('Update title', pageId, title)}
+                        aiClient={apiClients[selectedModel as keyof ApiClients] || apiClients.gemini}
+                        model={selectedModel}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* REVIEW VIEW */}
-          {activeView === 'review' && (
-            <div className="review-export-view">
-              <div className="page-header">
-                <h2 className="gradient-headline">3. Review & Export</h2>
-                <p>Review generated content, check SEO scores, and publish to WordPress.</p>
-              </div>
+              {/* REVIEW VIEW */}
+              {activeView === 'review' && (
+                <div className="review-export-view">
+                  <div className="page-header">
+                    <h2 className="gradient-headline">3. Review & Export</h2>
+                    <p>Review generated content, check SEO scores, and publish to WordPress.</p>
+                  </div>
 
-              <div className="table-controls">
-                <input
-                  type="search"
-                  placeholder="Filter content..."
-                  className="filter-input"
-                  value={filter}
-                  onChange={e => setFilter(e.target.value)}
-                />
-                <div className="table-actions">
-                  <button
-                    className="btn"
-                    onClick={handleGenerateSelected}
-                    disabled={isGenerating || selectedItems.size === 0}
-                  >
-                    {isGenerating
-                      ? `Generating... (${generationProgress.current}/${generationProgress.total})`
-                      : `Generate Selected (${selectedItems.size})`}
-                  </button>
-                  {isGenerating && (
-                    <button className="btn btn-secondary" onClick={() => handleStopGeneration()}>
-                      Stop All
-                    </button>
-                  )}
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setIsBulkPublishModalOpen(true)}
-                    disabled={selectedItems.size === 0}
-                  >
-                    Bulk Publish ({selectedItems.size})
-                  </button>
-                </div>
-              </div>
+                  <div className="table-controls">
+                    <input
+                      type="search"
+                      placeholder="Filter content..."
+                      className="filter-input"
+                      value={filter}
+                      onChange={e => setFilter(e.target.value)}
+                    />
+                    <div className="table-actions">
+                      <button
+                        className="btn"
+                        onClick={handleGenerateSelected}
+                        disabled={isGenerating || selectedItems.size === 0}
+                      >
+                        {isGenerating
+                          ? `Generating... (${generationProgress.current}/${generationProgress.total})`
+                          : `Generate Selected (${selectedItems.size})`}
+                      </button>
+                      {isGenerating && (
+                        <button className="btn btn-secondary" onClick={() => handleStopGeneration()}>
+                          Stop All
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setIsBulkPublishModalOpen(true)}
+                        disabled={selectedItems.size === 0}
+                      >
+                        Bulk Publish ({selectedItems.size})
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="review-table-container">
-                <table className="review-table">
-                  <thead>
-                    <tr>
-                      <th>
-                        <input
-                          type="checkbox"
-                          onChange={handleToggleSelectAll}
-                          checked={selectedItems.size > 0 && selectedItems.size === filteredAndSortedItems.length}
+                  {/* Intelligent Dashboard Integration */}
+                  {selectedItems.size === 1 && (() => {
+                    const itemId = Array.from(selectedItems)[0];
+                    const item = items.find(i => i.id === itemId);
+                    return item && item.generatedContent ? (
+                      <div style={{ marginBottom: '2rem' }}>
+                        <ContentIntelligenceDashboard
+                          content={item.generatedContent.content}
+                          title={item.generatedContent.title}
+                          metaDescription={item.generatedContent.metaDescription}
+                          targetKeyword={item.targetKeyword}
+                          existingPages={existingPages}
+                          serpData={[]}
+                          onMetricsUpdate={(metrics) => console.log('SEO Score:', metrics.overallScore)}
                         />
-                      </th>
-                      <th onClick={() => handleSort('title')}>Title</th>
-                      <th onClick={() => handleSort('type')}>Type</th>
-                      <th onClick={() => handleSort('status')}>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAndSortedItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
-                          No content items yet. Go to "Content Strategy" to plan some articles.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredAndSortedItems.map(item => (
-                        <tr key={item.id}>
-                          <td>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  <div className="review-table-container">
+                    <table className="review-table">
+                      <thead>
+                        <tr>
+                          <th>
                             <input
                               type="checkbox"
-                              checked={selectedItems.has(item.id)}
-                              onChange={() => handleToggleSelect(item.id)}
+                              onChange={handleToggleSelectAll}
+                              checked={selectedItems.size > 0 && selectedItems.size === filteredAndSortedItems.length}
                             />
-                          </td>
-                          <td>{item.title}</td>
-                          <td>
-                            <span className={`badge ${item.type}`}>{item.type}</span>
-                          </td>
-                          <td>
-                            <div className="status-cell">
-                              <div
-                                className={`status-indicator ${item.status}`}
-                                style={
-                                  item.status === 'error' && item.statusText.includes('TOO SHORT')
-                                    ? { backgroundColor: 'var(--warning)' }
-                                    : {}
-                                }
-                              />
-                              {item.statusText}
-                            </div>
-                          </td>
-                          <td>
-                            {item.status === 'idle' && (
-                              <button
-                                className="btn btn-small"
-                                onClick={() => handleGenerateSingle(item)}
-                              >
-                                Generate
-                              </button>
-                            )}
-                            {item.status === 'generating' && (
-                              <button
-                                className="btn btn-small btn-secondary"
-                                onClick={() => handleStopGeneration(item.id)}
-                              >
-                                Stop
-                              </button>
-                            )}
-                            {(item.status === 'done' || (item.status === 'error' && item.generatedContent)) && (
-                              <button
-                                className="btn btn-small"
-                                onClick={() => setSelectedItemForReview(item)}
-                              >
-                                Review
-                              </button>
-                            )}
-                            {item.status === 'error' && (
-                              <button
-                                className="btn btn-small btn-secondary"
-                                onClick={() => handleGenerateSingle(item)}
-                                style={item.generatedContent ? { marginLeft: '0.5rem' } : {}}
-                              >
-                                Retry
-                              </button>
-                            )}
-                          </td>
+                          </th>
+                          <th onClick={() => handleSort('title')}>Title</th>
+                          <th onClick={() => handleSort('type')}>Type</th>
+                          <th onClick={() => handleSort('status')}>Status</th>
+                          <th>Actions</th>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </main>
+                      </thead>
+                      <tbody>
+                        {filteredAndSortedItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-tertiary)' }}>
+                              No content items yet. Go to "Content Strategy" to plan some articles.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredAndSortedItems.map(item => (
+                            <tr key={item.id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedItems.has(item.id)}
+                                  onChange={() => handleToggleSelect(item.id)}
+                                />
+                              </td>
+                              <td>{item.title}</td>
+                              <td>
+                                <span className={`badge ${item.type}`}>{item.type}</span>
+                              </td>
+                              <td>
+                                <div className="status-cell">
+                                  <div
+                                    className={`status-indicator ${item.status}`}
+                                    style={
+                                      item.status === 'error' && item.statusText.includes('TOO SHORT')
+                                        ? { backgroundColor: 'var(--warning)' }
+                                        : {}
+                                    }
+                                  />
+                                  {item.statusText}
+                                </div>
+                              </td>
+                              <td>
+                                {item.status === 'idle' && (
+                                  <button
+                                    className="btn btn-small"
+                                    onClick={() => handleGenerateSingle(item)}
+                                  >
+                                    Generate
+                                  </button>
+                                )}
+                                {item.status === 'generating' && (
+                                  <button
+                                    className="btn btn-small btn-secondary"
+                                    onClick={() => handleStopGeneration(item.id)}
+                                  >
+                                    Stop
+                                  </button>
+                                )}
+                                {(item.status === 'done' || (item.status === 'error' && item.generatedContent)) && (
+                                  <button
+                                    className="btn btn-small"
+                                    onClick={() => setSelectedItemForReview(item)}
+                                  >
+                                    Review
+                                  </button>
+                                )}
+                                {item.status === 'error' && (
+                                  <button
+                                    className="btn btn-small btn-secondary"
+                                    onClick={() => handleGenerateSingle(item)}
+                                    style={item.generatedContent ? { marginLeft: '0.5rem' } : {}}
+                                  >
+                                    Retry
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </main>
       </div>
 
       <AppFooter />

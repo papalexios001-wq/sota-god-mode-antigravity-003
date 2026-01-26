@@ -10,18 +10,19 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.66.0",
-    "@google/genai": "^1.31.0",
-    "mermaid": "^11.4.0",
-    "openai": "^6.10.0",
+    "@google/genai": "^1.38.0",
+    "esbuild": "^0.27.2",
+    "mermaid": "^11.12.2",
+    "openai": "^6.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-quill": "^2.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.19.25",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@types/node": "^20.19.30",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
     "typescript": "^5.9.3",
     "vite": "^5.4.21"
   }
