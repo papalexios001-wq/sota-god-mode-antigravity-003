@@ -1381,6 +1381,37 @@ export const generateContent = {
   analyzePages
 };
 
+
+// Add to generateContent function
+import { PREMIUM_THEMES, generateKeyTakeawaysHTML } from './PremiumDesignSystem';
+
+const applyThemeToContent = (
+  htmlContent: string, 
+  themeId: string = 'glassmorphism-dark'
+): string => {
+  const theme = PREMIUM_THEMES.find(t => t.id === themeId) || PREMIUM_THEMES[0];
+  
+  // Wrap content with theme container
+  return `
+    <style>
+      .sota-themed-content { ${theme.styles.container} }
+      .sota-themed-content h2 { ${theme.styles.heading} }
+      .sota-themed-content p { ${theme.styles.paragraph} }
+      .sota-themed-content .key-takeaways-box { ${theme.styles.keyTakeaways} }
+      .sota-themed-content table { ${theme.styles.comparisonTable} }
+      .sota-themed-content .faq-item { ${theme.styles.faqAccordion} }
+      .sota-themed-content blockquote { ${theme.styles.quoteBlock} }
+    </style>
+    <div class="sota-themed-content">
+      ${htmlContent}
+    </div>
+  `;
+};
+
+
+
+
+
 // ==================== WORDPRESS PUBLISHING ====================
 
 export const publishItemToWordPress = async (
