@@ -2062,6 +2062,937 @@ const App: React.FC = () => {
           )}
 
           {/* STRATEGY VIEW */}
+          {activeView === 'strategy' && (
+            <div className="content-strategy-view">
+              <div className="page-header">
+                <h2 className="gradient-headline">2. Content Strategy & Planning</h2>
+              </div>
+
+              {/* Tabs */}
+              <div className="tabs-container">
+                <div className="tabs" role="tablist">
+                  <button
+                    className={`tab-btn ${contentMode === 'bulk' ? 'active' : ''}`}
+                    onClick={() => setContentMode('bulk')}
+                  >
+                    Bulk Content Planner
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'single' ? 'active' : ''}`}
+                    onClick={() => setContentMode('single')}
+                  >
+                    Single Article
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'gapAnalysis' ? 'active' : ''}`}
+                    onClick={() => setContentMode('gapAnalysis')}
+                  >
+                    Gap Analysis (God Mode)
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'refresh' ? 'active' : ''}`}
+                    onClick={() => setContentMode('refresh')}
+                  >
+                    Quick Refresh
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'hub' ? 'active' : ''}`}
+                    onClick={() => setContentMode('hub')}
+                  >
+                    Content Hub
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'imageGenerator' ? 'active' : ''}`}
+                    onClick={() => setContentMode('imageGenerator')}
+                  >
+                    Image Generator
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'topicAuthority' ? 'active' : ''}`}
+                    onClick={() => setContentMode('topicAuthority')}
+                  >
+                    Topic Authority
+                  </button>
+                  <button
+                    className={`tab-btn ${contentMode === 'lifecycle' ? 'active' : ''}`}
+                    onClick={() => setContentMode('lifecycle')}
+                  >
+                    Lifecycle Manager
+                  </button>
+                </div>
+              </div>
+
+              {/* Bulk Content Planner Tab */}
+              {contentMode === 'bulk' && (
+                <div className="tab-panel">
+                  <h3>Bulk Content Planner</h3>
+                  <p className="help-text">
+                    Enter a broad topic to generate a pillar page and cluster content plan.
+                  </p>
+
+                  <div className="form-group">
+                    <label htmlFor="topic">Broad Topic</label>
+                    <input
+                      type="text"
+                      id="topic"
+                      value={topic}
+                      onChange={e => setTopic(e.target.value)}
+                      placeholder="e.g., Landscape Photography"
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleGenerateClusterPlan}
+                    disabled={isGenerating || !topic}
+                  >
+                    {isGenerating ? 'Generating...' : 'Generate Content Plan'}
+                  </button>
+                </div>
+              )}
+
+              {/* Single Article Tab */}
+              {contentMode === 'single' && (
+                <div className="tab-panel">
+                  <h3>Single Article</h3>
+
+                  <div className="form-group">
+                    <label htmlFor="primaryKeywords">Primary Keywords (one per line)</label>
+                    <textarea
+                      id="primaryKeywords"
+                      value={primaryKeywords}
+                      onChange={e => setPrimaryKeywords(e.target.value)}
+                      rows={5}
+                      placeholder="Best running shoes 2026&#10;How to train for a marathon&#10;Running gear essentials"
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleGenerateMultipleFromKeywords}
+                    disabled={!primaryKeywords.trim()}
+                  >
+                    Go to Review →
+                  </button>
+                </div>
+              )}
+
+              {/* Gap Analysis Tab with God Mode */}
+              {contentMode === 'gapAnalysis' && (
+                <div className="tab-panel">
+                  <h3 className="gradient-headline">Blue Ocean Gap Analysis</h3>
+
+                  {/* God Mode Panel */}
+                  <div
+                    className="god-mode-panel"
+                    style={{
+                      background: isGodMode
+                        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.3))'
+                        : 'rgba(255,255,255,0.02)',
+                      border: isGodMode ? '1px solid #10B981' : '1px solid var(--border-subtle)',
+                      padding: '1.5rem',
+                      borderRadius: '12px',
+                      marginBottom: '2rem'
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '1rem'
+                    }}>
+                      <div>
+                        <h3 style={{
+                          margin: 0,
+                          color: isGodMode ? '#10B981' : 'white'
+                        }}>
+                          {isGodMode ? '⚡ GOD MODE ACTIVE' : '💤 God Mode (Autonomous)'}
+                        </h3>
+                        <p style={{ fontSize: '0.85rem', color: '#94A3B8', margin: '0.5rem 0 0 0' }}>
+                          Automatically optimizes your sitemap content using AI.
+                        </p>
+                      </div>
+
+                      <label className="switch">
+                        <input
+                          type="checkbox"
+                          checked={isGodMode}
+                          onChange={e => setIsGodMode(e.target.checked)}
+                        />
+                        <span className="slider round" style={{
+                          backgroundColor: isGodMode ? '#10B981' : '#334155'
+                        }} />
+                      </label>
+                    </div>
+
+                    {isGodMode && (
+                      <>
+                        {/* Diagnostics Button */}
+                        <div style={{ marginBottom: '1rem' }}>
+                          <button
+                            onClick={runWordPressDiagnostics}
+                            disabled={isRunningDiagnostics}
+                            className="btn-secondary"
+                          >
+                            {isRunningDiagnostics ? '🔄 Running...' : '🔍 Debug WordPress API'}
+                          </button>
+                        </div>
+
+                        {/* Exclusion Controls */}
+                        <div style={{
+                          background: '#020617',
+                          padding: '1rem',
+                          borderRadius: '8px',
+                          marginBottom: '1rem'
+                        }}>
+                          <div style={{ color: '#F59E0B', fontWeight: 'bold', marginBottom: '1rem' }}>
+                            🚫 Exclusion Controls
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div>
+                              <label style={{ display: 'block', color: '#94A3B8', fontSize: '0.85rem' }}>
+                                Exclude URLs (one per line)
+                              </label>
+                              <textarea
+                                value={excludedUrls.join('\n')}
+                                onChange={e => setExcludedUrls(
+                                  e.target.value.split('\n').map(url => url.trim()).filter(Boolean)
+                                )}
+                                placeholder="https://example.com/page1"
+                                style={{
+                                  width: '100%',
+                                  minHeight: '80px',
+                                  background: '#1e293b',
+                                  border: '1px solid #334155',
+                                  borderRadius: '6px',
+                                  padding: '0.5rem',
+                                  color: '#E2E8F0',
+                                  fontSize: '0.75rem'
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', color: '#94A3B8', fontSize: '0.85rem' }}>
+                                Exclude Categories (one per line)
+                              </label>
+                              <textarea
+                                value={excludedCategories.join('\n')}
+                                onChange={e => setExcludedCategories(
+                                  e.target.value.split('\n').map(cat => cat.trim()).filter(Boolean)
+                                )}
+                                placeholder="category-slug-1"
+                                style={{
+                                  width: '100%',
+                                  minHeight: '80px',
+                                  background: '#1e293b',
+                                  border: '1px solid #334155',
+                                  borderRadius: '6px',
+                                  padding: '0.5rem',
+                                  color: '#E2E8F0',
+                                  fontSize: '0.75rem'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Priority URL Queue */}
+                        <div style={{
+                          marginTop: '1.5rem',
+                          padding: '1.25rem',
+                          background: 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)',
+                          borderRadius: '12px',
+                          border: '1px solid #3b82f6'
+                        }}>
+                          <h4 style={{ margin: 0, color: '#3b82f6' }}>🎯 Priority URL Queue</h4>
+                          <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '0.5rem 0 1rem 0' }}>
+                            Add URLs that God Mode should optimize FIRST.
+                          </p>
+
+                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <input
+                              type="url"
+                              id="priorityUrlInput"
+                              placeholder="https://example.com/page-to-optimize"
+                              style={{
+                                flex: 1,
+                                padding: '0.75rem 1rem',
+                                background: '#020617',
+                                border: '1px solid #334155',
+                                borderRadius: '8px',
+                                color: '#e2e8f0'
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  const input = document.getElementById('priorityUrlInput') as HTMLInputElement;
+                                  const url = input.value.trim();
+                                  if (url && !priorityUrls.includes(url)) {
+                                    setPriorityUrls([url, ...priorityUrls]);
+                                    input.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById('priorityUrlInput') as HTMLInputElement;
+                                const url = input.value.trim();
+                                if (url && !priorityUrls.includes(url)) {
+                                  setPriorityUrls([url, ...priorityUrls]);
+                                  input.value = '';
+                                }
+                              }}
+                              className="btn"
+                            >
+                              + Add URL
+                            </button>
+                          </div>
+
+                          {priorityUrls.length > 0 && (
+                            <div style={{
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              background: '#020617',
+                              borderRadius: '8px',
+                              border: '1px solid #1e293b'
+                            }}>
+                              {priorityUrls.map((url, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '0.75rem 1rem',
+                                    borderBottom: '1px solid #1e293b'
+                                  }}
+                                >
+                                  <span style={{ color: '#3b82f6' }}>#{idx + 1}</span>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      color: '#e2e8f0',
+                                      textDecoration: 'none',
+                                      flex: 1,
+                                      marginLeft: '0.75rem',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
+                                    }}
+                                  >
+                                    {url}
+                                  </a>
+                                  <button
+                                    onClick={() => setPriorityUrls(priorityUrls.filter((_, i) => i !== idx))}
+                                    style={{
+                                      background: 'transparent',
+                                      border: '1px solid #ef4444',
+                                      color: '#ef4444',
+                                      borderRadius: '4px',
+                                      padding: '0.25rem 0.5rem',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* God Mode Logs */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1.5fr',
+                          gap: '1rem',
+                          marginTop: '1rem'
+                        }}>
+                          <div style={{
+                            background: '#020617',
+                            padding: '1rem',
+                            borderRadius: '8px',
+                            fontFamily: 'monospace',
+                            fontSize: '0.8rem',
+                            height: '200px',
+                            overflowY: 'auto'
+                          }}>
+                            <div style={{ color: '#64748B', marginBottom: '0.5rem' }}>SYSTEM LOGS</div>
+                            {godModeLogs.length === 0 ? (
+                              <div style={{ color: '#64748B' }}>Waiting for tasks...</div>
+                            ) : (
+                              godModeLogs.map((log, i) => (
+                                <div
+                                  key={i}
+                                  style={{
+                                    marginBottom: '4px',
+                                    color: log.includes('Error') ? '#EF4444'
+                                      : log.includes('✅') ? '#10B981'
+                                        : '#94A3B8'
+                                  }}
+                                >
+                                  {log}
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          <div style={{
+                            background: '#020617',
+                            padding: '1rem',
+                            borderRadius: '8px',
+                            height: '200px',
+                            overflowY: 'auto'
+                          }}>
+                            <div style={{ color: '#10B981', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                              ✅ RECENTLY OPTIMIZED ({optimizedHistory.length})
+                            </div>
+                            {optimizedHistory.length === 0 ? (
+                              <div style={{ color: '#64748B', fontSize: '0.85rem' }}>
+                                No posts optimized in this session yet.
+                              </div>
+                            ) : (
+                              optimizedHistory.map((item, i) => (
+                                <div
+                                  key={i}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    padding: '0.5rem',
+                                    borderBottom: '1px solid #1e293b'
+                                  }}
+                                >
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: '#E2E8F0', textDecoration: 'none' }}
+                                  >
+                                    {item.title}
+                                  </a>
+                                  <span style={{ color: '#64748B', fontSize: '0.75rem' }}>
+                                    {item.timestamp}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Gap Analysis Button */}
+                  {existingPages.length === 0 ? (
+                    <div className="sitemap-warning" style={{
+                      padding: '1.5rem',
+                      background: 'rgba(220, 38, 38, 0.1)',
+                      border: '1px solid var(--error)',
+                      borderRadius: '12px',
+                      color: '#FCA5A5'
+                    }}>
+                      <XIcon />
+                      <div>
+                        <strong>Sitemap Required:</strong> Please crawl your sitemap first.
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn"
+                      onClick={handleAnalyzeGaps}
+                      disabled={isAnalyzingGaps}
+                      style={{ width: '100%', padding: '1rem', fontSize: '1rem' }}
+                    >
+                      {isAnalyzingGaps ? 'Scanning...' : '🚀 Run Deep Gap Analysis'}
+                    </button>
+                  )}
+
+                  {/* Gap Suggestions */}
+                  {gapSuggestions.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                      <h4>Content Opportunities Found:</h4>
+                      {gapSuggestions.map((suggestion, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '1rem',
+                            background: '#1e293b',
+                            borderRadius: '8px',
+                            marginBottom: '0.5rem'
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold', color: '#3b82f6' }}>
+                            {suggestion.keyword}
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+                            {suggestion.opportunity}
+                          </div>
+                          <button
+                            className="btn btn-small"
+                            onClick={() => handleGenerateGapArticle(suggestion)}
+                            style={{ marginTop: '0.5rem' }}
+                          >
+                            Create Article
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Quick Refresh Tab */}
+              {contentMode === 'refresh' && (
+                <div className="tab-panel">
+                  <h3>Quick Refresh & Validate</h3>
+
+                  <div className="tabs" style={{ marginBottom: '1.5rem' }}>
+                    <button
+                      className={`tab-btn ${refreshMode === 'single' ? 'active' : ''}`}
+                      onClick={() => setRefreshMode('single')}
+                    >
+                      Single URL
+                    </button>
+                    <button
+                      className={`tab-btn ${refreshMode === 'bulk' ? 'active' : ''}`}
+                      onClick={() => setRefreshMode('bulk')}
+                    >
+                      Bulk via Sitemap
+                    </button>
+                  </div>
+
+                  {refreshMode === 'single' && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="refreshUrl">Post URL to Refresh</label>
+                        <input
+                          type="url"
+                          id="refreshUrl"
+                          value={refreshUrl}
+                          onChange={e => setRefreshUrl(e.target.value)}
+                          placeholder="https://example.com/my-old-post"
+                        />
+                      </div>
+                      <button
+                        className="btn"
+                        onClick={handleRefreshContent}
+                        disabled={isGenerating || !refreshUrl}
+                      >
+                        {isGenerating ? 'Refreshing...' : 'Refresh & Validate'}
+                      </button>
+                    </>
+                  )}
+
+                  {refreshMode === 'bulk' && (
+                    <>
+                      <div className="form-group">
+                        <label htmlFor="sitemapUrl">Sitemap URL</label>
+                        <input
+                          type="url"
+                          id="sitemapUrl"
+                          value={sitemapUrl}
+                          onChange={e => setSitemapUrl(e.target.value)}
+                          placeholder="https://example.com/sitemap_index.xml"
+                        />
+                      </div>
+                      <button
+                        className="btn"
+                        onClick={handleCrawlSitemap}
+                        disabled={isCrawling}
+                      >
+                        {isCrawling ? 'Crawling...' : 'Crawl Sitemap'}
+                      </button>
+
+                      {crawlMessage && (
+                        <div className="crawl-status" style={{ marginTop: '1rem' }}>
+                          {crawlMessage}
+                        </div>
+                      )}
+
+                      {existingPages.length > 0 && (
+                        <div className="content-hub-table-container" style={{ marginTop: '1.5rem' }}>
+                          <div className="table-controls">
+                            <input
+                              type="search"
+                              placeholder="Search pages..."
+                              className="filter-input"
+                              value={hubSearchFilter}
+                              onChange={e => setHubSearchFilter(e.target.value)}
+                            />
+                            <div className="table-actions">
+                              <button
+                                className="btn btn-secondary"
+                                onClick={handleAddToRefreshQueue}
+                                disabled={selectedHubPages.size === 0}
+                              >
+                                Add Selected to Review ({selectedHubPages.size})
+                              </button>
+                              <button
+                                className="btn"
+                                style={{ backgroundColor: 'var(--accent-success)' }}
+                                onClick={handleBulkRefreshAndPublish}
+                                disabled={selectedHubPages.size === 0 || isBulkAutoPublishing}
+                              >
+                                {isBulkAutoPublishing
+                                  ? 'Processing...'
+                                  : `Bulk Refresh & Publish (${selectedHubPages.size})`}
+                              </button>
+                            </div>
+                          </div>
+
+                          {isBulkAutoPublishing && (
+                            <div style={{
+                              margin: '1rem 0',
+                              padding: '1rem',
+                              background: 'rgba(0,0,0,0.3)',
+                              borderRadius: '8px'
+                            }}>
+                              <div>
+                                Processing... {bulkAutoPublishProgress.current}/{bulkAutoPublishProgress.total}
+                              </div>
+                              <div style={{
+                                width: '100%',
+                                height: '6px',
+                                background: 'rgba(255,255,255,0.1)',
+                                borderRadius: '3px',
+                                marginTop: '0.5rem'
+                              }}>
+                                <div style={{
+                                  width: `${(bulkAutoPublishProgress.current / Math.max(1, bulkAutoPublishProgress.total)) * 100}%`,
+                                  height: '100%',
+                                  background: 'var(--accent-primary)',
+                                  transition: 'width 0.3s ease'
+                                }} />
+                              </div>
+                              <div style={{
+                                marginTop: '1rem',
+                                maxHeight: '150px',
+                                overflowY: 'auto',
+                                fontSize: '0.8rem',
+                                fontFamily: 'monospace'
+                              }}>
+                                {bulkPublishLogs.map((log, i) => (
+                                  <div key={i}>{log}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <table className="content-hub-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '40px' }}>
+                                  <input
+                                    type="checkbox"
+                                    onChange={handleToggleHubPageSelectAll}
+                                    checked={selectedHubPages.size > 0 && selectedHubPages.size === filteredAndSortedHubPages.length}
+                                  />
+                                </th>
+                                <th onClick={() => handleHubSort('title')}>Title & URL</th>
+                                <th onClick={() => handleHubSort('daysOld')}>Age</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {isCrawling ? (
+                                <SkeletonLoader rows={5} columns={3} />
+                              ) : (
+                                filteredAndSortedHubPages.map(page => (
+                                  <tr key={page.id}>
+                                    <td>
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedHubPages.has(page.id)}
+                                        onChange={() => handleToggleHubPageSelect(page.id)}
+                                      />
+                                    </td>
+                                    <td className="hub-title-cell">
+                                      <a href={page.id} target="_blank" rel="noopener noreferrer">
+                                        {sanitizeTitle(page.title, page.slug)}
+                                      </a>
+                                      <div className="slug">{page.id}</div>
+                                    </td>
+                                    <td>{page.daysOld !== null ? `${page.daysOld} days` : 'N/A'}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Content Hub Tab */}
+              {contentMode === 'hub' && (
+                <div className="tab-panel">
+                  <h3>Content Hub & Rewrite Assistant</h3>
+                  <p className="help-text">
+                    Crawl your sitemap, analyze content health, and generate strategic rewrites.
+                  </p>
+
+                  <div className="sitemap-crawler-form">
+                    <div className="form-group">
+                      <label htmlFor="sitemapUrlHub">Sitemap URL</label>
+                      <input
+                        type="url"
+                        id="sitemapUrlHub"
+                        value={sitemapUrl}
+                        onChange={e => setSitemapUrl(e.target.value)}
+                        placeholder="https://example.com/sitemap_index.xml"
+                      />
+                    </div>
+                    <button className="btn" onClick={handleCrawlSitemap} disabled={isCrawling}>
+                      {isCrawling ? 'Crawling...' : 'Crawl Sitemap'}
+                    </button>
+                  </div>
+
+                  {crawlMessage && <div className="crawl-status">{crawlMessage}</div>}
+
+                  {existingPages.length > 0 && (
+                    <div className="content-hub-table-container">
+                      <div className="table-controls">
+                        <input
+                          type="search"
+                          placeholder="Search pages..."
+                          className="filter-input"
+                          value={hubSearchFilter}
+                          onChange={e => setHubSearchFilter(e.target.value)}
+                        />
+                        <select
+                          value={hubStatusFilter}
+                          onChange={e => setHubStatusFilter(e.target.value)}
+                        >
+                          <option value="All">All Statuses</option>
+                          <option value="Critical">Critical</option>
+                          <option value="High">High</option>
+                          <option value="Medium">Medium</option>
+                          <option value="Healthy">Healthy</option>
+                        </select>
+                        <div className="table-actions">
+                          <button
+                            className="btn btn-secondary"
+                            onClick={handleAnalyzeSelectedPages}
+                            disabled={isAnalyzingHealth || selectedHubPages.size === 0}
+                          >
+                            {isAnalyzingHealth
+                              ? `Analyzing... (${healthAnalysisProgress.current}/${healthAnalysisProgress.total})`
+                              : `Analyze Selected (${selectedHubPages.size})`}
+                          </button>
+                          <button
+                            className="btn"
+                            onClick={handleRewriteSelected}
+                            disabled={analyzableForRewrite === 0}
+                          >
+                            Rewrite Selected ({analyzableForRewrite})
+                          </button>
+                        </div>
+                      </div>
+
+                      <table className="content-hub-table">
+                        <thead>
+                          <tr>
+                            <th>
+                              <input
+                                type="checkbox"
+                                onChange={handleToggleHubPageSelectAll}
+                                checked={selectedHubPages.size > 0 && selectedHubPages.size === filteredAndSortedHubPages.length}
+                              />
+                            </th>
+                            <th onClick={() => handleHubSort('title')}>Title & Slug</th>
+                            <th onClick={() => handleHubSort('daysOld')}>Age</th>
+                            <th onClick={() => handleHubSort('updatePriority')}>Status</th>
+                            <th>Analysis & Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {isCrawling ? (
+                            <SkeletonLoader rows={10} columns={5} />
+                          ) : (
+                            filteredAndSortedHubPages.map(page => (
+                              <tr key={page.id}>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedHubPages.has(page.id)}
+                                    onChange={() => handleToggleHubPageSelect(page.id)}
+                                  />
+                                </td>
+                                <td className="hub-title-cell">
+                                  <a href={page.id} target="_blank" rel="noopener noreferrer">
+                                    {sanitizeTitle(page.title, page.slug)}
+                                  </a>
+                                  <div className="slug">{page.id}</div>
+                                </td>
+                                <td>{page.daysOld !== null ? `${page.daysOld} days` : 'N/A'}</td>
+                                <td>
+                                  {page.updatePriority ? (
+                                    <span className={`priority-${page.updatePriority}`}>
+                                      {page.updatePriority}
+                                    </span>
+                                  ) : (
+                                    'Not Analyzed'
+                                  )}
+                                </td>
+                                <td>
+                                  {page.status === 'analyzing' && (
+                                    <div className="status-cell">
+                                      <div className="status-indicator analyzing" />
+                                      Analyzing...
+                                    </div>
+                                  )}
+                                  {page.status === 'error' && (
+                                    <div className="status-cell error">
+                                      <XIcon /> {page.justification?.substring(0, 20) || 'Error'}...
+                                    </div>
+                                  )}
+                                  {page.status === 'analyzed' && page.analysis && (
+                                    <button
+                                      className="btn btn-small"
+                                      onClick={() => setViewingAnalysis(page)}
+                                    >
+                                      View Rewrite Plan
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Image Generator Tab */}
+              {contentMode === 'imageGenerator' && FEATURE_FLAGS.ENABLE_IMAGE_GENERATION && (
+                <div className="tab-panel">
+                  <h3>SOTA Image Generator</h3>
+                  <p className="help-text">
+                    Generate high-quality images using DALL-E 3 or Gemini Imagen.
+                  </p>
+
+                  <div className="form-group">
+                    <label htmlFor="imagePrompt">Image Prompt</label>
+                    <textarea
+                      id="imagePrompt"
+                      value={imagePrompt}
+                      onChange={e => setImagePrompt(e.target.value)}
+                      rows={4}
+                      placeholder="e.g., A photorealistic image of a golden retriever puppy playing in a field of flowers..."
+                    />
+                  </div>
+
+                  <div className="form-group-row">
+                    <div className="form-group">
+                      <label htmlFor="numImages">Number of Images</label>
+                      <select
+                        id="numImages"
+                        value={numImages}
+                        onChange={e => setNumImages(Number(e.target.value))}
+                      >
+                        {[1, 2, 3, 4].map(n => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="aspectRatio">Aspect Ratio</label>
+                      <select
+                        id="aspectRatio"
+                        value={aspectRatio}
+                        onChange={e => setAspectRatio(e.target.value)}
+                      >
+                        <option value="1:1">1:1 (Square)</option>
+                        <option value="16:9">16:9 (Widescreen)</option>
+                        <option value="9:16">9:16 (Vertical)</option>
+                        <option value="4:3">4:3 (Landscape)</option>
+                        <option value="3:4">3:4 (Portrait)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleGenerateImages}
+                    disabled={isGeneratingImages || !imagePrompt}
+                  >
+                    {isGeneratingImages ? (
+                      <>
+                        <div className="spinner" /> Generating...
+                      </>
+                    ) : (
+                      'Generate Images'
+                    )}
+                  </button>
+
+                  {imageGenerationError && (
+                    <p className="error" style={{ marginTop: '1rem' }}>{imageGenerationError}</p>
+                  )}
+
+                  {generatedImages.length > 0 && (
+                    <div className="image-assets-grid" style={{ marginTop: '2rem' }}>
+                      {generatedImages.map((image, index) => (
+                        <div key={index} className="image-asset-card">
+                          <img src={image.src} alt={image.prompt} loading="lazy" />
+                          <div className="image-asset-details">
+                            <button
+                              className="btn btn-small"
+                              onClick={() => handleDownloadImage(image.src, image.prompt)}
+                            >
+                              Download
+                            </button>
+                            <button
+                              className="btn btn-small btn-secondary"
+                              onClick={() => handleCopyText(image.prompt)}
+                            >
+                              Copy Prompt
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Topic Authority Hub */}
+                  {contentMode === 'topicAuthority' && (
+                    <div className="tab-panel">
+                      <h3>Topic Authority Hub</h3>
+                      <TopicAuthorityHub
+                        existingPages={existingPages}
+                        onCreateContent={(topic) => {
+                          setTopic(topic);
+                          setContentMode('bulk');
+                        }}
+                        aiClient={apiClients[selectedModel as keyof ApiClients] || apiClients.gemini}
+                        model={selectedModel}
+                      />
+                    </div>
+                  )}
+
+                  {/* Content Lifecycle Manager */}
+                  {contentMode === 'lifecycle' && (
+                    <div className="tab-panel">
+                      <h3>Content Lifecycle Manager</h3>
+                      <ContentLifecycleManager
+                        existingPages={existingPages}
+                        onRefreshContent={(pageId) => {
+                          setRefreshUrl(pageId);
+                          setContentMode('refresh');
+                          setRefreshMode('single');
+                        }}
+                        onUpdateTitle={(pageId, title) => console.log('Update title', pageId, title)}
+                        aiClient={apiClients[selectedModel as keyof ApiClients] || apiClients.gemini}
+                        model={selectedModel}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* STRATEGY VIEW */}
               {activeView === 'strategy' && (
