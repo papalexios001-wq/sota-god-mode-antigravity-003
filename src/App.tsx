@@ -67,6 +67,7 @@ import {
   WordPressEndpointInstructions
 } from './components';
 import { LandingPage } from './LandingPage';
+import GodModeSection from './GodModeSection';
 import {
   SitemapPage,
   ContentItem,
@@ -2429,192 +2430,26 @@ const App: React.FC = () => {
 
               {/* GAP ANALYSIS / GOD MODE */}
               {contentMode === 'gap' && (
-                <div className="sota-card" style={{
-                  background: isGodMode
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.95))'
-                    : 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
-                  borderRadius: '20px',
-                  padding: '2rem',
-                  border: isGodMode ? '2px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(16, 185, 129, 0.3)',
-                  boxShadow: isGodMode ? '0 0 40px rgba(16, 185, 129, 0.2)' : '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                      <span style={{ fontSize: '2rem' }}>🎯</span>
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Blue Ocean Gap Analysis</h3>
-                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
-                          Discover untapped content opportunities in your niche.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* God Mode Toggle */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.5rem 1rem',
-                      background: isGodMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-                      borderRadius: '12px',
-                      border: `1px solid ${isGodMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(100, 116, 139, 0.3)'}`
-                    }}>
-                      <span style={{ fontSize: '0.85rem', color: isGodMode ? '#10B981' : '#94A3B8' }}>
-                        ⚡ GOD MODE
-                      </span>
-                      <button
-                        onClick={() => {
-                          const newState = !isGodMode;
-                          setIsGodMode(newState);
-                          localStorage.setItem(STORAGE_KEYS.GOD_MODE, String(newState));
-                        }}
-                        style={{
-                          width: '48px',
-                          height: '24px',
-                          borderRadius: '12px',
-                          background: isGodMode ? '#10B981' : '#475569',
-                          border: 'none',
-                          cursor: 'pointer',
-                          position: 'relative',
-                          transition: 'background 0.2s'
-                        }}
-                      >
-                        <span style={{
-                          position: 'absolute',
-                          top: '2px',
-                          left: isGodMode ? '26px' : '2px',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          background: '#fff',
-                          transition: 'left 0.2s'
-                        }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Niche Input */}
-                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Topic / Niche</label>
-                    <input
-                      type="text"
-                      value={topic}
-                      onChange={e => setTopic(e.target.value)}
-                      placeholder="e.g., Affiliate Marketing, Dog Training, SaaS Tools..."
-                      style={{
-                        width: '100%',
-                        padding: '1rem',
-                        background: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                        borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: '1rem'
-                      }}
-                    />
-                  </div>
-
-                  <button
-                    className="btn"
-                    onClick={handleAnalyzeGaps}
-                    disabled={isAnalyzingGaps || !topic.trim()}
-                    style={{
-                      background: 'linear-gradient(135deg, #10B981, #059669)',
-                      padding: '1rem 2rem',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      marginBottom: '1.5rem'
+                <>
+                  <GodModeSection
+                    isGodMode={isGodMode}
+                    setIsGodMode={(enabled) => {
+                      setIsGodMode(enabled);
+                      localStorage.setItem(STORAGE_KEYS.GOD_MODE, String(enabled));
                     }}
-                  >
-                    {isAnalyzingGaps ? '🔍 Analyzing Gaps...' : '🎯 Analyze Content Gaps'}
-                  </button>
-
-                  {/* God Mode Controls */}
-                  {isGodMode && (
-                    <div style={{
-                      marginTop: '1.5rem',
-                      padding: '1.5rem',
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(16, 185, 129, 0.3)'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <span style={{ color: '#10B981', fontWeight: 700 }}>⚡ GOD MODE ACTIVE</span>
-                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                          - Automatically optimizes your sitemap content using AI
-                        </span>
-                      </div>
-
-                      {/* Exclusion Controls */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <div>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#F87171', marginBottom: '0.5rem', display: 'block' }}>
-                            🚫 Exclude URLs (one per line)
-                          </label>
-                          <textarea
-                            value={excludedUrls.join('\n')}
-                            onChange={e => {
-                              const urls = e.target.value.split('\n').filter(u => u.trim());
-                              setExcludedUrls(urls);
-                              setStorageItem(STORAGE_KEYS.EXCLUDED_URLS, urls);
-                            }}
-                            placeholder="https://example.com/page1"
-                            rows={3}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              background: 'rgba(15, 23, 42, 0.8)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '8px',
-                              color: '#fff',
-                              fontSize: '0.85rem'
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#F87171', marginBottom: '0.5rem', display: 'block' }}>
-                            🚫 Exclude Categories
-                          </label>
-                          <textarea
-                            value={excludedCategories.join('\n')}
-                            onChange={e => {
-                              const cats = e.target.value.split('\n').filter(c => c.trim());
-                              setExcludedCategories(cats);
-                              setStorageItem(STORAGE_KEYS.EXCLUDED_CATEGORIES, cats);
-                            }}
-                            placeholder="category-slug-1"
-                            rows={3}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              background: 'rgba(15, 23, 42, 0.8)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '8px',
-                              color: '#fff',
-                              fontSize: '0.85rem'
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* System Logs */}
-                      <div style={{
-                        padding: '1rem',
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        borderRadius: '8px',
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        fontFamily: 'monospace',
-                        fontSize: '0.8rem'
-                      }}>
-                        <div style={{ color: '#10B981', marginBottom: '0.25rem' }}>📋 SYSTEM LOGS</div>
-                        {godModeLogs.length === 0 ? (
-                          <div style={{ color: 'rgba(255,255,255,0.5)' }}>No activity yet. Crawl sitemap to begin.</div>
-                        ) : godModeLogs.slice(-10).map((log, i) => (
-                          <div key={i} style={{ color: 'rgba(255,255,255,0.7)' }}>{log}</div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    godModeLogs={godModeLogs}
+                    optimizedHistory={optimizedHistory}
+                    existingPages={existingPages}
+                    sitemapUrl={sitemapUrl}
+                    onAnalyzeGaps={handleAnalyzeGaps}
+                    isAnalyzingGaps={isAnalyzingGaps}
+                    wpConfig={wpConfig}
+                    wpPassword={wpPassword}
+                    onPriorityQueueUpdate={(urls) => {
+                      setPriorityUrls(urls);
+                      // Also maintain string array for legacy if needed, but context handles objects now
+                    }}
+                  />
 
                   {/* Gap Results */}
                   {gapSuggestions.length > 0 && (
@@ -2647,7 +2482,7 @@ const App: React.FC = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                </>
               )}
 
               {/* QUICK REFRESH */}
@@ -3309,70 +3144,78 @@ const App: React.FC = () => {
       <AppFooter />
 
       {/* Modals */}
-      {isEndpointModalOpen && (
-        <WordPressEndpointInstructions onClose={() => setIsEndpointModalOpen(false)} />
-      )}
+      {
+        isEndpointModalOpen && (
+          <WordPressEndpointInstructions onClose={() => setIsEndpointModalOpen(false)} />
+        )
+      }
 
-      {selectedItemForReview && (
-        <ReviewModal
-          item={selectedItemForReview}
-          onClose={() => setSelectedItemForReview(null)}
-          onSaveChanges={(itemId, updatedSeo, updatedContent) => {
-            dispatch({
-              type: 'SET_CONTENT',
-              payload: {
-                id: itemId,
-                content: {
-                  ...selectedItemForReview.generatedContent!,
-                  title: updatedSeo.title,
-                  content: updatedContent
+      {
+        selectedItemForReview && (
+          <ReviewModal
+            item={selectedItemForReview}
+            onClose={() => setSelectedItemForReview(null)}
+            onSaveChanges={(itemId, updatedSeo, updatedContent) => {
+              dispatch({
+                type: 'SET_CONTENT',
+                payload: {
+                  id: itemId,
+                  content: {
+                    ...selectedItemForReview.generatedContent!,
+                    title: updatedSeo.title,
+                    content: updatedContent
+                  }
                 }
+              });
+              alert('Changes saved locally!');
+            }}
+            wpConfig={wpConfig}
+            wpPassword={wpPassword}
+            onPublishSuccess={(originalUrl) => {
+              if (window.confirm(`✅ Published successfully!\n\nView post now?\n${originalUrl}`)) {
+                window.open(originalUrl, '_blank');
               }
-            });
-            alert('Changes saved locally!');
-          }}
-          wpConfig={wpConfig}
-          wpPassword={wpPassword}
-          onPublishSuccess={(originalUrl) => {
-            if (window.confirm(`✅ Published successfully!\n\nView post now?\n${originalUrl}`)) {
-              window.open(originalUrl, '_blank');
+            }}
+            publishItem={(item, pwd, status) =>
+              publishItemToWordPress(item, pwd, status, fetchWordPressWithRetry, wpConfig)
             }
-          }}
-          publishItem={(item, pwd, status) =>
-            publishItemToWordPress(item, pwd, status, fetchWordPressWithRetry, wpConfig)
-          }
-          callAI={(key, args, fmt, g) =>
-            callAI(apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, key, args, fmt, g)
-          }
-          geoTargeting={geoTargeting}
-          neuronConfig={neuronConfig}
-        />
-      )}
+            callAI={(key, args, fmt, g) =>
+              callAI(apiClients, selectedModel, geoTargeting, openrouterModels, selectedGroqModel, key, args, fmt, g)
+            }
+            geoTargeting={geoTargeting}
+            neuronConfig={neuronConfig}
+          />
+        )
+      }
 
-      {isBulkPublishModalOpen && (
-        <BulkPublishModal
-          items={items.filter(i => selectedItems.has(i.id) && i.status === 'done')}
-          onClose={() => setIsBulkPublishModalOpen(false)}
-          publishItem={(item, pwd, status) =>
-            publishItemToWordPress(item, pwd, status, fetchWordPressWithRetry, wpConfig)
-          }
-          wpConfig={wpConfig}
-          wpPassword={wpPassword}
-          onPublishSuccess={(url) => {
-            // Bulk modal handles its own per-item display, but we can log unique success here
-            console.log(`Published ${url}`);
-          }}
-        />
-      )}
+      {
+        isBulkPublishModalOpen && (
+          <BulkPublishModal
+            items={items.filter(i => selectedItems.has(i.id) && i.status === 'done')}
+            onClose={() => setIsBulkPublishModalOpen(false)}
+            publishItem={(item, pwd, status) =>
+              publishItemToWordPress(item, pwd, status, fetchWordPressWithRetry, wpConfig)
+            }
+            wpConfig={wpConfig}
+            wpPassword={wpPassword}
+            onPublishSuccess={(url) => {
+              // Bulk modal handles its own per-item display, but we can log unique success here
+              console.log(`Published ${url}`);
+            }}
+          />
+        )
+      }
 
-      {viewingAnalysis && (
-        <AnalysisModal
-          page={viewingAnalysis}
-          onClose={() => setViewingAnalysis(null)}
-          onPlanRewrite={handlePlanRewrite}
-        />
-      )}
-    </div>
+      {
+        viewingAnalysis && (
+          <AnalysisModal
+            page={viewingAnalysis}
+            onClose={() => setViewingAnalysis(null)}
+            onPlanRewrite={handlePlanRewrite}
+          />
+        )
+      }
+    </div >
   );
 };
 

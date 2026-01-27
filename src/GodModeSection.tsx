@@ -41,7 +41,8 @@ interface GodModeSectionProps {
 const STORAGE_KEYS = {
     PRIORITY_URLS: 'sota_god_mode_priority_urls',
     EXCLUDED_URLS: 'sota_god_mode_excluded_urls',
-    EXCLUDED_CATEGORIES: 'sota_god_mode_excluded_categories'
+    EXCLUDED_CATEGORIES: 'sota_god_mode_excluded_categories',
+    PRIORITY_ONLY_MODE: 'sota_god_mode_priority_only'
 } as const;
 
 export const GodModeSection: React.FC<GodModeSectionProps> = ({
@@ -71,7 +72,7 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
     const [excludedUrls, setExcludedUrls] = useState<string>(() => {
         return localStorage.getItem(STORAGE_KEYS.EXCLUDED_URLS) || '';
     });
-    
+
     const [excludedCategories, setExcludedCategories] = useState<string>(() => {
         return localStorage.getItem(STORAGE_KEYS.EXCLUDED_CATEGORIES) || '';
     });
@@ -79,6 +80,11 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
     // Debug Mode State
     const [isDebugMode, setIsDebugMode] = useState(false);
     const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+    // Priority Only Mode - Only optimize specific URLs
+    const [priorityOnlyMode, setPriorityOnlyMode] = useState<boolean>(() => {
+        return localStorage.getItem(STORAGE_KEYS.PRIORITY_ONLY_MODE) === 'true';
+    });
 
     // Persist priority URLs
     useEffect(() => {
@@ -96,6 +102,11 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
     useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.EXCLUDED_CATEGORIES, excludedCategories);
     }, [excludedCategories]);
+
+    // Persistence for Priority Only Mode
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.PRIORITY_ONLY_MODE, String(priorityOnlyMode));
+    }, [priorityOnlyMode]);
 
     // Handle priority URL queue updates
     const handlePriorityUrlsChange = useCallback((urls: PriorityURL[]) => {
@@ -169,11 +180,11 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
             }}>
                 Blue Ocean Gap Analysis
             </h3>
-            
+
             {/* Main God Mode Control Panel */}
             <div className="god-mode-panel" style={{
-                background: isGodMode 
-                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.3))' 
+                background: isGodMode
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.3))'
                     : 'rgba(255,255,255,0.02)',
                 border: isGodMode ? '1px solid #10B981' : '1px solid var(--border-subtle)',
                 padding: '1.5rem',
@@ -224,11 +235,11 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                         width: '60px',
                         height: '34px'
                     }}>
-                        <input 
-                            type="checkbox" 
-                            checked={isGodMode} 
-                            onChange={e => setIsGodMode(e.target.checked)} 
-                            style={{ opacity: 0, width: 0, height: 0 }} 
+                        <input
+                            type="checkbox"
+                            checked={isGodMode}
+                            onChange={e => setIsGodMode(e.target.checked)}
+                            style={{ opacity: 0, width: 0, height: 0 }}
                         />
                         <span className="slider round" style={{
                             position: 'absolute',
@@ -252,6 +263,65 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                                 transition: '.4s',
                                 borderRadius: '50%',
                                 transform: isGodMode ? 'translateX(26px)' : 'translateX(0)'
+                            }}></span>
+                        </span>
+                    </label>
+                </div>
+
+                {/* Priority Mode Toggle */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    marginBottom: '1.5rem',
+                    padding: '0.75rem',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    borderRadius: '8px'
+                }}>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ color: '#E2E8F0', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            🎯 Priority Only Mode
+                            {priorityOnlyMode && <span style={{ fontSize: '0.7rem', background: '#3B82F6', color: 'white', padding: '2px 6px', borderRadius: '4px' }}>ACTIVE</span>}
+                        </div>
+                        <div style={{ color: '#94A3B8', fontSize: '0.8rem' }}>
+                            Restricts God Mode to ONLY optimize URLs in your Priority Queue. Ignores sitemap scan.
+                        </div>
+                    </div>
+                    <label className="switch" style={{
+                        position: 'relative',
+                        display: 'inline-block',
+                        width: '48px',
+                        height: '28px'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={priorityOnlyMode}
+                            onChange={e => setPriorityOnlyMode(e.target.checked)}
+                            style={{ opacity: 0, width: 0, height: 0 }}
+                        />
+                        <span className="slider round" style={{
+                            position: 'absolute',
+                            cursor: 'pointer',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: priorityOnlyMode ? '#3B82F6' : '#334155',
+                            transition: '.4s',
+                            borderRadius: '34px'
+                        }}>
+                            <span style={{
+                                position: 'absolute',
+                                content: "",
+                                height: '20px',
+                                width: '20px',
+                                left: '4px',
+                                bottom: '4px',
+                                backgroundColor: 'white',
+                                transition: '.4s',
+                                borderRadius: '50%',
+                                transform: priorityOnlyMode ? 'translateX(20px)' : 'translateX(0)'
                             }}></span>
                         </span>
                     </label>
@@ -319,10 +389,10 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                             }}>
                                 {debugLogs.slice(0, 10).map((log, i) => (
                                     <div key={i} style={{
-                                        color: log.includes('✅') ? '#10B981' 
-                                            : log.includes('❌') ? '#EF4444' 
-                                            : log.includes('⚠️') ? '#F59E0B' 
-                                            : '#94A3B8',
+                                        color: log.includes('✅') ? '#10B981'
+                                            : log.includes('❌') ? '#EF4444'
+                                                : log.includes('⚠️') ? '#F59E0B'
+                                                    : '#94A3B8',
                                         marginBottom: '2px'
                                     }}>
                                         {log}
@@ -410,41 +480,119 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                         gridTemplateColumns: '1fr 1.5fr',
                         gap: '1rem'
                     }}>
-                        {/* System Logs */}
+                        {/* System Logs - SOTA ENTERPRISE GRADE */}
                         <div className="god-mode-logs" style={{
-                            background: '#020617',
-                            padding: '1rem',
-                            borderRadius: '8px',
-                            fontFamily: 'monospace',
-                            fontSize: '0.8rem',
-                            height: '200px',
+                            background: 'linear-gradient(135deg, #020617 0%, #0F172A 100%)',
+                            padding: '1.25rem',
+                            borderRadius: '12px',
+                            fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+                            fontSize: '0.75rem',
+                            height: '240px',
                             overflowY: 'auto',
                             border: '1px solid #1e293b',
-                            boxShadow: 'inset 0 2px 4px 0 rgba(0,0,0,0.5)'
+                            boxShadow: 'inset 0 4px 8px 0 rgba(0,0,0,0.6)'
                         }}>
                             <div style={{
-                                color: '#64748B',
+                                color: '#10B981',
                                 borderBottom: '1px solid #1e293b',
-                                paddingBottom: '0.5rem',
-                                marginBottom: '0.5rem'
+                                paddingBottom: '0.75rem',
+                                marginBottom: '0.75rem',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}>
-                                SYSTEM LOGS
-                            </div>
-                            {godModeLogs.map((log, i) => (
-                                <div key={i} style={{
-                                    marginBottom: '4px',
-                                    color: log.includes('Error') || log.includes('❌') ? '#EF4444' 
-                                        : log.includes('✅') ? '#10B981' 
-                                        : log.includes('⚡') ? '#F59E0B'
-                                        : '#94A3B8'
+                                <span style={{ fontWeight: 700, letterSpacing: '0.05em' }}>📋 SYSTEM LOGS</span>
+                                <span style={{
+                                    fontSize: '0.65rem',
+                                    color: '#64748B',
+                                    background: 'rgba(100,116,139,0.2)',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px'
                                 }}>
-                                    <span style={{ opacity: 0.5 }}>[{new Date().toLocaleTimeString()}]</span> {log}
+                                    {godModeLogs.length} entries
+                                </span>
+                            </div>
+                            {godModeLogs.length === 0 ? (
+                                <div style={{
+                                    color: '#64748B',
+                                    textAlign: 'center',
+                                    padding: '2rem',
+                                    fontStyle: 'italic'
+                                }}>
+                                    ⏳ Waiting for optimization tasks...
                                 </div>
-                            ))}
-                            {godModeLogs.length === 0 && (
-                                <div style={{ color: '#64748B' }}>
-                                    Initializing engine... waiting for tasks...
-                                </div>
+                            ) : (
+                                godModeLogs.map((log, i) => {
+                                    // Parse log type for styling
+                                    const isError = log.includes('❌') || log.includes('FAILED') || log.includes('Error');
+                                    const isSuccess = log.includes('✅') || log.includes('SUCCESS');
+                                    const isWarning = log.includes('⚠️') || log.includes('WARNING');
+                                    const isInfo = log.includes('📊') || log.includes('🎯') || log.includes('📥');
+                                    const isAction = log.includes('🚀') || log.includes('⚡') || log.includes('🔗');
+
+                                    // Parse success logs for title and URL
+                                    let formattedLog = log;
+                                    let logUrl = '';
+                                    if (log.includes('SUCCESS|')) {
+                                        const parts = log.split('|');
+                                        if (parts.length >= 3) {
+                                            formattedLog = `✅ OPTIMIZED: ${parts[1]}`;
+                                            logUrl = parts[2];
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={i} style={{
+                                            marginBottom: '8px',
+                                            padding: '8px 10px',
+                                            background: isError ? 'rgba(239,68,68,0.08)'
+                                                : isSuccess ? 'rgba(16,185,129,0.08)'
+                                                    : isWarning ? 'rgba(245,158,11,0.08)'
+                                                        : 'transparent',
+                                            borderRadius: '6px',
+                                            borderLeft: `3px solid ${isError ? '#EF4444'
+                                                : isSuccess ? '#10B981'
+                                                    : isWarning ? '#F59E0B'
+                                                        : isAction ? '#8B5CF6'
+                                                            : isInfo ? '#3B82F6'
+                                                                : '#334155'
+                                                }`,
+                                            color: isError ? '#FCA5A5'
+                                                : isSuccess ? '#6EE7B7'
+                                                    : isWarning ? '#FCD34D'
+                                                        : '#94A3B8',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '4px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{
+                                                    opacity: 0.5,
+                                                    fontSize: '0.65rem',
+                                                    color: '#64748B'
+                                                }}>
+                                                    [{new Date().toLocaleTimeString()}]
+                                                </span>
+                                                <span style={{ flex: 1 }}>{formattedLog}</span>
+                                            </div>
+                                            {logUrl && (
+                                                <a
+                                                    href={logUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        color: '#3B82F6',
+                                                        fontSize: '0.65rem',
+                                                        textDecoration: 'none',
+                                                        opacity: 0.8
+                                                    }}
+                                                >
+                                                    🔗 {logUrl}
+                                                </a>
+                                            )}
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
 
@@ -491,10 +639,10 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                                             textOverflow: 'ellipsis',
                                             marginRight: '1rem'
                                         }}>
-                                            <a 
-                                                href={item.url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer" 
+                                            <a
+                                                href={item.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 style={{
                                                     color: '#E2E8F0',
                                                     textDecoration: 'none',
@@ -534,15 +682,15 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
                 }}>
                     <XIcon />
                     <div>
-                        <strong>Sitemap Required:</strong> Please crawl your sitemap in the "Quick Refresh" tab first. 
+                        <strong>Sitemap Required:</strong> Please crawl your sitemap in the "Quick Refresh" tab first.
                         The AI needs to know your existing content to find the gaps.
                     </div>
                 </div>
             ) : (
-                <button 
-                    className="btn" 
-                    onClick={onAnalyzeGaps} 
-                    disabled={isAnalyzingGaps} 
+                <button
+                    className="btn"
+                    onClick={onAnalyzeGaps}
+                    disabled={isAnalyzingGaps}
                     style={{
                         width: '100%',
                         padding: '1rem',
@@ -562,7 +710,7 @@ export default GodModeSection;
 export const getExclusionLists = () => {
     const excludedUrls = localStorage.getItem(STORAGE_KEYS.EXCLUDED_URLS) || '';
     const excludedCategories = localStorage.getItem(STORAGE_KEYS.EXCLUDED_CATEGORIES) || '';
-    
+
     return {
         urls: excludedUrls.split('\n').map(u => u.trim()).filter(Boolean),
         categories: excludedCategories.split('\n').map(c => c.trim().toLowerCase()).filter(Boolean)
@@ -581,15 +729,15 @@ export const getPriorityUrls = (): PriorityURL[] => {
 
 // Export utility function to update priority URL status
 export const updatePriorityUrlStatus = (
-    url: string, 
+    url: string,
     status: PriorityURL['status'],
     optimizedAt?: string
 ) => {
     try {
         const saved = localStorage.getItem(STORAGE_KEYS.PRIORITY_URLS);
         const urls: PriorityURL[] = saved ? JSON.parse(saved) : [];
-        const updatedUrls = urls.map(u => 
-            u.url === url 
+        const updatedUrls = urls.map(u =>
+            u.url === url
                 ? { ...u, status, optimizedAt: optimizedAt || u.optimizedAt }
                 : u
         );

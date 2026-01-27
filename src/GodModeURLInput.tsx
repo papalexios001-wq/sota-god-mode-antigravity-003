@@ -10,9 +10,10 @@ export interface PriorityURLItem {
   id: string;
   url: string;
   priority: 'critical' | 'high' | 'medium' | 'low';
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'skipped';
+  status: 'queued' | 'processing' | 'completed' | 'failed' | 'skipped' | 'pending';
   addedAt: number;
   processedAt?: number;
+  optimizedAt?: string;
   errorMessage?: string;
   retryCount: number;
   metadata?: {
@@ -23,14 +24,18 @@ export interface PriorityURLItem {
 }
 
 export interface GodModeURLInputProps {
-  onURLsSubmitted: (urls: PriorityURLItem[]) => void;
-  onStartProcessing: (urls: PriorityURLItem[]) => void;
+  onURLsSubmitted?: (urls: PriorityURLItem[]) => void;
+  onStartProcessing?: (urls: PriorityURLItem[]) => void;
   onClearQueue?: () => void;
   isGodModeActive: boolean;
-  isProcessing: boolean;
+  isProcessing?: boolean;
   existingPages?: { id: string }[];
   excludedUrls?: string[];
   excludedCategories?: string[];
+  // Props from GodModeSection
+  priorityUrls?: PriorityURLItem[];
+  onPriorityUrlsChange?: (urls: PriorityURLItem[]) => void;
+  maxUrls?: number;
 }
 
 export interface QueueStats {
@@ -46,7 +51,7 @@ export interface QueueStats {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-const generateUniqueId = (): string => 
+const generateUniqueId = (): string =>
   `purl-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
 const isValidUrl = (urlString: string): boolean => {
@@ -124,7 +129,7 @@ export const GodModeURLInput = memo(({
   const [isDragging, setIsDragging] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PriorityURLItem['status']>('all');
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -198,7 +203,7 @@ export const GodModeURLInput = memo(({
       }
 
       // Check against excluded categories (simple pattern matching)
-      const isExcludedByCategory = excludedCategories.some(cat => 
+      const isExcludedByCategory = excludedCategories.some(cat =>
         normalizedUrl.toLowerCase().includes(cat.toLowerCase())
       );
       if (isExcludedByCategory) {
@@ -225,10 +230,10 @@ export const GodModeURLInput = memo(({
     if (validUrls.length > 0) {
       // Sort by priority: critical > high > medium > low
       const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      const sortedNewUrls = validUrls.sort((a, b) => 
+      const sortedNewUrls = validUrls.sort((a, b) =>
         priorityOrder[a.priority] - priorityOrder[b.priority]
       );
-      
+
       setUrlQueue(prev => {
         const combined = [...sortedNewUrls, ...prev];
         // Re-sort entire queue by priority
@@ -261,7 +266,7 @@ export const GodModeURLInput = memo(({
       if (!content) return;
 
       let urls: string[] = [];
-      
+
       // Handle CSV files
       if (file.name.endsWith('.csv')) {
         const lines = content.split('\n');
@@ -294,7 +299,7 @@ export const GodModeURLInput = memo(({
   }, []);
 
   const handleRetryFailed = useCallback((id: string) => {
-    setUrlQueue(prev => prev.map(u => 
+    setUrlQueue(prev => prev.map(u =>
       u.id === id ? { ...u, status: 'queued', retryCount: u.retryCount + 1, errorMessage: undefined } : u
     ));
   }, []);
@@ -333,15 +338,15 @@ export const GodModeURLInput = memo(({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
-    const validFile = files.find(f => 
-      f.type === 'text/plain' || 
-      f.type === 'text/csv' || 
-      f.name.endsWith('.txt') || 
+    const validFile = files.find(f =>
+      f.type === 'text/plain' ||
+      f.type === 'text/csv' ||
+      f.name.endsWith('.txt') ||
       f.name.endsWith('.csv')
     );
-    
+
     if (validFile) {
       handleFileImport(validFile);
     }
@@ -349,7 +354,7 @@ export const GodModeURLInput = memo(({
 
   // Filter URLs for display
   const filteredUrls = urlQueue.filter(u => {
-    const matchesSearch = !searchFilter || 
+    const matchesSearch = !searchFilter ||
       u.url.toLowerCase().includes(searchFilter.toLowerCase());
     const matchesStatus = statusFilter === 'all' || u.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -366,14 +371,14 @@ export const GodModeURLInput = memo(({
       borderRadius: '16px',
       padding: '0',
       marginBottom: '24px',
-      boxShadow: isGodModeActive 
-        ? '0 0 40px rgba(16, 185, 129, 0.15), 0 20px 60px rgba(0,0,0,0.6)' 
+      boxShadow: isGodModeActive
+        ? '0 0 40px rgba(16, 185, 129, 0.15), 0 20px 60px rgba(0,0,0,0.6)'
         : '0 20px 60px rgba(0,0,0,0.6)',
       transition: 'all 0.3s ease',
       overflow: 'hidden',
     }}>
       {/* HEADER */}
-      <div 
+      <div
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
           display: 'flex',
@@ -381,8 +386,8 @@ export const GodModeURLInput = memo(({
           alignItems: 'center',
           padding: '20px 24px',
           cursor: 'pointer',
-          background: isGodModeActive 
-            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.2))' 
+          background: isGodModeActive
+            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(6, 78, 59, 0.2))'
             : 'rgba(30, 41, 59, 0.5)',
           borderBottom: isExpanded ? '1px solid rgba(51, 65, 85, 0.5)' : 'none',
         }}
@@ -392,8 +397,8 @@ export const GodModeURLInput = memo(({
             width: '48px',
             height: '48px',
             borderRadius: '12px',
-            background: isGodModeActive 
-              ? 'linear-gradient(135deg, #10B981, #059669)' 
+            background: isGodModeActive
+              ? 'linear-gradient(135deg, #10B981, #059669)'
               : 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
             display: 'flex',
             alignItems: 'center',
@@ -408,8 +413,8 @@ export const GodModeURLInput = memo(({
               margin: '0 0 4px 0',
               fontSize: '18px',
               fontWeight: '700',
-              background: isGodModeActive 
-                ? 'linear-gradient(135deg, #10B981, #34D399)' 
+              background: isGodModeActive
+                ? 'linear-gradient(135deg, #10B981, #34D399)'
                 : 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -427,7 +432,7 @@ export const GodModeURLInput = memo(({
             </p>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Queue Stats Pills */}
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -466,7 +471,7 @@ export const GodModeURLInput = memo(({
               </span>
             )}
           </div>
-          
+
           <span style={{
             fontSize: '24px',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -497,8 +502,8 @@ export const GodModeURLInput = memo(({
                 style={{
                   flex: 1,
                   padding: '12px 16px',
-                  background: inputMode === mode 
-                    ? 'linear-gradient(135deg, #3B82F6, #8B5CF6)' 
+                  background: inputMode === mode
+                    ? 'linear-gradient(135deg, #3B82F6, #8B5CF6)'
                     : 'transparent',
                   border: 'none',
                   color: inputMode === mode ? 'white' : '#94A3B8',
@@ -678,7 +683,7 @@ export const GodModeURLInput = memo(({
           )}
 
           {inputMode === 'import' && (
-            <div 
+            <div
               ref={dropZoneRef}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -815,7 +820,7 @@ export const GodModeURLInput = memo(({
               {/* Queue Items */}
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {filteredUrls.map((item, index) => (
-                  <div 
+                  <div
                     key={item.id}
                     style={{
                       display: 'flex',
@@ -936,9 +941,9 @@ export const GodModeURLInput = memo(({
                 width: '100%',
                 marginTop: '24px',
                 padding: '16px 24px',
-                background: isProcessing 
-                  ? '#334155' 
-                  : !isGodModeActive 
+                background: isProcessing
+                  ? '#334155'
+                  : !isGodModeActive
                     ? '#475569'
                     : 'linear-gradient(135deg, #10B981, #059669)',
                 border: 'none',
@@ -948,8 +953,8 @@ export const GodModeURLInput = memo(({
                 fontSize: '15px',
                 cursor: isProcessing || !isGodModeActive ? 'not-allowed' : 'pointer',
                 transition: 'all 0.3s ease',
-                boxShadow: isProcessing || !isGodModeActive 
-                  ? 'none' 
+                boxShadow: isProcessing || !isGodModeActive
+                  ? 'none'
                   : '0 8px 24px rgba(16, 185, 129, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
@@ -990,7 +995,7 @@ export const GodModeURLInput = memo(({
             borderLeft: '3px solid #3B82F6',
           }}>
             <div style={{ color: '#93C5FD', fontSize: '12px', lineHeight: '1.6' }}>
-              💡 <strong>Pro Tip:</strong> URLs added here will be prioritized over automatic sitemap scanning. 
+              💡 <strong>Pro Tip:</strong> URLs added here will be prioritized over automatic sitemap scanning.
               Critical priority URLs are processed first, followed by high, medium, and low priority.
             </div>
           </div>
@@ -1007,5 +1012,8 @@ export const GodModeURLInput = memo(({
 });
 
 GodModeURLInput.displayName = 'GodModeURLInput';
+
+// BACKWARDS COMPATIBILITY: Alias for GodModeSection
+export type PriorityURL = PriorityURLItem;
 
 export default GodModeURLInput;

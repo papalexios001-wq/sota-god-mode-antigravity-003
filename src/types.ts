@@ -259,7 +259,7 @@ export interface GenerationContext {
   neuronConfig: NeuronConfig;
   excludedUrls?: string[];
   excludedCategories?: string[];
-  priorityUrls?: string[];
+  priorityUrls?: any[];
   priorityOnlyMode?: boolean;
 }
 

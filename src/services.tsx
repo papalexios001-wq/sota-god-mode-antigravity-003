@@ -1733,12 +1733,12 @@ class MaintenanceEngine {
 
     if (priorityOnlyMode && priorityUrls && priorityUrls.length > 0) {
       pagesToProcess = pagesToProcess.filter(page =>
-        priorityUrls.some(url => page.id.includes(url))
+        priorityUrls.some((p: any) => page.id.includes(typeof p === 'string' ? p : p.url))
       );
     } else if (priorityUrls && priorityUrls.length > 0) {
       pagesToProcess.sort((a, b) => {
-        const aIsPriority = priorityUrls.some(url => a.id.includes(url));
-        const bIsPriority = priorityUrls.some(url => b.id.includes(url));
+        const aIsPriority = priorityUrls.some((p: any) => a.id.includes(typeof p === 'string' ? p : p.url));
+        const bIsPriority = priorityUrls.some((p: any) => b.id.includes(typeof p === 'string' ? p : p.url));
         if (aIsPriority && !bIsPriority) return -1;
         if (!aIsPriority && bIsPriority) return 1;
         return 0;
