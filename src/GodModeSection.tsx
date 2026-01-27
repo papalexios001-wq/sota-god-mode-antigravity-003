@@ -35,6 +35,8 @@ interface GodModeSectionProps {
     wpConfig: { url: string; username: string };
     wpPassword: string;
     onPriorityQueueUpdate?: (urls: PriorityURL[]) => void;
+    onExcludedUrlsChange?: (urls: string[]) => void;
+    onExcludedCategoriesChange?: (categories: string[]) => void;
 }
 
 // Storage keys
@@ -56,7 +58,9 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
     isAnalyzingGaps,
     wpConfig,
     wpPassword,
-    onPriorityQueueUpdate
+    onPriorityQueueUpdate,
+    onExcludedUrlsChange,
+    onExcludedCategoriesChange
 }) => {
     // Priority URL Queue State
     const [priorityUrls, setPriorityUrls] = useState<PriorityURL[]>(() => {
@@ -97,11 +101,20 @@ export const GodModeSection: React.FC<GodModeSectionProps> = ({
     // Persist exclusions
     useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.EXCLUDED_URLS, excludedUrls);
-    }, [excludedUrls]);
+        if (onExcludedUrlsChange) {
+            // Split string by newline to get array
+            const urlArray = excludedUrls.split('\n').filter(u => u.trim());
+            onExcludedUrlsChange(urlArray);
+        }
+    }, [excludedUrls, onExcludedUrlsChange]);
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.EXCLUDED_CATEGORIES, excludedCategories);
-    }, [excludedCategories]);
+        if (onExcludedCategoriesChange) {
+            const catArray = excludedCategories.split('\n').filter(c => c.trim());
+            onExcludedCategoriesChange(catArray);
+        }
+    }, [excludedCategories, onExcludedCategoriesChange]);
 
     // Persistence for Priority Only Mode
     useEffect(() => {

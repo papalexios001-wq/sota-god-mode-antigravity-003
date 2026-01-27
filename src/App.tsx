@@ -2445,10 +2445,10 @@ const App: React.FC = () => {
                     isAnalyzingGaps={isAnalyzingGaps}
                     wpConfig={wpConfig}
                     wpPassword={wpPassword}
-                    onPriorityQueueUpdate={(urls) => {
-                      setPriorityUrls(urls);
-                      // Also maintain string array for legacy if needed, but context handles objects now
-                    }}
+                    onPriorityQueueUpdate={setPriorityUrls}
+                    onExcludedUrlsChange={setExcludedUrls}
+                    onExcludedCategoriesChange={setExcludedCategories}
+
                   />
 
                   {/* Gap Results */}
