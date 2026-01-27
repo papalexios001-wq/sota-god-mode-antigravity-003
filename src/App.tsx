@@ -1640,11 +1640,11 @@ const App: React.FC = () => {
 
   // ==================== COMPUTED VALUES ====================
 
-  const filteredAndSortedHubPages = useMemo(() => {
-    let filtered = [...existingPages];
+  const filteredHubPages = useMemo(() => {
+    let filtered = existingPages;
 
     if (hubStatusFilter !== 'All') {
-      filtered = filtered.filter(page => page.updatePriority === hubStatusFilter);
+      filtered = filtered.filter(page => page.status === hubStatusFilter.toLowerCase());
     }
 
     if (hubSearchFilter) {
@@ -2181,54 +2181,730 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* STRATEGY VIEW */}
+          {/* STRATEGY VIEW - FULL SOTA IMPLEMENTATION */}
           {activeView === 'strategy' && (
             <div className="strategy-view" style={{ padding: '2rem' }}>
               <div className="page-header">
-                <h2 className="gradient-headline">2. Content Strategy & Gap Analysis</h2>
-                <p>Analyze your content ecosystem and discover new opportunities.</p>
+                <h2 className="gradient-headline">2. Content Strategy & Planning</h2>
+                <p>Plan, generate, and optimize your content with AI-powered tools.</p>
               </div>
-              <div className="strategy-content">
-                <div className="form-group">
-                  <label>Topic / Niche</label>
-                  <input
-                    type="text"
-                    value={topic}
-                    onChange={e => setTopic(e.target.value)}
-                    placeholder="e.g., Affiliate Marketing, Dog Training, SaaS Tools..."
-                  />
-                </div>
-                <button
-                  className="btn"
-                  onClick={handleAnalyzeGaps}
-                  disabled={isAnalyzingGaps}
-                >
-                  {isAnalyzingGaps ? '🔍 Analyzing...' : '🎯 Analyze Content Gaps'}
-                </button>
-                {gapSuggestions.length > 0 && (
-                  <div className="gap-suggestions" style={{ marginTop: '2rem' }}>
-                    <h3>📊 Gap Analysis Results</h3>
-                    {gapSuggestions.map((suggestion, idx) => (
-                      <div key={idx} className="gap-card" style={{
-                        padding: '1rem',
-                        background: 'rgba(139, 92, 246, 0.1)',
-                        borderRadius: '12px',
-                        marginBottom: '1rem',
-                        border: '1px solid rgba(139, 92, 246, 0.3)'
-                      }}>
-                        <h4>{suggestion.keyword}</h4>
-                        <p style={{ color: 'rgba(255,255,255,0.7)' }}>{suggestion.opportunity}</p>
-                        <button
-                          className="btn-secondary"
-                          onClick={() => handleGenerateGapArticle(suggestion)}
-                        >
-                          ✨ Generate Article
-                        </button>
-                      </div>
-                    ))}
+
+              {/* Tab Navigation */}
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                marginBottom: '2rem',
+                flexWrap: 'wrap',
+                background: 'rgba(15, 23, 42, 0.5)',
+                padding: '0.5rem',
+                borderRadius: '16px',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                {[
+                  { id: 'bulk', label: '📚 Bulk Planner', icon: '📚' },
+                  { id: 'single', label: '📝 Single Article', icon: '📝' },
+                  { id: 'gap', label: '🎯 Gap Analysis', icon: '🎯' },
+                  { id: 'refresh', label: '🔄 Quick Refresh', icon: '🔄' },
+                  { id: 'hub', label: '🗂️ Content Hub', icon: '🗂️' },
+                  { id: 'images', label: '🖼️ Image Gen', icon: '🖼️' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setContentMode(tab.id)}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      background: contentMode === tab.id
+                        ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(59, 130, 246, 0.3))'
+                        : 'transparent',
+                      border: contentMode === tab.id ? '1px solid rgba(139, 92, 246, 0.5)' : '1px solid transparent',
+                      borderRadius: '12px',
+                      color: contentMode === tab.id ? '#ffffff' : 'rgba(255,255,255,0.6)',
+                      fontSize: '0.9rem',
+                      fontWeight: contentMode === tab.id ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* BULK CONTENT PLANNER */}
+              {contentMode === 'bulk' && (
+                <div className="sota-card" style={{
+                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem' }}>📚</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Bulk Content Planner</h3>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                        Enter a broad topic to generate a pillar page and cluster content plan.
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Broad Topic</label>
+                    <input
+                      type="text"
+                      value={topic}
+                      onChange={e => setTopic(e.target.value)}
+                      placeholder="e.g., Landscape Photography, Affiliate Marketing, Dog Training..."
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleGenerateClusterPlan}
+                    disabled={isGenerating || !topic.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)',
+                      padding: '1rem 2rem',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {isGenerating ? '⚙️ Generating Plan...' : '🚀 Generate Content Plan'}
+                  </button>
+                </div>
+              )}
+
+              {/* SINGLE ARTICLE */}
+              {contentMode === 'single' && (
+                <div className="sota-card" style={{
+                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem' }}>📝</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Single Article Generator</h3>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                        Enter primary keywords (one per line) to generate articles.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Primary Keywords (one per line)</label>
+                    <textarea
+                      value={primaryKeywords}
+                      onChange={e => setPrimaryKeywords(e.target.value)}
+                      placeholder="Best running shoes 2026&#10;How to train for a marathon&#10;Running gear essentials"
+                      rows={6}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                      className="btn"
+                      onClick={handleGenerateMultipleFromKeywords}
+                      disabled={isGenerating || !primaryKeywords.trim()}
+                      style={{
+                        background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+                        padding: '1rem 2rem',
+                        fontSize: '1rem',
+                        fontWeight: 600
+                      }}
+                    >
+                      {isGenerating ? '⚙️ Adding...' : '➕ Add to Queue'}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setActiveView('review')}
+                      style={{ padding: '1rem 2rem' }}
+                    >
+                      Go to Review →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* GAP ANALYSIS / GOD MODE */}
+              {contentMode === 'gap' && (
+                <div className="sota-card" style={{
+                  background: isGodMode
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(15, 23, 42, 0.95))'
+                    : 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: isGodMode ? '2px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(16, 185, 129, 0.3)',
+                  boxShadow: isGodMode ? '0 0 40px rgba(16, 185, 129, 0.2)' : '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '2rem' }}>🎯</span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Blue Ocean Gap Analysis</h3>
+                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                          Discover untapped content opportunities in your niche.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* God Mode Toggle */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.5rem 1rem',
+                      background: isGodMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+                      borderRadius: '12px',
+                      border: `1px solid ${isGodMode ? 'rgba(16, 185, 129, 0.4)' : 'rgba(100, 116, 139, 0.3)'}`
+                    }}>
+                      <span style={{ fontSize: '0.85rem', color: isGodMode ? '#10B981' : '#94A3B8' }}>
+                        ⚡ GOD MODE
+                      </span>
+                      <button
+                        onClick={() => {
+                          const newState = !isGodMode;
+                          setIsGodMode(newState);
+                          localStorage.setItem(STORAGE_KEYS.GOD_MODE, String(newState));
+                        }}
+                        style={{
+                          width: '48px',
+                          height: '24px',
+                          borderRadius: '12px',
+                          background: isGodMode ? '#10B981' : '#475569',
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <span style={{
+                          position: 'absolute',
+                          top: '2px',
+                          left: isGodMode ? '26px' : '2px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          transition: 'left 0.2s'
+                        }} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Niche Input */}
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Topic / Niche</label>
+                    <input
+                      type="text"
+                      value={topic}
+                      onChange={e => setTopic(e.target.value)}
+                      placeholder="e.g., Affiliate Marketing, Dog Training, SaaS Tools..."
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleAnalyzeGaps}
+                    disabled={isAnalyzingGaps || !topic.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #10B981, #059669)',
+                      padding: '1rem 2rem',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    {isAnalyzingGaps ? '🔍 Analyzing Gaps...' : '🎯 Analyze Content Gaps'}
+                  </button>
+
+                  {/* God Mode Controls */}
+                  {isGodMode && (
+                    <div style={{
+                      marginTop: '1.5rem',
+                      padding: '1.5rem',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(16, 185, 129, 0.3)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <span style={{ color: '#10B981', fontWeight: 700 }}>⚡ GOD MODE ACTIVE</span>
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+                          - Automatically optimizes your sitemap content using AI
+                        </span>
+                      </div>
+
+                      {/* Exclusion Controls */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#F87171', marginBottom: '0.5rem', display: 'block' }}>
+                            🚫 Exclude URLs (one per line)
+                          </label>
+                          <textarea
+                            value={excludedUrls.join('\n')}
+                            onChange={e => {
+                              const urls = e.target.value.split('\n').filter(u => u.trim());
+                              setExcludedUrls(urls);
+                              setStorageItem(STORAGE_KEYS.EXCLUDED_URLS, urls);
+                            }}
+                            placeholder="https://example.com/page1"
+                            rows={3}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              borderRadius: '8px',
+                              color: '#fff',
+                              fontSize: '0.85rem'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#F87171', marginBottom: '0.5rem', display: 'block' }}>
+                            🚫 Exclude Categories
+                          </label>
+                          <textarea
+                            value={excludedCategories.join('\n')}
+                            onChange={e => {
+                              const cats = e.target.value.split('\n').filter(c => c.trim());
+                              setExcludedCategories(cats);
+                              setStorageItem(STORAGE_KEYS.EXCLUDED_CATEGORIES, cats);
+                            }}
+                            placeholder="category-slug-1"
+                            rows={3}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              background: 'rgba(15, 23, 42, 0.8)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              borderRadius: '8px',
+                              color: '#fff',
+                              fontSize: '0.85rem'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* System Logs */}
+                      <div style={{
+                        padding: '1rem',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '8px',
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem'
+                      }}>
+                        <div style={{ color: '#10B981', marginBottom: '0.25rem' }}>📋 SYSTEM LOGS</div>
+                        {godModeLogs.length === 0 ? (
+                          <div style={{ color: 'rgba(255,255,255,0.5)' }}>No activity yet. Crawl sitemap to begin.</div>
+                        ) : godModeLogs.slice(-10).map((log, i) => (
+                          <div key={i} style={{ color: 'rgba(255,255,255,0.7)' }}>{log}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Gap Results */}
+                  {gapSuggestions.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                      <h4 style={{ marginBottom: '1rem', color: '#10B981' }}>📊 Gap Analysis Results ({gapSuggestions.length})</h4>
+                      <div style={{ display: 'grid', gap: '1rem' }}>
+                        {gapSuggestions.map((suggestion, idx) => (
+                          <div key={idx} style={{
+                            padding: '1rem',
+                            background: 'rgba(139, 92, 246, 0.1)',
+                            borderRadius: '12px',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <div>
+                              <h5 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>{suggestion.keyword}</h5>
+                              <p style={{ margin: '0.25rem 0 0', color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>{suggestion.opportunity}</p>
+                            </div>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => handleGenerateGapArticle(suggestion)}
+                              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                            >
+                              ✨ Generate
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* QUICK REFRESH */}
+              {contentMode === 'refresh' && (
+                <div className="sota-card" style={{
+                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem' }}>🔄</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Quick Refresh & Validate</h3>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                        Update existing content with fresh data and improved SEO.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mode Toggle */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                    <button
+                      onClick={() => setRefreshMode('single')}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        background: refreshMode === 'single' ? 'rgba(245, 158, 11, 0.3)' : 'transparent',
+                        border: refreshMode === 'single' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '10px',
+                        color: refreshMode === 'single' ? '#FBBF24' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Single URL
+                    </button>
+                    <button
+                      onClick={() => setRefreshMode('bulk')}
+                      style={{
+                        padding: '0.75rem 1.5rem',
+                        background: refreshMode === 'bulk' ? 'rgba(245, 158, 11, 0.3)' : 'transparent',
+                        border: refreshMode === 'bulk' ? '1px solid rgba(245, 158, 11, 0.5)' : '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '10px',
+                        color: refreshMode === 'bulk' ? '#FBBF24' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Bulk via Sitemap
+                    </button>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>
+                      {refreshMode === 'single' ? 'Post URL to Refresh' : 'Sitemap URL'}
+                    </label>
+                    <input
+                      type="text"
+                      value={refreshMode === 'single' ? refreshUrl : sitemapUrl}
+                      onChange={e => refreshMode === 'single' ? setRefreshUrl(e.target.value) : setSitemapUrl(e.target.value)}
+                      placeholder={refreshMode === 'single' ? 'https://example.com/my-old-post' : 'https://example.com/sitemap.xml'}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={refreshMode === 'single' ? handleRefreshContent : handleCrawlSitemap}
+                    disabled={isGenerating || isCrawling}
+                    style={{
+                      background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                      padding: '1rem 2rem',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {isGenerating || isCrawling ? '⚙️ Processing...' : '🔄 Refresh & Validate'}
+                  </button>
+                </div>
+              )}
+
+              {/* CONTENT HUB */}
+              {contentMode === 'hub' && (
+                <div className="sota-card" style={{
+                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem' }}>🗂️</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Content Hub & Rewrite Assistant</h3>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                        Crawl your sitemap, analyze content health, and generate strategic rewrites.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Sitemap URL</label>
+                    <input
+                      type="text"
+                      value={sitemapUrl}
+                      onChange={e => setSitemapUrl(e.target.value)}
+                      placeholder="https://example.com/sitemap_index.xml"
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={handleCrawlSitemap}
+                    disabled={isCrawling || !sitemapUrl.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                      padding: '1rem 2rem',
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      marginBottom: '1.5rem'
+                    }}
+                  >
+                    {isCrawling ? `🔍 Crawling... (${crawlProgress.current}/${crawlProgress.total})` : '🔍 Crawl Sitemap'}
+                  </button>
+
+                  {/* Crawl Progress */}
+                  {crawlMessage && (
+                    <div style={{
+                      padding: '1rem',
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      borderRadius: '8px',
+                      marginBottom: '1rem',
+                      fontSize: '0.9rem'
+                    }}>
+                      {crawlMessage}
+                    </div>
+                  )}
+
+                  {/* Existing Pages List */}
+                  {existingPages.length > 0 && (
+                    <div style={{ marginTop: '1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h4 style={{ margin: 0 }}>📄 Discovered Pages ({existingPages.length})</h4>
+                        <input
+                          type="text"
+                          placeholder="🔍 Filter..."
+                          value={hubSearchFilter}
+                          onChange={e => setHubSearchFilter(e.target.value)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: 'rgba(15, 23, 42, 0.8)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '8px',
+                            color: '#fff'
+                          }}
+                        />
+                      </div>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                        {filteredHubPages.slice(0, 20).map(page => (
+                          <div key={page.id} style={{
+                            padding: '0.75rem 1rem',
+                            background: 'rgba(0,0,0,0.2)',
+                            borderRadius: '8px',
+                            marginBottom: '0.5rem',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontSize: '0.9rem' }}>{page.title || page.url}</span>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => setViewingAnalysis(page)}
+                              style={{ padding: '0.25rem 0.75rem', fontSize: '0.8rem' }}
+                            >
+                              Analyze
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* IMAGE GENERATOR */}
+              {contentMode === 'images' && (
+                <div className="sota-card" style={{
+                  background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9))',
+                  borderRadius: '20px',
+                  padding: '2rem',
+                  border: '1px solid rgba(236, 72, 153, 0.3)',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <span style={{ fontSize: '2rem' }}>🖼️</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>SOTA Image Generator</h3>
+                      <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem' }}>
+                        Generate high-quality images using DALL-E 3 or Gemini Imagen.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Image Prompt</label>
+                    <textarea
+                      value={imagePrompt}
+                      onChange={e => setImagePrompt(e.target.value)}
+                      placeholder="e.g., A photorealistic image of a golden retriever puppy playing in a field of flowers, soft natural lighting, 4K quality..."
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(236, 72, 153, 0.3)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        fontSize: '1rem',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Number of Images</label>
+                      <select
+                        value={numImages}
+                        onChange={e => setNumImages(Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '1rem',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(236, 72, 153, 0.3)',
+                          borderRadius: '12px',
+                          color: '#fff'
+                        }}
+                      >
+                        {[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label style={{ fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Aspect Ratio</label>
+                      <select
+                        value={aspectRatio}
+                        onChange={e => setAspectRatio(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '1rem',
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(236, 72, 153, 0.3)',
+                          borderRadius: '12px',
+                          color: '#fff'
+                        }}
+                      >
+                        <option value="1:1">1:1 (Square)</option>
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                        <option value="4:3">4:3 (Standard)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn"
+                    onClick={async () => {
+                      if (!imagePrompt.trim()) return;
+                      setIsGeneratingImages(true);
+                      setImageGenerationError('');
+                      try {
+                        const results: string[] = [];
+                        for (let i = 0; i < numImages; i++) {
+                          const result = await generateImageWithFallback(apiClients, imagePrompt);
+                          if (result) results.push(result);
+                        }
+                        if (results.length > 0) {
+                          setGeneratedImages(prev => [...results.map(src => ({ src, prompt: imagePrompt })), ...prev]);
+                        }
+                      } catch (err: any) {
+                        setImageGenerationError(err.message || 'Image generation failed');
+                      } finally {
+                        setIsGeneratingImages(false);
+                      }
+                    }}
+                    disabled={isGeneratingImages || !imagePrompt.trim()}
+                    style={{
+                      background: 'linear-gradient(135deg, #EC4899, #8B5CF6)',
+                      padding: '1rem 2rem',
+                      fontSize: '1rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    {isGeneratingImages ? '🎨 Generating...' : '🎨 Generate Images'}
+                  </button>
+
+                  {imageGenerationError && (
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: '#F87171' }}>
+                      ❌ {imageGenerationError}
+                    </div>
+                  )}
+
+                  {/* Generated Images Grid */}
+                  {generatedImages.length > 0 && (
+                    <div style={{ marginTop: '2rem' }}>
+                      <h4 style={{ marginBottom: '1rem' }}>🎨 Generated Images ({generatedImages.length})</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                        {generatedImages.map((img, idx) => (
+                          <div key={idx} style={{
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                          }}>
+                            <img src={img.src} alt={img.prompt} style={{ width: '100%', display: 'block' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
