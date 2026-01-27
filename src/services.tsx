@@ -20,9 +20,7 @@ import {
 } from './types';
 import {
   fetchWithProxies,
-  smartCrawl,
-  processInternalLinks,
-  surgicalSanitizer
+  smartCrawl
 } from './contentUtils';
 import {
   callAiWithRetry,
