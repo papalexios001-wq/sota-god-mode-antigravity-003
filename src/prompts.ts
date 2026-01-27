@@ -240,6 +240,54 @@ Return ONLY this JSON structure (no markdown, no backticks):
 }`
   },
 
+  // ==================== CONTENT ANALYZER (SINGLE PAGE) ====================
+  content_analyzer: {
+    systemInstruction: `You are a SOTA content quality analyzer and SEO expert.
+
+Analyze content for:
+- SEO optimization (keywords, structure, meta)
+- Content quality (readability, depth, value)
+- User experience (formatting, engagement)
+- E-E-A-T signals (expertise, authority, trust)
+- Improvement opportunities
+
+CRITICAL OUTPUT RULES:
+1. Return ONLY valid JSON
+2. NO markdown code blocks
+3. NO explanations before or after the JSON
+4. Score must be 0-100 integer`,
+
+    userPrompt: (crawledContent: string, pageTitle: string) => `Analyze this webpage content and provide actionable insights:
+
+**Page Title:** ${pageTitle}
+
+**Content (first 10000 chars):**
+${crawledContent ? crawledContent.substring(0, 10000) : "No content available"}
+
+Return ONLY this JSON structure (no markdown, no backticks):
+{
+  "score": 72,
+  "critique": "2-3 sentence overall assessment of the content quality and SEO effectiveness",
+  "keyIssues": [
+    "Specific issue #1 that hurts rankings or user experience",
+    "Specific issue #2 with actionable detail",
+    "Specific issue #3 if applicable"
+  ],
+  "recommendations": [
+    "Specific actionable recommendation #1",
+    "Specific actionable recommendation #2", 
+    "Specific actionable recommendation #3"
+  ],
+  "opportunities": [
+    "Growth opportunity #1 (keywords, topics to add)",
+    "Growth opportunity #2 for more traffic"
+  ],
+  "seoScore": 70,
+  "readabilityScore": 75,
+  "engagementScore": 68
+}`
+  },
+
   // ==================== SEMANTIC KEYWORD GENERATOR ====================
   semantic_keyword_generator: {
     systemInstruction: `You are a semantic SEO expert. Generate comprehensive keyword clusters.
