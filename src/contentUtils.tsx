@@ -324,29 +324,66 @@ export const validateAndFixAnchor = (
   return { valid: false, anchor: anchor, reason: validation.reason };
 };
 
-// ==================== PROXY FETCH ====================
+// ==================== SOTA PROXY FETCH v2.0 ====================
 
-// Use multiple CORS proxies with fallback chain
-const getProxyUrls = (): string[] => {
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+
+const getProxyUrls = (): Array<{ url: string; name: string; timeout: number }> => {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-  
-  // For local development, skip our own proxy (it won't work without serverless runtime)
-  // For production (Vercel/Cloudflare), use our proxy first
-  const proxies: string[] = [];
-  
-  if (!isLocalhost) {
-    proxies.push(`${origin}/api/proxy?url=`);  // Our own serverless proxy (production only)
+
+  const proxies: Array<{ url: string; name: string; timeout: number }> = [];
+
+  if (SUPABASE_URL) {
+    proxies.push({
+      url: `${SUPABASE_URL}/functions/v1/fetch-sitemap?url=`,
+      name: 'supabase-edge',
+      timeout: 60000
+    });
   }
-  
-  // Public CORS proxies as fallbacks
+
+  if (!isLocalhost) {
+    proxies.push({
+      url: `${origin}/api/proxy?url=`,
+      name: 'serverless-proxy',
+      timeout: 45000
+    });
+  }
+
   proxies.push(
-    'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.io/?',
-    'https://api.codetabs.com/v1/proxy?quest=',
+    { url: 'https://api.allorigins.win/raw?url=', name: 'allorigins', timeout: 45000 },
+    { url: 'https://corsproxy.io/?', name: 'corsproxy', timeout: 45000 },
+    { url: 'https://proxy.cors.sh/', name: 'cors-sh', timeout: 45000 },
+    { url: 'https://thingproxy.freeboard.io/fetch/', name: 'thingproxy', timeout: 45000 },
   );
-  
+
   return proxies;
+};
+
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  timeout: number,
+  retries: number = 2
+): Promise<Response> => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      return response;
+    } catch (e: any) {
+      if (attempt === retries) throw e;
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw new Error('Max retries reached');
 };
 
 export const fetchWithProxies = async (
@@ -354,42 +391,85 @@ export const fetchWithProxies = async (
   options: RequestInit = {},
   onProgress?: (message: string) => void
 ): Promise<Response> => {
-  let lastError: Error | null = null;
   const errors: string[] = [];
   const proxies = getProxyUrls();
 
+  const isSitemap = url.includes('sitemap') || url.endsWith('.xml');
+
   for (const proxy of proxies) {
     try {
-      const targetUrl = `${proxy}${encodeURIComponent(url)}`;
-      const proxyName = proxy.includes('/api/proxy') ? 'serverless-proxy' : proxy.split('//')[1]?.split('/')[0] || 'unknown';
-      onProgress?.(`Trying: ${proxyName}...`);
-      
-      const response = await fetch(targetUrl, {
-        ...options,
-        signal: AbortSignal.timeout(30000),
-        headers: {
-          'Accept': 'application/xml, text/xml, */*',
-          ...options.headers,
-        },
-      });
+      const targetUrl = `${proxy.url}${encodeURIComponent(url)}`;
+      onProgress?.(`Trying: ${proxy.name}...`);
+
+      const timeout = isSitemap ? Math.max(proxy.timeout, 60000) : proxy.timeout;
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/xml, text/xml, text/html, */*',
+        'User-Agent': 'Mozilla/5.0 (compatible; ContentOptimizer/1.0)',
+        ...options.headers as Record<string, string>,
+      };
+
+      if (proxy.name === 'cors-sh') {
+        headers['x-cors-api-key'] = 'temp_' + Date.now();
+      }
+
+      const response = await fetchWithRetry(
+        targetUrl,
+        { ...options, headers },
+        timeout,
+        isSitemap ? 2 : 1
+      );
 
       if (response.ok) {
+        onProgress?.(`Success via ${proxy.name}`);
         return response;
       }
-      
-      // Capture non-ok responses as errors and continue to next proxy
-      errors.push(`${proxyName}: HTTP ${response.status}`);
+
+      errors.push(`${proxy.name}: HTTP ${response.status}`);
     } catch (e: any) {
-      const proxyName = proxy.includes('/api/proxy') ? 'serverless-proxy' : proxy.split('//')[1]?.split('/')[0] || 'unknown';
-      errors.push(`${proxyName}: ${e.message || 'Network error'}`);
-      lastError = e;
+      const msg = e.name === 'AbortError' ? 'timeout' : (e.message || 'error');
+      errors.push(`${proxy.name}: ${msg}`);
       continue;
     }
   }
 
-  // Provide more detailed error message
   const errorDetails = errors.length > 0 ? ` (${errors.join('; ')})` : '';
-  throw lastError || new Error(`Failed to fetch: ${url}${errorDetails}`);
+  throw new Error(`Failed to fetch: ${url}${errorDetails}`);
+};
+
+export const fetchSitemapDirect = async (
+  sitemapUrl: string,
+  onProgress?: (message: string) => void
+): Promise<string> => {
+  onProgress?.('Fetching sitemap...');
+
+  if (SUPABASE_URL) {
+    try {
+      onProgress?.('Using Supabase Edge Function...');
+      const edgeUrl = `${SUPABASE_URL}/functions/v1/fetch-sitemap`;
+      const response = await fetch(edgeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || ''}`
+        },
+        body: JSON.stringify({ url: sitemapUrl })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.content) {
+          onProgress?.('Sitemap fetched via Edge Function');
+          return data.content;
+        }
+      }
+    } catch (e) {
+      onProgress?.('Edge Function unavailable, trying proxies...');
+    }
+  }
+
+  const response = await fetchWithProxies(sitemapUrl, {}, onProgress);
+  return response.text();
 };
 
 // ==================== SMART CRAWL ====================
