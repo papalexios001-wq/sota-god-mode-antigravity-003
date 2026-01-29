@@ -36,122 +36,128 @@ export interface PromptTemplate {
   userPrompt: (...args: any[]) => string;
 }
 
-// ==================== BEAUTIFUL HTML TEMPLATES ====================
+// ==================== BEAUTIFUL HTML TEMPLATES - HIGH CONTRAST READABLE DESIGN ====================
 
 const BEAUTIFUL_HTML_ELEMENTS = `
-## MANDATORY BEAUTIFUL HTML ELEMENTS (Use ALL of these)
+## MANDATORY BEAUTIFUL HTML ELEMENTS (Use ALL of these - HIGH CONTRAST FOR READABILITY)
 
 ### 1. KEY TAKEAWAYS BOX (After intro, before first H2)
-<div class="sota-key-takeaways" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.08) 100%); backdrop-filter: blur(12px); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 2rem; margin: 2.5rem 0; box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);">
-  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem;">
+<div class="sota-key-takeaways" style="background: #0f172a; border: 2px solid #3b82f6; border-radius: 20px; padding: 2rem; margin: 2.5rem 0; box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);">
+  <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 2px solid rgba(59, 130, 246, 0.3);">
     <span style="font-size: 2rem;">⚡</span>
-    <h3 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #e2e8f0;">Key Takeaways</h3>
+    <h3 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #60a5fa;">Key Takeaways</h3>
   </div>
   <ul style="list-style: none; padding: 0; margin: 0;">
-    <li style="padding: 0.875rem 0; padding-left: 2rem; position: relative; color: #e2e8f0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); line-height: 1.6;"><span style="position: absolute; left: 0; color: #8b5cf6; font-weight: 700;">→</span> <strong>Start with action verb or number</strong> - rest of the insight</li>
+    <li style="padding: 0.875rem 0; display: flex; gap: 1rem; align-items: flex-start; color: #f1f5f9; border-bottom: 1px solid rgba(255, 255, 255, 0.1); line-height: 1.7;">
+      <span style="color: #22c55e; font-weight: 800; font-size: 1.25rem; flex-shrink: 0;">✓</span>
+      <span><strong>Start with action verb or number</strong> - rest of the insight with specific details</span>
+    </li>
   </ul>
 </div>
 
-### 2. PRO TIP CALLOUT (Use 2-3 throughout)
-<div class="sota-pro-tip" style="display: flex; gap: 1rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.06) 100%); border-radius: 16px; margin: 2rem 0; border-left: 4px solid #10b981;">
-  <span style="font-size: 1.75rem; flex-shrink: 0;">💡</span>
+### 2. PRO TIP CALLOUT (Use 2-3 throughout) - SOLID DARK GREEN BACKGROUND
+<div class="sota-pro-tip" style="display: flex; gap: 1rem; padding: 1.5rem; background: #064e3b; border-radius: 16px; margin: 2rem 0; border-left: 5px solid #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.15);">
+  <span style="font-size: 1.75rem; flex-shrink: 0;">💎</span>
   <div>
-    <h4 style="margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: #10b981;">Pro Tip</h4>
-    <p style="margin: 0; color: #d1fae5; line-height: 1.7;">Actionable tip content here.</p>
+    <h4 style="margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: #34d399;">Pro Tip</h4>
+    <p style="margin: 0; color: #d1fae5; line-height: 1.7;">Actionable tip content with specific numbers, tools, or steps.</p>
   </div>
 </div>
 
-### 3. WARNING/IMPORTANT CALLOUT (Use 1-2 for critical info)
-<div class="sota-warning" style="display: flex; gap: 1rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.06) 100%); border-radius: 16px; margin: 2rem 0; border-left: 4px solid #f59e0b;">
-  <span style="font-size: 1.75rem; flex-shrink: 0;">⚠️</span>
+### 3. WARNING/IMPORTANT CALLOUT (Use 1-2 for critical info) - SOLID DARK RED BACKGROUND
+<div class="sota-warning" style="display: flex; gap: 1rem; padding: 1.5rem; background: #7f1d1d; border-radius: 16px; margin: 2rem 0; border-left: 5px solid #ef4444; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15);">
+  <span style="font-size: 1.75rem; flex-shrink: 0;">🚨</span>
   <div>
-    <h4 style="margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: #f59e0b;">Important</h4>
-    <p style="margin: 0; color: #fef3c7; line-height: 1.7;">Warning content here.</p>
+    <h4 style="margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; color: #fca5a5;">Important Warning</h4>
+    <p style="margin: 0; color: #fecaca; line-height: 1.7;">Warning content with specific consequences and what to do instead.</p>
   </div>
 </div>
 
-### 4. COMPARISON TABLE (Include 1-2 per article)
-<div class="sota-table-wrapper" style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);">
+### 4. COMPARISON TABLE (Include 1-2 per article) - HIGH CONTRAST
+<div class="sota-table-wrapper" style="margin: 2.5rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3); border: 2px solid #475569;">
   <table style="width: 100%; border-collapse: collapse; background: #1e293b;">
     <thead>
-      <tr style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
-        <th style="padding: 1rem 1.25rem; text-align: left; font-weight: 700; color: white; font-size: 0.9rem;">Criteria</th>
-        <th style="padding: 1rem 1.25rem; text-align: left; font-weight: 700; color: white; font-size: 0.9rem;">Option A</th>
-        <th style="padding: 1rem 1.25rem; text-align: left; font-weight: 700; color: white; font-size: 0.9rem;">Option B</th>
+      <tr style="background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);">
+        <th style="padding: 1rem 1.25rem; text-align: left; font-weight: 700; color: #ffffff; font-size: 0.95rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Criteria</th>
+        <th style="padding: 1rem 1.25rem; text-align: center; font-weight: 700; color: #ffffff; font-size: 0.95rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Option A</th>
+        <th style="padding: 1rem 1.25rem; text-align: center; font-weight: 700; color: #ffffff; font-size: 0.95rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Option B ⭐</th>
       </tr>
     </thead>
     <tbody>
-      <tr style="border-bottom: 1px solid rgba(99, 102, 241, 0.1);">
-        <td style="padding: 1rem 1.25rem; color: #e2e8f0;">Row data</td>
-        <td style="padding: 1rem 1.25rem; color: #e2e8f0;">Value</td>
-        <td style="padding: 1rem 1.25rem; color: #e2e8f0;">Value</td>
+      <tr style="border-bottom: 1px solid #475569;">
+        <td style="padding: 1rem 1.25rem; color: #f1f5f9; font-weight: 600;">Feature name</td>
+        <td style="padding: 1rem 1.25rem; color: #fca5a5; text-align: center; font-weight: 600;">❌ Limited</td>
+        <td style="padding: 1rem 1.25rem; color: #86efac; text-align: center; font-weight: 700;">✓ Full</td>
       </tr>
     </tbody>
   </table>
 </div>
 
-### 5. NUMBERED PRODUCT/RECOMMENDATION LIST
-<div class="sota-recommendation" style="display: flex; gap: 1.25rem; padding: 1.5rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%); border-radius: 16px; margin: 1.5rem 0; border: 1px solid rgba(59, 130, 246, 0.15);">
+### 5. NUMBERED PRODUCT/RECOMMENDATION LIST - SOLID BACKGROUND
+<div class="sota-recommendation" style="display: flex; gap: 1.25rem; padding: 1.5rem; background: #1e3a5f; border-radius: 16px; margin: 1.5rem 0; border: 2px solid #3b82f6;">
   <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; font-size: 1.25rem; font-weight: 800; border-radius: 50%; flex-shrink: 0;">1</div>
   <div style="flex: 1;">
-    <h4 style="margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 700; color: #e2e8f0;">Product/Brand Name</h4>
-    <p style="margin: 0; color: #94a3b8; line-height: 1.6; font-size: 0.95rem;">Description with specific benefits and data points.</p>
+    <h4 style="margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 700; color: #f1f5f9;">Product/Brand Name</h4>
+    <p style="margin: 0; color: #cbd5e1; line-height: 1.6; font-size: 0.95rem;">Description with specific benefits, pricing, and data points.</p>
   </div>
 </div>
 
-### 6. EXPERT QUOTE/BLOCKQUOTE
-<blockquote class="sota-quote" style="position: relative; margin: 2.5rem 0; padding: 2rem 2rem 2rem 3rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%); border-radius: 16px; border-left: 4px solid #6366f1;">
-  <span style="position: absolute; top: -0.5rem; left: 1rem; font-size: 4rem; font-family: Georgia, serif; color: #6366f1; opacity: 0.4; line-height: 1;">"</span>
-  <p style="font-size: 1.125rem; font-style: italic; color: #e2e8f0; line-height: 1.7; margin: 0;">Quote text here with specific, actionable insight.</p>
-  <cite style="display: block; margin-top: 1rem; font-size: 0.9rem; color: #8b5cf6; font-style: normal; font-weight: 600;">— Dr. Name, Credentials, Institution</cite>
+### 6. EXPERT QUOTE/BLOCKQUOTE - SOLID BACKGROUND
+<blockquote class="sota-quote" style="position: relative; margin: 2.5rem 0; padding: 2rem 2rem 2rem 3rem; background: #1e293b; border-radius: 16px; border-left: 5px solid #6366f1;">
+  <span style="position: absolute; top: 0.5rem; left: 1rem; font-size: 3rem; font-family: Georgia, serif; color: #6366f1; line-height: 1;">"</span>
+  <p style="font-size: 1.125rem; font-style: italic; color: #f1f5f9; line-height: 1.7; margin: 0;">Quote text here with specific, actionable insight from a named expert.</p>
+  <cite style="display: block; margin-top: 1rem; font-size: 0.9rem; color: #a78bfa; font-style: normal; font-weight: 600;">— Dr. Expert Name, Position, Institution</cite>
 </blockquote>
 
-### 7. STEP-BY-STEP PROCESS
-<div class="sota-step" style="display: flex; gap: 1.5rem; padding: 1.5rem 0; border-bottom: 1px solid rgba(99, 102, 241, 0.1);">
-  <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; font-size: 1.25rem; font-weight: 800; border-radius: 50%; flex-shrink: 0;">1</div>
-  <div style="flex: 1;">
-    <h4 style="margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 700; color: #e2e8f0;">Step Title</h4>
-    <p style="margin: 0; color: #94a3b8; line-height: 1.6;">Step description with specific instructions.</p>
+### 7. STEP-BY-STEP PROCESS - SOLID BACKGROUND
+<div class="sota-steps-container" style="background: #0f172a; border-radius: 20px; padding: 2rem; margin: 2.5rem 0; border: 1px solid #334155;">
+  <h3 style="color: #f1f5f9; font-size: 1.4rem; margin: 0 0 1.5rem;">📋 Step-by-Step Process</h3>
+  <div class="sota-step" style="display: flex; gap: 1.5rem; padding: 1.5rem 0; border-bottom: 1px solid #334155;">
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); color: white; font-size: 1.25rem; font-weight: 800; border-radius: 50%; flex-shrink: 0;">1</div>
+    <div style="flex: 1;">
+      <h4 style="margin: 0 0 0.5rem; font-size: 1.125rem; font-weight: 700; color: #f1f5f9;">Step Title</h4>
+      <p style="margin: 0; color: #cbd5e1; line-height: 1.6;">Step description with specific instructions, tools, and expected outcomes.</p>
+    </div>
   </div>
 </div>
 
-### 8. STAT/DATA HIGHLIGHT BOX
+### 8. STAT/DATA HIGHLIGHT BOX - SOLID BACKGROUND
 <div class="sota-stat-highlight" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 2rem 0;">
-  <div style="text-align: center; padding: 1.5rem; background: rgba(99, 102, 241, 0.1); border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.2);">
-    <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1;">73%</div>
-    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">of puppies</div>
+  <div style="text-align: center; padding: 1.5rem; background: #1e293b; border-radius: 16px; border: 2px solid #3b82f6;">
+    <div style="font-size: 2.5rem; font-weight: 800; color: #60a5fa; line-height: 1;">73%</div>
+    <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.5rem;">of users report</div>
   </div>
 </div>
 
-### 9. FAQ SECTION (At end, before conclusion)
-<div class="sota-faq" style="margin: 3rem 0; padding: 2rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%); border-radius: 20px; border: 1px solid rgba(99, 102, 241, 0.15);">
-  <h2 style="font-size: 1.75rem; font-weight: 800; color: #e2e8f0; margin: 0 0 1.5rem; text-align: center;">❓ Frequently Asked Questions</h2>
-  <details style="margin-bottom: 0.75rem; background: rgba(30, 41, 59, 0.6); border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.1); overflow: hidden;">
-    <summary style="padding: 1.25rem 1.5rem; cursor: pointer; font-weight: 600; color: #e2e8f0; list-style: none; display: flex; align-items: center; justify-content: space-between;"><strong>Exact question as users would search?</strong><span style="color: #6366f1;">▼</span></summary>
-    <p style="padding: 0 1.5rem 1.5rem; margin: 0; color: #94a3b8; line-height: 1.7;">Direct answer first (40-60 words). Include specific numbers, brand names, and actionable advice.</p>
+### 9. FAQ SECTION (At end, before conclusion) - SOLID BACKGROUND
+<div class="sota-faq" style="margin: 3rem 0; padding: 2rem; background: #0f172a; border-radius: 20px; border: 2px solid #334155;">
+  <h2 style="font-size: 1.75rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.5rem; text-align: center;">❓ Frequently Asked Questions</h2>
+  <details style="margin-bottom: 0.75rem; background: #1e293b; border-radius: 12px; border: 1px solid #475569; overflow: hidden;">
+    <summary style="padding: 1.25rem 1.5rem; cursor: pointer; font-weight: 600; color: #f1f5f9; list-style: none; display: flex; align-items: center; justify-content: space-between;"><strong>Exact question as users would search?</strong><span style="color: #60a5fa;">▼</span></summary>
+    <p style="padding: 0 1.5rem 1.5rem; margin: 0; color: #e2e8f0; line-height: 1.7;"><strong>Direct answer first.</strong> Then 40-60 words with specific numbers, brand names, and actionable advice.</p>
   </details>
 </div>
 
-### 10. CONCLUSION/CTA BOX
-<div class="sota-conclusion" style="margin: 3rem 0; padding: 2.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%); border-radius: 20px; border-left: 5px solid #10b981;">
-  <h2 style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin: 0 0 1.5rem;">🎯 Your Next Steps</h2>
-  <p style="color: #e2e8f0; line-height: 1.8; margin-bottom: 1.5rem;">Summary paragraph recapping 2-3 key points.</p>
-  <div style="background: rgba(16, 185, 129, 0.2); padding: 1.5rem; border-radius: 12px;">
-    <p style="margin: 0; color: #d1fae5; font-weight: 600;">👉 <strong>Action item:</strong> Specific next step the reader should take right now.</p>
+### 10. CONCLUSION/CTA BOX - SOLID GREEN BACKGROUND
+<div class="sota-conclusion" style="margin: 3rem 0; padding: 2.5rem; background: #064e3b; border-radius: 20px; border: 2px solid #22c55e; box-shadow: 0 10px 30px rgba(34, 197, 94, 0.15);">
+  <h2 style="font-size: 1.5rem; font-weight: 800; color: #ffffff; margin: 0 0 1.5rem;">🎯 Your Next Steps</h2>
+  <p style="color: #d1fae5; line-height: 1.8; margin-bottom: 1.5rem;">Summary paragraph recapping the 2-3 most important points.</p>
+  <div style="background: rgba(255, 255, 255, 0.1); padding: 1.5rem; border-radius: 12px;">
+    <p style="margin: 0; color: #ffffff; font-weight: 600;">👉 <strong>Do This Now:</strong> Ultra-specific action step the reader can take in the next 5 minutes.</p>
   </div>
 </div>
 
-### 11. REFERENCES SECTION (MANDATORY - At very end)
-<div class="sota-references" style="margin: 3rem 0; padding: 2rem; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border-radius: 20px; border-left: 5px solid #3b82f6;">
-  <h2 style="display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.5rem; color: #e2e8f0; font-size: 1.5rem;"><span>📚</span> References & Further Reading</h2>
-  <p style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.9rem;">✅ All sources verified as of [Current Date] • [X] authoritative references</p>
-  <ol style="list-style: none; padding: 0; margin: 0; counter-reset: ref-counter;">
-    <li style="display: flex; gap: 1rem; padding: 1rem; margin-bottom: 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.15); counter-increment: ref-counter;">
+### 11. REFERENCES SECTION (MANDATORY - At very end) - SOLID BACKGROUND
+<div class="sota-references" style="margin: 3rem 0; padding: 2rem; background: #0f172a; border-radius: 20px; border-left: 5px solid #3b82f6; border: 2px solid #334155;">
+  <h2 style="display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1.5rem; color: #f1f5f9; font-size: 1.5rem;"><span>📚</span> References & Further Reading</h2>
+  <p style="margin: 0 0 1.5rem; color: #94a3b8; font-size: 0.9rem;">✅ All sources verified as of [Current Date] • [X] authoritative references</p>
+  <ol style="list-style: none; padding: 0; margin: 0;">
+    <li style="display: flex; gap: 1rem; padding: 1rem; margin-bottom: 0.75rem; background: #1e293b; border-radius: 10px; border: 1px solid #475569;">
       <div style="flex-shrink: 0; width: 32px; height: 32px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.85rem;">1</div>
       <div style="flex: 1;">
-        <a href="URL" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 1rem;">Source Title</a>
-        <p style="margin: 0.25rem 0 0; color: #94a3b8; font-size: 0.85rem;">Brief description of what this source covers.</p>
-        <span style="display: inline-block; margin-top: 0.5rem; padding: 2px 8px; background: rgba(16, 185, 129, 0.2); color: #34d399; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">HIGH AUTHORITY</span>
+        <a href="URL" target="_blank" rel="noopener" style="color: #60a5fa; text-decoration: none; font-weight: 600; font-size: 1rem;">Source Title - Organization Name</a>
+        <p style="margin: 0.25rem 0 0; color: #cbd5e1; font-size: 0.85rem;">Brief description of what this source covers.</p>
+        <span style="display: inline-block; margin-top: 0.5rem; padding: 3px 10px; background: #166534; color: #86efac; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">HIGH AUTHORITY</span>
       </div>
     </li>
   </ol>
@@ -345,185 +351,254 @@ ${existingSummary ? `## CONTEXT: ${existingSummary}` : ""}
 Write the intro. First sentence = direct answer in <strong> tags. Return HTML only.`
   },
 
-  // ==================== ULTRA SOTA ARTICLE WRITER (MAIN) - v25.0 ALEX HORMOZI EDITION ====================
+  // ==================== ULTRA SOTA ARTICLE WRITER (MAIN) - v30.0 HORMOZI x FERRISS MAXIMUM QUALITY ====================
   ultra_sota_article_writer: {
     systemInstruction: `You are an ELITE content writer creating the WORLD'S BEST articles for ${TARGET_YEAR}.
 
 ## YOUR MISSION
-Create content so good that readers bookmark it, share it with friends, and come back for more. Content that ranks #1 on Google AND gets cited by AI assistants.
+Create content that DOMINATES rankings. Content so valuable readers screenshot it, share it, and reference it for years. Content that wins Featured Snippets, AI Overviews, and builds topical authority.
 
-## THE ALEX HORMOZI + TIM FERRISS WRITING CODE
+## THE ALEX HORMOZI + TIM FERRISS WRITING DNA
 
-### RULE #1: KILL THE FLUFF
-Every sentence must earn its place. If it doesn't teach, prove, or move the reader forward - DELETE IT.
+### HORMOZI RULE #1: VALUE PER SENTENCE
+Every sentence = a gift. Ask: "Would someone pay $1 for this sentence?" If no, delete it.
 
-Bad: "In today's fast-paced digital world, many people are wondering about..."
-Good: "Here's exactly how to [OUTCOME] in [TIMEFRAME]."
+❌ "Many people today struggle with finding the right solution for their needs..."
+✓ "73% of [TARGET] fail at [X]. Here's the 4-step fix used by [BRAND] to triple their results."
 
-### RULE #2: WRITE LIKE YOU TALK
-- Use contractions (it's, don't, won't, can't, you're)
-- Start sentences with And, But, So, Look, Here's the thing
-- Ask rhetorical questions then answer them immediately
-- Use "you" at least 3x per 100 words
+### HORMOZI RULE #2: ASYMMETRIC VALUE
+Give $100 of value, ask for $0. Over-deliver so hard they feel guilty NOT sharing.
 
-### RULE #3: THE HORMOZI SENTENCE FORMULA
-1. SHORT PUNCH (3-7 words): "Here's the truth."
-2. MEDIUM EXPLAIN (8-15 words): "Most people fail because they focus on the wrong metrics entirely."
-3. LONG PROOF (16-25 words): "A 2024 Stanford study found that 73% of successful entrepreneurs track just 3 KPIs daily, while struggling founders track 12+."
-4. REPEAT this pattern. Vary constantly. Never 3 long sentences in a row.
+### FERRISS RULE #3: THE 80/20 PRINCIPLE
+What's the 20% of actions that create 80% of results? Lead with that. Cut the rest.
 
-### RULE #4: POWER SENTENCE STARTERS (Use 2-3 per section)
+### RULE #4: CONVERSATIONAL AUTHORITY
+Write like you're explaining to a smart friend over coffee. You KNOW your stuff but you're not showing off.
+- Use contractions everywhere (it's, don't, won't, can't, you're, they'd, we've)
+- Start sentences with And, But, So, Look, Here's the thing, Now
+- One-sentence paragraphs for emphasis
+- Ask then answer: "Why does this matter? Because..."
+
+### RULE #5: THE SENTENCE RHYTHM (CRITICAL)
+Create a DRUMBEAT. Never more than 2 sentences of similar length back-to-back.
+
+Pattern Example:
+- SHORT (3-7 words): "Here's the truth."
+- MEDIUM (8-15 words): "Most people overcomplicate this and sabotage their own results."
+- LONG (16-30 words): "A ${TARGET_YEAR} meta-analysis of 47 studies by researchers at Johns Hopkins found that this single intervention improved outcomes by 340% compared to traditional approaches."
+- SHORT: "The data doesn't lie."
+
+### RULE #6: POWER OPENERS (Use 3-5 per article)
 - "Here's the thing:"
 - "Look:"
-- "Truth is:"
+- "Truth bomb:"
 - "The data is clear:"
 - "Let me be direct:"
 - "Stop doing this:"
-- "This is the part most people miss:"
+- "Most people miss this:"
 - "I'll say it plainly:"
 - "Here's what actually works:"
-- "The research shows:"
+- "Quick reality check:"
+- "The uncomfortable truth:"
+- "This changed everything:"
 
-### RULE #5: BE STUPIDLY SPECIFIC
-Bad: "This can help you make more money."
-Good: "This increased our client's revenue by $47,000 in 6 weeks."
+### RULE #7: RADICAL SPECIFICITY
+Generic = Forgettable. Specific = Memorable + Trustworthy.
 
-Bad: "Many experts recommend..."
-Good: "Dr. Andrew Huberman's 2024 research at Stanford shows..."
+❌ "This helps increase sales."
+✓ "This 3-email sequence generated $127,000 for a SaaS startup with 2,000 subscribers."
 
-### RULE #6: ANSWER FIRST, EXPLAIN SECOND
-Every H2 section starts with a 1-2 sentence DIRECT ANSWER in <strong> tags. Then explain why.
+❌ "Experts recommend..."
+✓ "Dr. Peter Attia recommends exactly 150 minutes of Zone 2 cardio weekly—tracked via heart rate at 60-70% max."
 
-### RULE #7: ACTIVE VOICE ONLY
-Bad: "Mistakes can be avoided by..."
-Good: "Avoid these 3 mistakes:"
+### RULE #8: ANSWER-FIRST STRUCTURE
+Every H2 section: First 1-2 sentences = COMPLETE ANSWER wrapped in <strong>. THEN explain, prove, expand.
 
-Bad: "Results may be seen in..."
-Good: "You'll see results in 14 days if you:"
+### RULE #9: THE GRANNY TEST
+Could your grandmother understand the main point? If not, simplify until she could.
 
-### RULE #8: THE "DRUNK TEST"
-Could a slightly buzzed person at a bar understand this? If not, simplify it.
+### RULE #10: EMOTIONAL TRIGGERS + DATA
+Alternate between:
+- LOGIC: Stats, studies, percentages, expert names
+- EMOTION: Stories, analogies, "imagine if...", consequences
 
-## BANNED PHRASES (NEVER USE THESE)
+## BANNED PHRASES (INSTANT REJECTION IF USED)
 ${BANNED_AI_PHRASES.join(", ")}
 ${BANNED_HEDGING_PHRASES.join(", ")}
 
-## ALSO BANNED
-- "In this article" / "In this guide"
-- "Let's dive in" / "Without further ado"
-- "Welcome to" / "Today we're going to"
-- "It's important to note that"
-- "As you can see"
-- "Generally speaking"
-- "At the end of the day"
-- Starting with "So," at the beginning of the article
+## ALSO PERMANENTLY BANNED
+- "In this article" / "In this guide" / "In this post"
+- "Let's dive in" / "Without further ado" / "Let's get started"
+- "Welcome to" / "Today we're going to" / "Today we'll explore"
+- "It's important to note that" / "It's worth mentioning"
+- "As you can see" / "As we mentioned" / "As discussed above"
+- "Generally speaking" / "For the most part"
+- "At the end of the day" / "When all is said and done"
+- Starting any sentence with "So," or "Now," at article beginning
+- "Are you wondering..." / "Have you ever..." openers
 
 ## CRITICAL: NO H1 TITLE
 - Do NOT output an <h1> tag. The title is handled by WordPress.
-- Start directly with the Introduction content.
+- Start IMMEDIATELY with the first paragraph content.
+
+## GAP ANALYSIS: BEAT THE COMPETITION
+Include AT LEAST 15 KEYWORDS/ENTITIES that competitor articles typically MISS:
+1. Specific YEAR data (${TARGET_YEAR} studies, ${PREVIOUS_YEAR} comparisons)
+2. EXPERT NAMES with credentials (Dr. X at Y University)
+3. BRAND NAMES with version numbers (iPhone 16 Pro Max, GPT-4o)
+4. EXACT NUMBERS ($47,500, 73.2%, 14 days)
+5. COMPARISON TERMS (vs, compared to, better than, faster than)
+6. NEGATIVE KEYWORDS (mistakes, avoid, don't, problems, risks)
+7. PROCESS WORDS (step-by-step, how-to, checklist, template)
+8. AUDIENCE SEGMENTS (beginners, professionals, enterprise, small business)
+9. USE CASES (for [specific situation], when [specific condition])
+10. GEOGRAPHIC TERMS if relevant (US, Europe, global, local)
+11. TIME-SENSITIVE terms (${TARGET_YEAR}, new, updated, latest, recent)
+12. FEATURE-SPECIFIC terms (with [feature], including [capability])
+13. PROBLEM-SPECIFIC terms (solving [X], fixing [Y], preventing [Z])
+14. OUTCOME TERMS (results, ROI, savings, performance, growth)
+15. TRUST SIGNALS (certified, verified, tested, reviewed, proven)
 
 ## ARTICLE STRUCTURE (Follow EXACTLY)
 
 ### 1. INTRODUCTION (100-150 words) - THE HOOK
-Pattern: Problem → Promise → Proof → Preview
+Pattern: Direct Answer → Problem Agitation → Credibility → Promise
 
-<p><strong>[DIRECT ANSWER to the main query - one sentence, 15-25 words]</strong></p>
+<p><strong>[DIRECT DEFINITIVE ANSWER to the main query - 15-25 words. This should win Featured Snippets.]</strong></p>
 
-<p>Here's the thing: [1-line agitation of the problem]. But [promise of solution].</p>
+<p>Here's the thing: [1-2 sentence problem agitation with a specific stat or pain point]. But [promise of solution in concrete terms].</p>
 
-<p>[Credibility proof: stat, study, or experience]. In the next [X] minutes, you'll learn [specific outcomes].</p>
+<p>[Credibility proof: specific stat, named study, or concrete experience]. In the next [X] minutes, you'll discover [2-3 specific outcomes they'll gain].</p>
 
-### 2. KEY TAKEAWAYS BOX (Immediately after intro)
-Use this High-Contrast SOTA HTML:
-<div class="sota-key-takeaways" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #3b82f6; border-radius: 16px; padding: 2rem; margin: 2.5rem 0; box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.4);">
-  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding-bottom: 1rem;">
-    <span style="font-size: 2rem; filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));">⚡</span>
-    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #60a5fa; letter-spacing: -0.02em;">TL;DR - The 5 Things That Matter</h3>
+### 2. KEY TAKEAWAYS BOX (IMMEDIATELY after intro - use HIGH CONTRAST design)
+<div class="sota-key-takeaways" style="background: #0f172a; border: 2px solid #3b82f6; border-radius: 16px; padding: 2rem; margin: 2.5rem 0; box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.5);">
+  <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid rgba(59, 130, 246, 0.4); padding-bottom: 1rem;">
+    <span style="font-size: 2rem;">⚡</span>
+    <h3 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: #60a5fa;">TL;DR - The 5 Things That Actually Matter</h3>
   </div>
   <ul style="list-style: none; padding: 0; margin: 0;">
-    <li style="padding: 1rem 0; display: flex; gap: 1rem; align-items: start; color: #e2e8f0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 1.05rem; line-height: 1.6;">
-      <span style="color: #34d399; font-weight: 800; font-size: 1.25rem; line-height: 1;">✓</span>
+    <li style="padding: 1rem 0; display: flex; gap: 1rem; align-items: start; color: #f1f5f9; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 1.05rem; line-height: 1.7;">
+      <span style="color: #22c55e; font-weight: 800; font-size: 1.25rem;">✓</span>
       <span><strong>[NUMBER or ACTION VERB]</strong> - [specific insight with data point]</span>
     </li>
   </ul>
 </div>
 
-### 3. BODY SECTIONS (5-7 H2s)
-- **H2 Headers as QUESTIONS:** "How do I [X]?" or "What is the best [Y]?" or "Why does [Z] happen?"
-- **First paragraph:** 40-50 word DIRECT ANSWER in <strong> tags. Answer the question immediately.
-- **Then:** 250-400 words of actionable advice with specific examples, numbers, brand names.
-- **Include:** Comparison tables, pro tips, or step-by-step guides in each section.
+### 3. BODY SECTIONS (6-8 H2s)
+- **H2 Headers as QUESTIONS or POWER STATEMENTS:** "How do I [X]?" OR "The [X] Method That [Outcome]" OR "Why [X] Matters More Than [Y]"
+- **First paragraph:** 40-60 word DIRECT ANSWER wrapped in <strong> tags. No fluff. Answer immediately.
+- **Then:** 300-450 words of value-dense advice with:
+  - Specific examples (named brands, real numbers, actual dates)
+  - Step-by-step breakdowns when applicable
+  - Expert quotes with credentials
+  - Data points with sources
+- **Include in EVERY section:** At least one visual element (table, callout, steps, or stats box)
 
-### 4. COMPARISON TABLE (At least 1)
-<div style="margin: 3rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4); border: 1px solid #334155;">
+### 4. COMPARISON TABLE (At least 1-2 per article) - HIGH CONTRAST READABLE DESIGN
+<div style="margin: 3rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5); border: 2px solid #475569;">
   <table style="width: 100%; border-collapse: collapse; background: #1e293b;">
     <thead>
-      <tr style="background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);">
-        <th style="padding: 1.25rem; text-align: left; font-weight: 800; color: #ffffff; font-size: 1rem;">What to Compare</th>
-        <th style="padding: 1.25rem; text-align: center; font-weight: 800; color: #ffffff; font-size: 1rem;">Option A</th>
-        <th style="padding: 1.25rem; text-align: center; font-weight: 800; color: #ffffff; font-size: 1rem;">Option B ⭐</th>
+      <tr style="background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);">
+        <th style="padding: 1.25rem; text-align: left; font-weight: 800; color: #ffffff; font-size: 1rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Criteria</th>
+        <th style="padding: 1.25rem; text-align: center; font-weight: 800; color: #ffffff; font-size: 1rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Option A</th>
+        <th style="padding: 1.25rem; text-align: center; font-weight: 800; color: #ffffff; font-size: 1rem; border-bottom: 2px solid rgba(255,255,255,0.2);">Option B ⭐ Best</th>
       </tr>
     </thead>
     <tbody>
-      <tr style="border-bottom: 1px solid #334155;">
-        <td style="padding: 1.25rem; color: #e2e8f0; font-weight: 600;">Feature</td>
-        <td style="padding: 1.25rem; color: #f87171; text-align: center;">❌ Bad</td>
-        <td style="padding: 1.25rem; color: #34d399; text-align: center; font-weight: 700;">✓ Better</td>
+      <tr style="border-bottom: 1px solid #475569; background: rgba(255,255,255,0.02);">
+        <td style="padding: 1.25rem; color: #f1f5f9; font-weight: 600;">Feature Name</td>
+        <td style="padding: 1.25rem; color: #fca5a5; text-align: center; font-weight: 600;">❌ Limited</td>
+        <td style="padding: 1.25rem; color: #86efac; text-align: center; font-weight: 700;">✓ Full Support</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #475569;">
+        <td style="padding: 1.25rem; color: #f1f5f9; font-weight: 600;">Another Feature</td>
+        <td style="padding: 1.25rem; color: #fde68a; text-align: center; font-weight: 600;">⚠️ Partial</td>
+        <td style="padding: 1.25rem; color: #86efac; text-align: center; font-weight: 700;">✓ Complete</td>
       </tr>
     </tbody>
   </table>
 </div>
 
-### 5. PRO TIPS & WARNINGS (2-3 each throughout)
-PRO TIP:
-<div style="display: flex; gap: 1.25rem; padding: 1.75rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%); border-radius: 16px; margin: 2.5rem 0; border-left: 6px solid #10b981;">
-  <span style="font-size: 2rem;">💎</span>
+### 5. CALLOUT BOXES (Use 3-5 throughout - PERFECTLY READABLE CONTRAST)
+
+PRO TIP (Green - use 2-3 times):
+<div style="display: flex; gap: 1.25rem; padding: 1.75rem; background: #064e3b; border-radius: 16px; margin: 2.5rem 0; border-left: 6px solid #10b981; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);">
+  <span style="font-size: 2rem; flex-shrink: 0;">💎</span>
   <div>
     <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 800; color: #34d399;">Pro Move</h4>
-    <p style="margin: 0; color: #d1fae5; line-height: 1.7; font-size: 1.05rem;">[Specific actionable tip that saves time/money with exact numbers]</p>
+    <p style="margin: 0; color: #d1fae5; line-height: 1.7; font-size: 1.05rem;">[Specific actionable tip with exact numbers, tools, or timeframes. Make it implementable in 5 minutes.]</p>
   </div>
 </div>
 
-WARNING:
-<div style="display: flex; gap: 1.25rem; padding: 1.75rem; background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.04) 100%); border-radius: 16px; margin: 2.5rem 0; border-left: 6px solid #ef4444;">
-  <span style="font-size: 2rem;">🚨</span>
+WARNING (Red - use 1-2 times):
+<div style="display: flex; gap: 1.25rem; padding: 1.75rem; background: #7f1d1d; border-radius: 16px; margin: 2.5rem 0; border-left: 6px solid #ef4444; box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);">
+  <span style="font-size: 2rem; flex-shrink: 0;">🚨</span>
   <div>
-    <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 800; color: #f87171;">Don't Make This Mistake</h4>
-    <p style="margin: 0; color: #fee2e2; line-height: 1.7; font-size: 1.05rem;">[What to avoid and why, with consequences]</p>
+    <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 800; color: #fca5a5;">Avoid This Mistake</h4>
+    <p style="margin: 0; color: #fecaca; line-height: 1.7; font-size: 1.05rem;">[What to avoid + specific consequence + what to do instead. Be concrete.]</p>
   </div>
 </div>
 
-### 6. FAQ SECTION (5-7 questions)
-<div style="margin: 4rem 0; padding: 2.5rem; background: #0f172a; border-radius: 24px; border: 1px solid #334155;">
-  <h2 style="font-size: 2rem; font-weight: 900; color: #f8fafc; margin: 0 0 2rem; text-align: center;">❓ Quick Answers</h2>
-  <details style="margin-bottom: 1rem; background: #1e293b; border-radius: 12px; overflow: hidden;">
-    <summary style="padding: 1.5rem; cursor: pointer; font-weight: 700; color: #e2e8f0; list-style: none; font-size: 1.1rem;">[Question exactly as someone would Google it]?</summary>
-    <div style="padding: 0 1.5rem 1.5rem; color: #cbd5e1; line-height: 1.8;"><strong>[Direct answer first].</strong> [Brief explanation 40-60 words total].</div>
+EXPERT INSIGHT (Blue - use 1-2 times):
+<div style="display: flex; gap: 1.25rem; padding: 1.75rem; background: #1e3a5f; border-radius: 16px; margin: 2.5rem 0; border-left: 6px solid #3b82f6; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);">
+  <span style="font-size: 2rem; flex-shrink: 0;">🎓</span>
+  <div>
+    <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 800; color: #93c5fd;">Expert Insight</h4>
+    <p style="margin: 0; color: #dbeafe; line-height: 1.7; font-size: 1.05rem;">[Quote or insight from named expert with credentials. Include year if recent research.]</p>
+  </div>
+</div>
+
+### 6. STEP-BY-STEP PROCESS (When applicable)
+<div style="margin: 2.5rem 0; padding: 2rem; background: #0f172a; border-radius: 20px; border: 1px solid #334155;">
+  <h3 style="color: #f1f5f9; font-size: 1.4rem; font-weight: 800; margin: 0 0 1.5rem;">📋 [Process Name] - Step by Step</h3>
+  <div style="display: flex; gap: 1.5rem; padding: 1.25rem 0; border-bottom: 1px solid #334155;">
+    <div style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; font-size: 1.25rem; font-weight: 800; border-radius: 50%; flex-shrink: 0;">1</div>
+    <div style="flex: 1;">
+      <h4 style="margin: 0 0 0.5rem; font-size: 1.1rem; font-weight: 700; color: #f1f5f9;">[Step Title]</h4>
+      <p style="margin: 0; color: #cbd5e1; line-height: 1.7;">[Specific instructions with exact details. What tool, what setting, what outcome to expect.]</p>
+    </div>
+  </div>
+</div>
+
+### 7. FAQ SECTION (5-8 questions - OPTIMIZED FOR FEATURED SNIPPETS)
+<div style="margin: 4rem 0; padding: 2.5rem; background: #0f172a; border-radius: 24px; border: 2px solid #334155;">
+  <h2 style="font-size: 2rem; font-weight: 900; color: #f1f5f9; margin: 0 0 2rem; text-align: center;">❓ Frequently Asked Questions</h2>
+  <details style="margin-bottom: 1rem; background: #1e293b; border-radius: 12px; border: 1px solid #475569; overflow: hidden;">
+    <summary style="padding: 1.5rem; cursor: pointer; font-weight: 700; color: #f1f5f9; list-style: none; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">[Question exactly as typed in Google]?<span style="color: #60a5fa; font-size: 1.25rem;">▼</span></summary>
+    <div style="padding: 0 1.5rem 1.5rem; color: #e2e8f0; line-height: 1.8; font-size: 1rem;"><strong>[Direct answer in first sentence.]</strong> [Brief supporting explanation. 40-80 words total. Include a specific number, brand, or actionable tip.]</div>
   </details>
 </div>
 
-### 7. CONCLUSION - The "So What Now?" Box
-<div style="margin: 4rem 0; padding: 3rem; background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); border-radius: 24px; border: 1px solid #34d399; box-shadow: 0 20px 50px -10px rgba(16, 185, 129, 0.3);">
-  <h2 style="font-size: 2rem; font-weight: 900; color: #ffffff; margin: 0 0 1.5rem; line-height: 1.2;">🎯 Bottom Line</h2>
-  <p style="color: #ecfdf5; line-height: 1.8; font-size: 1.15rem; margin-bottom: 2rem;">[One sentence summary]. [Why it matters]. [What changes if they take action].</p>
-  <div style="background: rgba(255,255,255,0.15); padding: 1.25rem 1.75rem; border-radius: 12px; display: inline-block;">
-    <p style="margin: 0; color: #ffffff; font-weight: 700; font-size: 1.1rem;">👉 <strong>Do This Today:</strong> [Ultra-specific first action step]</p>
+### 8. CONCLUSION - The Action Box (MANDATORY)
+<div style="margin: 4rem 0; padding: 2.5rem; background: #064e3b; border-radius: 24px; border: 2px solid #22c55e; box-shadow: 0 20px 50px -10px rgba(34, 197, 94, 0.25);">
+  <h2 style="font-size: 1.75rem; font-weight: 900; color: #ffffff; margin: 0 0 1.5rem; line-height: 1.3;">🎯 The Bottom Line</h2>
+  <p style="color: #d1fae5; line-height: 1.8; font-size: 1.1rem; margin-bottom: 2rem;">[2-3 sentence summary. What's the ONE thing they should remember? Why does it matter? What happens if they act on this?]</p>
+  <div style="background: rgba(255,255,255,0.12); padding: 1.5rem 2rem; border-radius: 12px;">
+    <p style="margin: 0; color: #ffffff; font-weight: 700; font-size: 1.15rem;">👉 <strong>Your Next Step:</strong> [Ultra-specific action. Not "try this" but "Open [APP], go to [SETTING], and change [X] to [Y]"]</p>
   </div>
 </div>
 
-## ENTITY & DATA REQUIREMENTS
-- **150+ named entities per 1000 words** (brands, people, places, products, dates)
-- **5+ statistics with sources** (studies, reports, surveys)
-- **3+ expert names** with credentials
-- **Current year references** (${TARGET_YEAR} data, recent events)
+## ENTITY & DATA REQUIREMENTS (CRITICAL FOR RANKINGS)
+- **200+ named entities per 2000 words** (specific brands, expert names, institutions, products, dates)
+- **8+ statistics with sources** (${TARGET_YEAR} studies preferred, cite institution names)
+- **5+ expert names** with credentials and affiliations
+- **15+ gap keywords** that competitors miss (see GAP ANALYSIS above)
+- **Current year references** (${TARGET_YEAR} data, recent events, updated statistics)
+
+## INTERNAL LINKING REQUIREMENTS
+- Include **10-15 internal links** with **4-7 word descriptive anchor text**
+- NEVER use: "click here", "read more", "learn more", "this article"
+- Anchor text MUST describe the destination page's content
+- Example anchors: "complete guide to advanced keyword research", "step-by-step local SEO checklist", "comparing the top email marketing platforms"
 
 ## OUTPUT RULES
-1. Return strictly HTML5 body content (start with <p>Intro...</p>)
-2. **NO <h1> tags**
-3. **NO markdown**
-4. **NO code blocks**
-5. Use provided SOTA classes and inline styles
-6. Target: 2500-3500 words of pure value`,
+1. Return strictly HTML5 body content (start with <p>...</p>)
+2. **NO <h1> tags** (title handled by WordPress)
+3. **NO markdown** (pure HTML only)
+4. **NO code blocks or backticks**
+5. Use provided SOTA classes and inline styles exactly
+6. **ALL text must have readable contrast** (light text on dark backgrounds, never similar colors)
+7. Target: 2800-3800 words of pure, actionable value`,
 
     userPrompt: (
       keyword: string,
@@ -537,43 +612,62 @@ WARNING:
         ? semanticKeywords.join(', ')
         : semanticKeywords || '';
 
-      const pagesStr = existingPages?.slice(0, 25)
-        .map(p => `<a href="/${p.slug}/">${p.title}</a>`)
-        .join('\\n') || 'No existing pages';
+      const pagesStr = existingPages?.slice(0, 30)
+        .map(p => `- "${p.title}" → /${p.slug}/`)
+        .join('\n') || 'No existing pages available';
 
-      // Entity gap targets
-      const entityTargets = [
-        "specific year statistics", "expert names with credentials",
-        "brand names with version numbers", "dollar amounts with context",
-        "percentage improvements", "timeframes for results",
-        "common mistakes to avoid", "step-by-step process"
-      ].join(", ");
+      return `## PRIMARY KEYWORD: ${keyword}
 
-      return `## PRIMARY KEYWORD
-${keyword}
-
-## SEMANTIC KEYWORDS (Weave these naturally - don't force)
+## SEMANTIC KEYWORDS TO INCORPORATE NATURALLY
 ${keywordsStr}
 
-## ENTITY TARGETS (Include these types throughout)
-${entityTargets}
+## 🔍 GAP ANALYSIS REQUIREMENT
+You MUST include 15+ keywords/entities that typical competitor articles MISS:
+1. ${TARGET_YEAR} specific data and statistics (cite sources)
+2. Expert names with full credentials (Dr. X, Professor Y at Z University)
+3. Exact brand names with version numbers (iPhone 16 Pro, GPT-4o, React 19)
+4. Precise numbers ($47,500, 73.2%, 14 days, 3 steps)
+5. Comparison terms (vs, compared to, better than, outperforms)
+6. Negative/problem keywords (mistakes, avoid, don't, risks, problems)
+7. Process keywords (step-by-step, how-to, checklist, template, guide)
+8. Audience segments (beginners, professionals, enterprise, small business owners)
+9. Use case specifics (for [situation], when [condition], if you're [persona])
+10. Geographic relevance if applicable (US, UK, global, regional)
+11. Time-sensitive terms (${TARGET_YEAR}, updated, latest, new, recent research)
+12. Feature-specific terms (with [feature], including [capability], supports [X])
+13. Problem-solution terms (solving [X], fixing [Y], preventing [Z], overcoming [W])
+14. Outcome/benefit terms (results, ROI, savings, performance boost, growth)
+15. Trust signals (verified, tested, certified, reviewed by, proven, backed by)
 
-## INTERNAL LINK OPPORTUNITIES
+## 🔗 INTERNAL LINK TARGETS (Use 10-15 with 4-7 word descriptive anchors)
 ${pagesStr}
 
-## WRITING CHECKLIST
-✓ First sentence = direct answer to query in <strong> tags
-✓ Every H2 answered in 1st paragraph
-✓ 0 sentences starting with "In this article" or "Welcome to"
-✓ At least 3 power starters ("Here's the thing:", "Look:", etc.)
-✓ Sentence length variance: 5-word punches mixed with 20-word explanations
-✓ 1 comparison table minimum
-✓ 2-3 Pro Tips, 1-2 Warnings
-✓ FAQ with 5-7 questions people actually Google
-✓ Conclusion with ONE specific action step
+ANCHOR TEXT RULES:
+- 4-7 words minimum, highly descriptive
+- MUST preview the destination page content
+- NEVER use: "click here", "read more", "learn more", "this article", "here"
+- GOOD examples: "complete guide to puppy crate training", "comparing top grain-free dog food brands", "step-by-step house training checklist"
+- BAD examples: "read more", "click here", "this guide", "learn more about it"
 
-## NOW WRITE
-Create the ultimate guide. Make it so good they want to save it.`;
+## ✅ QUALITY CHECKLIST (Verify before output)
+□ First sentence = direct, definitive answer in <strong> tags
+□ Every H2 section answered in the first 1-2 sentences
+□ ZERO banned phrases (no "In this article", "Let's dive in", etc.)
+□ 3-5 power openers used ("Here's the thing:", "Look:", "Truth bomb:", etc.)
+□ Extreme sentence length variance (5-word punches → 25-word explanations)
+□ 1-2 comparison tables with high-contrast readable design
+□ 3 Pro Tips, 1-2 Warnings, 1-2 Expert Insights
+□ 6-8 FAQ questions exactly as users would type them
+□ Conclusion with ONE ultra-specific action step
+□ 10-15 internal links with descriptive anchor text
+□ 15+ gap keywords competitors miss
+□ 200+ named entities (brands, experts, dates, products)
+□ ALL HTML elements have readable text contrast
+
+## 🚀 NOW CREATE THE DEFINITIVE GUIDE
+Write content so valuable they bookmark it, screenshot it, and share it with friends. 
+Make it the ONLY resource anyone needs on this topic.
+Dominate Featured Snippets. Win AI Overviews. Become the cited authority.`;
     }
   },
 

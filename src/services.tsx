@@ -747,71 +747,151 @@ export const generateEnhancedInternalLinks = async (
   };
 };
 
-// ENHANCED: Better anchor text generation for rich, contextual links
+// ULTRA ENHANCED: Enterprise-grade anchor text generation for maximum SEO value
 function findContextualAnchorEnhanced(paragraphText: string, page: SitemapPage): AnchorCandidate | null {
   const words = paragraphText.split(/\s+/).filter(w => w.length > 0);
-  if (words.length < 5) return null;
+  if (words.length < 6) return null;
 
   const pageTitle = (page.title || '').toLowerCase();
   const titleWords = pageTitle
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter(w => w.length > 3);
+    .filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'that', 'this', 'from', 'your', 'what', 'how'].includes(w));
 
-  // Also consider slug words for matching
   const slugWords = (page.slug || '')
     .replace(/[-_]/g, ' ')
     .toLowerCase()
     .split(/\s+/)
-    .filter(w => w.length > 3);
+    .filter(w => w.length > 2);
 
   const allTargetWords = [...new Set([...titleWords, ...slugWords])];
+  
+  // Extract key topic phrases from title for better matching
+  const titlePhrases: string[] = [];
+  if (titleWords.length >= 2) {
+    for (let i = 0; i < titleWords.length - 1; i++) {
+      titlePhrases.push(titleWords.slice(i, i + 2).join(' '));
+      if (i < titleWords.length - 2) {
+        titlePhrases.push(titleWords.slice(i, i + 3).join(' '));
+      }
+    }
+  }
 
   let bestCandidate: AnchorCandidate | null = null;
   let highestScore = 0;
 
-  // Search for 3-7 word phrases that match the target page
-  for (let phraseLen = 3; phraseLen <= 7; phraseLen++) {
+  // PRIORITY 1: Search for 4-7 word phrases (optimal for SEO)
+  for (let phraseLen = 4; phraseLen <= 7; phraseLen++) {
     for (let i = 0; i <= words.length - phraseLen; i++) {
       const phraseWords = words.slice(i, i + phraseLen);
-      const phrase = phraseWords.join(' ').replace(/[.,!?;:'"()]/g, '').trim();
+      const phrase = phraseWords.join(' ').replace(/[.,!?;:'"()[\]{}]/g, '').trim();
 
-      if (phrase.length < 12 || phrase.length > 60) continue;
+      if (phrase.length < 15 || phrase.length > 70) continue;
 
       const phraseLower = phrase.toLowerCase();
       let score = 0;
 
-      // Score based on matching words
+      // CRITICAL: Check for banned/generic anchors FIRST
+      const bannedTerms = [
+        'click here', 'read more', 'learn more', 'this article', 'check out',
+        'click', 'here', 'this guide', 'this post', 'read this', 'see more',
+        'find out', 'discover more', 'more information', 'more details'
+      ];
+      if (bannedTerms.some(t => phraseLower.includes(t) || phraseLower === t)) continue;
+
+      // Score based on matching words with target page
       let matchedWords = 0;
+      let matchedImportantWords = 0;
       for (const targetWord of allTargetWords) {
         if (phraseLower.includes(targetWord)) {
           matchedWords++;
-          score += 0.2;
+          if (targetWord.length > 4) matchedImportantWords++;
+          score += 0.25;
         }
       }
 
       if (matchedWords === 0) continue;
 
-      // Bonus for multiple word matches
-      if (matchedWords >= 2) score += 0.25;
-      if (matchedWords >= 3) score += 0.25;
+      // BONUS: Matching title phrases (very strong signal)
+      for (const titlePhrase of titlePhrases) {
+        if (phraseLower.includes(titlePhrase)) {
+          score += 0.5;
+          break;
+        }
+      }
 
-      // Optimal length bonus (4-6 words ideal for SEO)
-      if (phraseWords.length >= 4 && phraseWords.length <= 6) score += 0.3;
+      // BONUS: Multiple word matches indicate high relevance
+      if (matchedWords >= 2) score += 0.3;
+      if (matchedWords >= 3) score += 0.4;
+      if (matchedImportantWords >= 2) score += 0.3;
 
-      // Penalize generic/banned phrases
-      const bannedTerms = ['click here', 'read more', 'learn more', 'this article', 'check out', 'click', 'here'];
-      if (bannedTerms.some(t => phraseLower.includes(t))) score -= 1.0;
+      // BONUS: Optimal phrase length (4-6 words ideal)
+      if (phraseWords.length >= 4 && phraseWords.length <= 6) score += 0.35;
 
-      // Bonus for action-oriented anchors
-      const actionWords = ['how to', 'guide to', 'best', 'top', 'tips for', 'ways to', 'complete', 'ultimate'];
-      if (actionWords.some(t => phraseLower.includes(t))) score += 0.15;
+      // BONUS: Descriptive action-oriented anchors
+      const descriptivePatterns = [
+        'how to', 'guide to', 'best', 'top', 'tips for', 'ways to',
+        'complete', 'ultimate', 'step by step', 'comparing', 'choosing',
+        'finding', 'understanding', 'selecting', 'benefits of', 'importance of',
+        'essential', 'proven', 'effective', 'advanced', 'beginner'
+      ];
+      if (descriptivePatterns.some(t => phraseLower.includes(t))) score += 0.3;
 
-      // Bonus for starting with strong words
-      const strongStarts = ['choosing', 'finding', 'understanding', 'selecting', 'best', 'top', 'complete'];
-      if (strongStarts.some(t => phraseLower.startsWith(t))) score += 0.1;
+      // BONUS: Starts with strong descriptive words
+      const strongStarters = [
+        'choosing', 'finding', 'understanding', 'selecting', 'best', 'top',
+        'complete', 'ultimate', 'essential', 'proven', 'effective', 'comparing',
+        'how', 'why', 'when', 'what', 'guide', 'tips', 'strategies'
+      ];
+      const firstWord = phraseWords[0].toLowerCase().replace(/[^a-z]/g, '');
+      if (strongStarters.includes(firstWord)) score += 0.2;
 
-      if (score > highestScore && score >= 0.4) {
+      // BONUS: Contains topic-specific terms
+      const topicTerms = ['training', 'guide', 'review', 'comparison', 'tutorial', 'checklist', 'template', 'strategy', 'method', 'technique', 'system', 'approach'];
+      if (topicTerms.some(t => phraseLower.includes(t))) score += 0.15;
+
+      // PENALTY: Too generic or vague
+      const vagueTerms = ['things', 'stuff', 'something', 'anything', 'everything', 'information', 'details'];
+      if (vagueTerms.some(t => phraseLower.includes(t))) score -= 0.3;
+
+      // PENALTY: Starts with weak words
+      const weakStarters = ['a', 'an', 'the', 'it', 'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been'];
+      if (weakStarters.includes(firstWord)) score -= 0.2;
+
+      if (score > highestScore && score >= 0.5) {
+        highestScore = score;
+        bestCandidate = { text: phrase, score };
+      }
+    }
+  }
+
+  // FALLBACK: Try 3-word phrases if no good 4-7 word match found
+  if (!bestCandidate || highestScore < 0.6) {
+    for (let i = 0; i <= words.length - 3; i++) {
+      const phraseWords = words.slice(i, i + 3);
+      const phrase = phraseWords.join(' ').replace(/[.,!?;:'"()[\]{}]/g, '').trim();
+      
+      if (phrase.length < 10 || phrase.length > 40) continue;
+      
+      const phraseLower = phrase.toLowerCase();
+      let score = 0;
+      
+      // Check for topic relevance
+      let matchedWords = 0;
+      for (const targetWord of allTargetWords) {
+        if (targetWord.length > 3 && phraseLower.includes(targetWord)) {
+          matchedWords++;
+          score += 0.3;
+        }
+      }
+      
+      if (matchedWords >= 2) score += 0.4;
+      
+      // Must be descriptive
+      const descriptive = ['guide', 'tips', 'how', 'best', 'top', 'training', 'review', 'comparison'];
+      if (descriptive.some(d => phraseLower.includes(d))) score += 0.2;
+      
+      if (score > highestScore && score >= 0.5 && matchedWords >= 1) {
         highestScore = score;
         bestCandidate = { text: phrase, score };
       }
