@@ -326,13 +326,16 @@ export const validateAndFixAnchor = (
 
 // ==================== PROXY FETCH ====================
 
-const CORS_PROXIES = [
-  '',
-  'https://api.codetabs.com/v1/proxy?quest=',
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url=',
-  'https://thingproxy.freeboard.io/fetch/',
-];
+// Use our own serverless API proxy first, then fallback to public CORS proxies
+const getProxyUrls = (): string[] => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return [
+    `${origin}/api/proxy?url=`,  // Our own serverless proxy (most reliable)
+    'https://api.codetabs.com/v1/proxy?quest=',
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+  ];
+};
 
 export const fetchWithProxies = async (
   url: string,
@@ -341,11 +344,12 @@ export const fetchWithProxies = async (
 ): Promise<Response> => {
   let lastError: Error | null = null;
   const errors: string[] = [];
+  const proxies = getProxyUrls();
 
-  for (const proxy of CORS_PROXIES) {
+  for (const proxy of proxies) {
     try {
-      const targetUrl = proxy ? `${proxy}${encodeURIComponent(url)}` : url;
-      const proxyName = proxy || 'direct';
+      const targetUrl = `${proxy}${encodeURIComponent(url)}`;
+      const proxyName = proxy.includes('/api/proxy') ? 'serverless-proxy' : proxy.split('//')[1]?.split('/')[0] || 'unknown';
       onProgress?.(`Trying: ${proxyName}...`);
       
       const response = await fetch(targetUrl, {
@@ -364,7 +368,7 @@ export const fetchWithProxies = async (
       // Capture non-ok responses as errors and continue to next proxy
       errors.push(`${proxyName}: HTTP ${response.status}`);
     } catch (e: any) {
-      const proxyName = proxy || 'direct';
+      const proxyName = proxy.includes('/api/proxy') ? 'serverless-proxy' : proxy.split('//')[1]?.split('/')[0] || 'unknown';
       errors.push(`${proxyName}: ${e.message || 'Network error'}`);
       lastError = e;
       continue;
