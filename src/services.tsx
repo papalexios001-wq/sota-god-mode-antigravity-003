@@ -330,6 +330,43 @@ export const findRelevantYouTubeVideo = async (
   }
 };
 
+// ==================== INJECT YOUTUBE VIDEO INTO CONTENT ====================
+
+export const injectYouTubeIntoContent = async (
+  content: string,
+  keyword: string,
+  serperApiKey: string,
+  logCallback?: (msg: string) => void
+): Promise<string> => {
+  // Check for placeholder
+  if (!content.includes('[YOUTUBE_VIDEO_PLACEHOLDER]')) {
+    logCallback?.('[YouTube] No placeholder found in content');
+    return content;
+  }
+
+  if (!serperApiKey) {
+    logCallback?.('[YouTube] ⚠️ No Serper API key - removing placeholder');
+    return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+  }
+
+  logCallback?.('[YouTube] Finding relevant video for: ' + keyword);
+
+  try {
+    const { html: videoHtml } = await findRelevantYouTubeVideo(keyword, serperApiKey, logCallback);
+
+    if (videoHtml) {
+      logCallback?.('[YouTube] ✅ Video found and injected');
+      return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', videoHtml);
+    } else {
+      logCallback?.('[YouTube] No suitable video found - removing placeholder');
+      return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+    }
+  } catch (error: any) {
+    logCallback?.(`[YouTube] Error: ${error.message}`);
+    return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+  }
+};
+
 // ==================== VERIFIED REFERENCES ENGINE ====================
 
 export const fetchVerifiedReferences = async (
