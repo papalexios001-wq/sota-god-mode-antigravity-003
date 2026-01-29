@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 interface Env {}
 
 export const onRequest: PagesFunction<Env> = async (context) => {

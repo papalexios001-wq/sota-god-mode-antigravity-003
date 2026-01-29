@@ -1,10 +1,11 @@
 // =============================================================================
-// SOTA NEURONWRITER INTEGRATION v13.0 - ENTERPRISE GRADE
-// Uses Supabase Edge Function proxy for CORS-free API access
+// SOTA NEURONWRITER INTEGRATION v14.0 - CLOUDFLARE PAGES OPTIMIZED
+// Auto-detects proxy: Cloudflare Pages Functions or Supabase Edge Functions
 // =============================================================================
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const USE_CLOUDFLARE_PROXY = !SUPABASE_URL || SUPABASE_URL.trim() === '';
 
 // ==================== TYPES ====================
 
@@ -46,23 +47,28 @@ const callNeuronWriterProxy = async (
   method: string = 'GET',
   body?: Record<string, unknown>
 ): Promise<ProxyResponse> => {
-  if (!SUPABASE_URL) {
-    throw new Error('Supabase URL not configured. Please check your environment variables.');
-  }
+  const proxyUrl = USE_CLOUDFLARE_PROXY
+    ? '/api/neuronwriter'
+    : `${SUPABASE_URL}/functions/v1/neuronwriter-proxy`;
 
-  const proxyUrl = `${SUPABASE_URL}/functions/v1/neuronwriter-proxy`;
+  console.log(`[NeuronWriter] Using ${USE_CLOUDFLARE_PROXY ? 'Cloudflare Pages' : 'Supabase'} proxy`);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60000);
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-NeuronWriter-Key': apiKey,
+    };
+
+    if (!USE_CLOUDFLARE_PROXY) {
+      headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+    }
+
     const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'X-NeuronWriter-Key': apiKey,
-      },
+      headers,
       body: JSON.stringify({
         endpoint,
         method,

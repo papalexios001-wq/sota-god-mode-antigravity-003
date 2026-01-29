@@ -324,9 +324,10 @@ export const validateAndFixAnchor = (
   return { valid: false, anchor: anchor, reason: validation.reason };
 };
 
-// ==================== SOTA PROXY FETCH v2.0 ====================
+// ==================== SOTA PROXY FETCH v3.0 - CLOUDFLARE OPTIMIZED ====================
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const USE_CLOUDFLARE_PROXY = !SUPABASE_URL || SUPABASE_URL.trim() === '';
 
 const getProxyUrls = (): Array<{ url: string; name: string; timeout: number }> => {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -334,7 +335,13 @@ const getProxyUrls = (): Array<{ url: string; name: string; timeout: number }> =
 
   const proxies: Array<{ url: string; name: string; timeout: number }> = [];
 
-  if (SUPABASE_URL) {
+  if (USE_CLOUDFLARE_PROXY) {
+    proxies.push({
+      url: '/api/fetch-sitemap?url=',
+      name: 'cloudflare-pages',
+      timeout: 30000
+    });
+  } else if (SUPABASE_URL) {
     proxies.push({
       url: `${SUPABASE_URL}/functions/v1/fetch-sitemap?url=`,
       name: 'supabase-edge',
@@ -443,7 +450,35 @@ export const fetchSitemapDirect = async (
 ): Promise<string> => {
   onProgress?.('Fetching sitemap...');
 
-  if (SUPABASE_URL) {
+  if (USE_CLOUDFLARE_PROXY) {
+    try {
+      onProgress?.('Using Cloudflare Pages Function...');
+      const response = await fetch('/api/fetch-sitemap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: sitemapUrl })
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.content) {
+            onProgress?.('Sitemap fetched via Cloudflare Pages');
+            return data.content;
+          }
+        } else {
+          const text = await response.text();
+          onProgress?.('Sitemap fetched via Cloudflare Pages');
+          return text;
+        }
+      }
+    } catch (e) {
+      onProgress?.('Cloudflare function unavailable, trying proxies...');
+    }
+  } else if (SUPABASE_URL) {
     try {
       onProgress?.('Using Supabase Edge Function...');
       const edgeUrl = `${SUPABASE_URL}/functions/v1/fetch-sitemap`;
