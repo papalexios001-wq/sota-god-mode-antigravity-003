@@ -1,9 +1,10 @@
 // =============================================================================
-// SOTA WP CONTENT OPTIMIZER PRO - NEURONWRITER INTEGRATION v12.0
-// Enterprise-Grade NLP Term Optimization
+// SOTA NEURONWRITER INTEGRATION v13.0 - ENTERPRISE GRADE
+// Uses Supabase Edge Function proxy for CORS-free API access
 // =============================================================================
 
-import { callAiWithRetry } from './utils';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // ==================== TYPES ====================
 
@@ -22,64 +23,118 @@ export interface NeuronTerms {
   content_extended?: string;
 }
 
-export interface NeuronAnalysis {
-  terms_txt?: NeuronTerms;
-  contentScore?: number;
-  recommendations?: string[];
+export interface NeuronWriterData {
+  terms: string[];
+  competitors: string[];
+  questions: string[];
+  headings: string[];
 }
 
-// ==================== API FUNCTIONS ====================
+interface ProxyResponse {
+  success: boolean;
+  status?: number;
+  data?: any;
+  error?: string;
+  type?: string;
+}
 
-const NEURON_API_BASE = 'https://app.neuronwriter.com/api/v1';
+// ==================== PROXY HELPER ====================
 
-/**
- * Lists all NeuronWriter projects for the given API key
- */
-export const listNeuronProjects = async (apiKey: string): Promise<NeuronProject[]> => {
-  if (!apiKey || apiKey.trim().length < 10) {
-    throw new Error('Invalid NeuronWriter API key');
+const callNeuronWriterProxy = async (
+  endpoint: string,
+  apiKey: string,
+  method: string = 'GET',
+  body?: Record<string, unknown>
+): Promise<ProxyResponse> => {
+  if (!SUPABASE_URL) {
+    throw new Error('Supabase URL not configured. Please check your environment variables.');
   }
 
+  const proxyUrl = `${SUPABASE_URL}/functions/v1/neuronwriter-proxy`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
   try {
-    const response = await callAiWithRetry(async () => {
-      const res = await fetch(`${NEURON_API_BASE}/projects`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        signal: AbortSignal.timeout(15000)
-      });
+    const response = await fetch(proxyUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'X-NeuronWriter-Key': apiKey,
+      },
+      body: JSON.stringify({
+        endpoint,
+        method,
+        apiKey,
+        body
+      }),
+      signal: controller.signal
+    });
 
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => 'Unknown error');
-        throw new Error(`NeuronWriter API error (${res.status}): ${errorText}`);
-      }
+    clearTimeout(timeoutId);
 
-      return res;
-    }, 2);
-
-    const data = await response.json();
-    
-    if (!Array.isArray(data)) {
-      throw new Error('Invalid response format from NeuronWriter');
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      throw new Error(`Proxy error (${response.status}): ${errorText}`);
     }
 
-    return data.map((project: any) => ({
-      project: project.project || project.id,
-      name: project.name || 'Unnamed Project',
-      engine: project.engine || 'google',
-      language: project.language || 'en'
-    }));
+    const result: ProxyResponse = await response.json();
+    return result;
   } catch (error: any) {
-    console.error('[NeuronWriter] Failed to list projects:', error);
+    clearTimeout(timeoutId);
+
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. The NeuronWriter API took too long to respond.');
+    }
+
     throw error;
   }
 };
 
-/**
- * Fetches NLP terms for a specific query from NeuronWriter
- */
+// ==================== API FUNCTIONS ====================
+
+export const listNeuronProjects = async (apiKey: string): Promise<NeuronProject[]> => {
+  if (!apiKey || apiKey.trim().length < 10) {
+    throw new Error('Invalid NeuronWriter API key. Please enter a valid key.');
+  }
+
+  console.log('[NeuronWriter] Fetching projects via Edge Function...');
+
+  try {
+    const result = await callNeuronWriterProxy('/projects', apiKey, 'GET');
+
+    if (!result.success) {
+      throw new Error(result.error || `API error: ${result.status}`);
+    }
+
+    const data = result.data;
+
+    if (!data) {
+      throw new Error('No data returned from NeuronWriter API');
+    }
+
+    const projects = Array.isArray(data) ? data : (data.projects || data.data || []);
+
+    if (!Array.isArray(projects)) {
+      console.warn('[NeuronWriter] Unexpected response format:', data);
+      throw new Error('Invalid response format from NeuronWriter');
+    }
+
+    console.log(`[NeuronWriter] Found ${projects.length} projects`);
+
+    return projects.map((project: any) => ({
+      project: project.project || project.id || project.uuid,
+      name: project.name || project.title || 'Unnamed Project',
+      engine: project.engine || project.search_engine || 'google',
+      language: project.language || project.lang || 'en'
+    }));
+  } catch (error: any) {
+    console.error('[NeuronWriter] Failed to list projects:', error);
+    throw new Error(`Failed to fetch NeuronWriter projects: ${error.message}`);
+  }
+};
+
 export const fetchNeuronTerms = async (
   apiKey: string,
   projectId: string,
@@ -90,72 +145,67 @@ export const fetchNeuronTerms = async (
     return null;
   }
 
+  console.log(`[NeuronWriter] Fetching terms for: "${query}"`);
+
   try {
-    // First, create or get a query analysis
-    const analysisResponse = await callAiWithRetry(async () => {
-      const res = await fetch(`${NEURON_API_BASE}/projects/${projectId}/queries`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ query }),
-        signal: AbortSignal.timeout(30000)
-      });
+    const analysisResult = await callNeuronWriterProxy(
+      `/projects/${projectId}/queries`,
+      apiKey,
+      'POST',
+      { query }
+    );
 
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => 'Unknown error');
-        throw new Error(`NeuronWriter query error (${res.status}): ${errorText}`);
-      }
+    if (!analysisResult.success) {
+      console.warn('[NeuronWriter] Query creation failed:', analysisResult.error);
+      return null;
+    }
 
-      return res;
-    }, 2);
-
-    const analysisData = await analysisResponse.json();
-    const queryId = analysisData.id || analysisData.query_id;
+    const queryId = analysisResult.data?.id || analysisResult.data?.query_id;
 
     if (!queryId) {
       console.warn('[NeuronWriter] No query ID returned');
       return null;
     }
 
-    // Wait for analysis to complete (poll with timeout)
     let attempts = 0;
-    const maxAttempts = 10;
+    const maxAttempts = 12;
     let terms: NeuronTerms | null = null;
 
     while (attempts < maxAttempts) {
       attempts++;
-      
-      const termsResponse = await fetch(
-        `${NEURON_API_BASE}/projects/${projectId}/queries/${queryId}/terms`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          signal: AbortSignal.timeout(10000)
-        }
+      console.log(`[NeuronWriter] Polling for terms (attempt ${attempts}/${maxAttempts})...`);
+
+      const termsResult = await callNeuronWriterProxy(
+        `/projects/${projectId}/queries/${queryId}/terms`,
+        apiKey,
+        'GET'
       );
 
-      if (termsResponse.ok) {
-        const termsData = await termsResponse.json();
-        
-        if (termsData.status === 'completed' || termsData.terms_txt) {
+      if (termsResult.success && termsResult.data) {
+        const termsData = termsResult.data;
+
+        if (termsData.status === 'completed' || termsData.terms_txt || termsData.terms) {
+          const termsTxt = termsData.terms_txt || termsData.terms || {};
+
           terms = {
-            h1: termsData.terms_txt?.h1 || '',
-            title: termsData.terms_txt?.title || '',
-            h2: termsData.terms_txt?.h2 || '',
-            content_basic: termsData.terms_txt?.content_basic || '',
-            content_extended: termsData.terms_txt?.content_extended || ''
+            h1: termsTxt.h1 || termsTxt.H1 || '',
+            title: termsTxt.title || termsTxt.Title || '',
+            h2: termsTxt.h2 || termsTxt.H2 || '',
+            content_basic: termsTxt.content_basic || termsTxt.content || '',
+            content_extended: termsTxt.content_extended || termsTxt.extended || ''
           };
+
+          console.log('[NeuronWriter] Terms fetched successfully');
+          break;
+        }
+
+        if (termsData.status === 'failed' || termsData.error) {
+          console.warn('[NeuronWriter] Analysis failed:', termsData.error);
           break;
         }
       }
 
-      // Wait before next poll
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2500));
     }
 
     return terms;
@@ -165,9 +215,69 @@ export const fetchNeuronTerms = async (
   }
 };
 
-/**
- * Formats NeuronWriter terms for AI prompt injection
- */
+export const getNeuronWriterData = async (
+  apiKey: string,
+  projectId: string,
+  keyword: string
+): Promise<NeuronWriterData | null> => {
+  if (!apiKey || !projectId) {
+    console.warn('[NeuronWriter] Missing API key or project ID');
+    return null;
+  }
+
+  console.log(`[NeuronWriter] Fetching content editor data for: "${keyword}"`);
+
+  try {
+    const result = await callNeuronWriterProxy(
+      `/projects/${projectId}/content-editor`,
+      apiKey,
+      'POST',
+      {
+        keyword,
+        language: 'en',
+        country: 'us',
+      }
+    );
+
+    if (!result.success) {
+      console.warn('[NeuronWriter] Content editor request failed:', result.error);
+      return null;
+    }
+
+    const data = result.data;
+
+    return {
+      terms: extractTerms(data.terms || data.nlp_terms || []),
+      competitors: extractCompetitors(data.competitors || data.serp || []),
+      questions: data.questions || data.paa || data.people_also_ask || [],
+      headings: data.headings || data.suggested_headings || [],
+    };
+  } catch (error: any) {
+    console.error('[NeuronWriter] Error:', error.message);
+    return null;
+  }
+};
+
+// ==================== HELPER FUNCTIONS ====================
+
+const extractTerms = (terms: any[]): string[] => {
+  if (!Array.isArray(terms)) return [];
+
+  return terms.map((t: any) => {
+    if (typeof t === 'string') return t;
+    return t.term || t.name || t.keyword || t.text || '';
+  }).filter(Boolean);
+};
+
+const extractCompetitors = (competitors: any[]): string[] => {
+  if (!Array.isArray(competitors)) return [];
+
+  return competitors.map((c: any) => {
+    if (typeof c === 'string') return c;
+    return c.url || c.link || c.domain || '';
+  }).filter(Boolean);
+};
+
 export const formatNeuronTermsForPrompt = (terms: NeuronTerms | null): string => {
   if (!terms) return '';
 
@@ -196,9 +306,6 @@ export const formatNeuronTermsForPrompt = (terms: NeuronTerms | null): string =>
   return sections.join('\n');
 };
 
-/**
- * Calculates content score based on NeuronWriter terms coverage
- */
 export const calculateNeuronContentScore = (
   content: string,
   terms: NeuronTerms
@@ -209,7 +316,6 @@ export const calculateNeuronContentScore = (
   let totalTerms = 0;
   let foundTerms = 0;
 
-  // Extract all terms from NeuronWriter data
   const allTermsText = [
     terms.h1,
     terms.title,
@@ -218,7 +324,6 @@ export const calculateNeuronContentScore = (
     terms.content_extended
   ].filter(Boolean).join(' ');
 
-  // Split into individual terms (assume comma or semicolon separated)
   const termsList = allTermsText
     .split(/[,;]/)
     .map(t => t.trim().toLowerCase())
@@ -232,14 +337,11 @@ export const calculateNeuronContentScore = (
     }
   }
 
-  if (totalTerms === 0) return 100; // No terms to check
+  if (totalTerms === 0) return 100;
 
   return Math.round((foundTerms / totalTerms) * 100);
 };
 
-/**
- * Gets missing NeuronWriter terms that should be added to content
- */
 export const getMissingNeuronTerms = (
   content: string,
   terms: NeuronTerms,
@@ -265,70 +367,12 @@ export const getMissingNeuronTerms = (
     if (!contentLower.includes(term)) {
       missing.push(term);
     }
-    
+
     if (missing.length >= maxTerms) break;
   }
 
   return missing;
 };
-
-
-// =============================================================================
-// GET NEURONWRITER DATA FOR CONTENT GENERATION
-// =============================================================================
-
-export interface NeuronWriterData {
-  terms: string[];
-  competitors: string[];
-  questions: string[];
-  headings: string[];
-}
-
-export const getNeuronWriterData = async (
-  apiKey: string,
-  projectId: string,
-  keyword: string
-): Promise<NeuronWriterData | null> => {
-  if (!apiKey || !projectId) {
-    console.warn('[getNeuronWriterData] Missing API key or project ID');
-    return null;
-  }
-
-  try {
-    // NeuronWriter API endpoint
-    const response = await fetch(`https://app.neuronwriter.com/api/v1/projects/${projectId}/content-editor`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        keyword: keyword,
-        language: 'en',
-        country: 'us',
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn(`[getNeuronWriterData] API returned ${response.status}`);
-      return null;
-    }
-
-    const data = await response.json();
-
-    // Extract NLP terms and competitor data
-    return {
-      terms: data.terms?.map((t: any) => t.term || t.name || t) || [],
-      competitors: data.competitors?.map((c: any) => c.url || c) || [],
-      questions: data.questions || data.paa || [],
-      headings: data.headings || [],
-    };
-  } catch (error: any) {
-    console.error('[getNeuronWriterData] Error:', error.message);
-    return null;
-  }
-};
-
 
 // ==================== EXPORTS ====================
 
@@ -337,6 +381,6 @@ export default {
   fetchNeuronTerms,
   formatNeuronTermsForPrompt,
   calculateNeuronContentScore,
-  getMissingNeuronTerms
+  getMissingNeuronTerms,
+  getNeuronWriterData
 };
-
