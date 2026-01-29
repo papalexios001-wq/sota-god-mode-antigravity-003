@@ -1,3 +1,13 @@
 name = "wp-content-optimizer-pro"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
+
+# Cloudflare Pages Functions
+[build]
+command = "npm run build"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"

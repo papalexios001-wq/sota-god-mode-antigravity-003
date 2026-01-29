@@ -918,10 +918,36 @@ const App: React.FC = () => {
 
         const response = await fetchWithProxies(currentSitemapUrl, {});
         const text = await response.text();
+        
+        // Check if response is a JSON error from proxy
+        if (text.trim().startsWith('{') && text.includes('"error"')) {
+          try {
+            const errorJson = JSON.parse(text);
+            if (errorJson.error) {
+              throw new Error(errorJson.error);
+            }
+          } catch (parseErr) {
+            // Not JSON, continue with XML parsing
+          }
+        }
+
+        // Validate XML content
+        if (!text.includes('<urlset') && !text.includes('<sitemapindex') && !text.includes('<url>')) {
+          console.error('[Sitemap] Invalid XML response:', text.substring(0, 500));
+          throw new Error('Invalid sitemap XML. Make sure the URL points to a valid XML sitemap.');
+        }
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, "application/xml");
+        
+        // Check for XML parsing errors
+        const parseError = doc.querySelector('parsererror');
+        if (parseError) {
+          console.error('[Sitemap] XML Parse Error:', parseError.textContent);
+          throw new Error('Failed to parse sitemap XML. The file may be malformed.');
+        }
 
-        // Process nested sitemaps
+        // Process nested sitemaps (sitemap index files)
         const sitemapNodes = doc.getElementsByTagName('sitemap');
         for (let i = 0; i < sitemapNodes.length; i++) {
           const loc = sitemapNodes[i].getElementsByTagName('loc')[0]?.textContent;
@@ -939,6 +965,12 @@ const App: React.FC = () => {
             pageDataMap.set(loc.trim(), { lastmod: lastmod?.trim() || null });
           }
         }
+        
+        setCrawlMessage(`Crawling... Found ${pageDataMap.size} URLs so far.`);
+      }
+
+      if (pageDataMap.size === 0) {
+        throw new Error('No URLs found in sitemap. Verify the sitemap URL is correct and contains <url> entries.');
       }
 
       // Convert to SitemapPage objects
@@ -974,8 +1006,9 @@ const App: React.FC = () => {
       });
 
       setExistingPages(discoveredPages);
-      setCrawlMessage(`Found ${discoveredPages.length} pages.`);
+      setCrawlMessage(`✓ Found ${discoveredPages.length} pages.`);
     } catch (error: any) {
+      console.error('[Sitemap Crawl Error]', error);
       setCrawlMessage(`Error: ${error.message}`);
     } finally {
       setIsCrawling(false);
