@@ -30,7 +30,7 @@ async function makeNeuronRequest(
     const fetchOptions: RequestInit = {
       method,
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "X-API-KEY": apiKey,
         "Content-Type": "application/json",
         "Accept": "application/json",
         "User-Agent": "ContentOptimizer/1.0",
