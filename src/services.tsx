@@ -42,6 +42,12 @@ import {
   generateUltraPremiumYouTubeSection
 } from './SOTAContentEnhancer';
 
+import {
+  fetchNeuronTerms,
+  formatNeuronTermsForPrompt,
+  NeuronTerms
+} from './neuronwriter';
+
 console.log('[SOTA Services v13.0] ULTRA ENTERPRISE ENGINE Initialized');
 
 // ==================== CONSTANTS ====================
@@ -1491,11 +1497,56 @@ export const generateContent = {
           semanticKeywords = [item.title];
         }
 
+        // Phase 2.5: NeuronWriter Terms (if enabled)
+        let neuronTerms: NeuronTerms | null = null;
+        let neuronTermsFormatted: string | null = null;
+
+        if (neuronConfig?.enabled && neuronConfig.apiKey && neuronConfig.projectId) {
+          dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '🧠 NeuronWriter...' } });
+          console.log(`[NeuronWriter] Integration ENABLED for: "${item.title}"`);
+
+          try {
+            neuronTerms = await fetchNeuronTerms(
+              neuronConfig.apiKey,
+              neuronConfig.projectId,
+              item.title
+            );
+
+            if (neuronTerms) {
+              neuronTermsFormatted = formatNeuronTermsForPrompt(neuronTerms);
+              console.log(`[NeuronWriter] ✅ Successfully fetched terms`);
+              console.log(`[NeuronWriter] Terms preview:`, neuronTermsFormatted.substring(0, 200) + '...');
+
+              // Merge NeuronWriter terms with semantic keywords
+              const neuronKeywords = [
+                neuronTerms.h1,
+                neuronTerms.h2,
+                neuronTerms.content_basic
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .split(/[,;]/)
+                .map(k => k.trim())
+                .filter(k => k.length > 2)
+                .slice(0, 10);
+
+              semanticKeywords = [...new Set([...semanticKeywords, ...neuronKeywords])];
+              console.log(`[NeuronWriter] Merged ${neuronKeywords.length} NeuronWriter keywords with semantic keywords`);
+            } else {
+              console.warn(`[NeuronWriter] ⚠️ Failed to fetch terms for: "${item.title}"`);
+            }
+          } catch (error: any) {
+            console.error(`[NeuronWriter] Error:`, error.message);
+          }
+        } else {
+          console.log(`[NeuronWriter] Integration DISABLED or not configured`);
+        }
+
         // Phase 3: Main Content
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '✍️ Writing...' } });
         const contentResponse = await callAIFn(
           'ultra_sota_article_writer',
-          [item.title, semanticKeywords, existingPages, serpData, null, null],
+          [item.title, semanticKeywords, existingPages, serpData, neuronTermsFormatted, null],
           'html'
         );
 
@@ -1594,7 +1645,7 @@ export const generateContent = {
     context: GenerationContext,
     aiRepairer: any
   ) {
-    const { dispatch, existingPages, wpConfig, serperApiKey } = context;
+    const { dispatch, existingPages, wpConfig, serperApiKey, neuronConfig } = context;
 
     try {
       if (!item.crawledContent) {
@@ -1612,11 +1663,53 @@ export const generateContent = {
         semanticKeywords = [item.title];
       }
 
+      // Fetch NeuronWriter terms if enabled
+      let neuronTerms: NeuronTerms | null = null;
+      let neuronTermsFormatted: string | null = null;
+
+      if (neuronConfig?.enabled && neuronConfig.apiKey && neuronConfig.projectId) {
+        dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '🧠 NeuronWriter...' } });
+        console.log(`[NeuronWriter] Refresh - Integration ENABLED for: "${item.title}"`);
+
+        try {
+          neuronTerms = await fetchNeuronTerms(
+            neuronConfig.apiKey,
+            neuronConfig.projectId,
+            item.title
+          );
+
+          if (neuronTerms) {
+            neuronTermsFormatted = formatNeuronTermsForPrompt(neuronTerms);
+            console.log(`[NeuronWriter] Refresh - ✅ Successfully fetched terms`);
+
+            // Merge NeuronWriter terms with semantic keywords
+            const neuronKeywords = [
+              neuronTerms.h1,
+              neuronTerms.h2,
+              neuronTerms.content_basic
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .split(/[,;]/)
+              .map(k => k.trim())
+              .filter(k => k.length > 2)
+              .slice(0, 10);
+
+            semanticKeywords = [...new Set([...semanticKeywords, ...neuronKeywords])];
+            console.log(`[NeuronWriter] Refresh - Merged ${neuronKeywords.length} keywords`);
+          } else {
+            console.warn(`[NeuronWriter] Refresh - ⚠️ Failed to fetch terms`);
+          }
+        } catch (error: any) {
+          console.error(`[NeuronWriter] Refresh - Error:`, error.message);
+        }
+      }
+
       dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '✨ Optimizing...' } });
 
       const optimizedContent = await callAIFn(
         'content_refresher',
-        [item.crawledContent, item.title, semanticKeywords],
+        [item.crawledContent, item.title, semanticKeywords, neuronTermsFormatted],
         'html'
       );
 

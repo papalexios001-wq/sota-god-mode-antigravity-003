@@ -638,7 +638,7 @@ IMPORTANT: The system will automatically inject 4-8 internal links with proper a
 
 ## SEMANTIC KEYWORDS (incorporate naturally, never force)
 ${keywordsStr}
-
+${neuronData ? `\n## 🧠 NEURONWRITER SEO TERMS (CRITICAL FOR RANKING)\nThese terms are from NeuronWriter analysis. Include them naturally throughout:\n${neuronData}\n` : ''}
 ## 📹 YOUTUBE VIDEO (MANDATORY)
 Include this placeholder after section 3 or 4:
 [YOUTUBE_VIDEO_PLACEHOLDER]
@@ -1048,17 +1048,18 @@ Preserve structure and images.
 
 OUTPUT: Return refreshed HTML only.`,
 
-    userPrompt: (existingContent: string, title: string, semanticKeywords: string[] | string) => {
+    userPrompt: (existingContent: string, title: string, semanticKeywords: string[] | string, neuronData?: string | null) => {
       const keywordsStr = Array.isArray(semanticKeywords)
         ? semanticKeywords.join(', ')
         : semanticKeywords || '';
 
       return `## TITLE: ${title}
 ## KEYWORDS: ${keywordsStr}
+${neuronData ? `## 🧠 NEURONWRITER SEO TERMS (Incorporate naturally):\n${neuronData}\n` : ''}
 ## CONTENT:
 ${existingContent.substring(0, 12000)}
 
-Refresh for ${TARGET_YEAR}. Return HTML only.`;
+Refresh for ${TARGET_YEAR}. Include NeuronWriter terms naturally. Return HTML only.`;
     }
   },
 
