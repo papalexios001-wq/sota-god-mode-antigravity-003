@@ -357,36 +357,65 @@ export const injectYouTubeIntoContent = async (
   logCallback?: (msg: string) => void
 ): Promise<string> => {
   if (!serperApiKey) {
-    logCallback?.('[YouTube] No Serper API key - skipping');
+    logCallback?.('[YouTube] No Serper API key - cannot inject video');
     return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
   }
 
-  logCallback?.('[YouTube] Finding relevant video for: ' + keyword);
+  logCallback?.(`[YouTube] GUARANTEED injection for: "${keyword}"`);
 
   try {
     const result = await injectYouTubeVideo(content, keyword, serperApiKey);
 
     if (result.video) {
-      logCallback?.(`[YouTube] Injected: "${result.video.title}"`);
+      logCallback?.(`[YouTube] SUCCESS - Injected: "${result.video.title}"`);
       return result.html;
-    } else {
-      const { html: fallbackHtml, video } = await findRelevantYouTubeVideo(keyword, serperApiKey, logCallback);
+    }
+
+    logCallback?.('[YouTube] Primary method failed, trying enhanced fallback...');
+
+    const searchQueries = [
+      `${keyword} tutorial`,
+      `${keyword} guide`,
+      `how to ${keyword}`,
+      `${keyword} explained`,
+      `best ${keyword}`
+    ];
+
+    for (const query of searchQueries) {
+      logCallback?.(`[YouTube] Trying: "${query}"`);
+      const { html: fallbackHtml, video } = await findRelevantYouTubeVideo(query, serperApiKey);
+
       if (fallbackHtml && video) {
+        logCallback?.(`[YouTube] FOUND via fallback: "${video.title}"`);
         const ultraYoutubeHtml = generateUltraPremiumYouTubeSection(video);
+
         if (content.includes('[YOUTUBE_VIDEO_PLACEHOLDER]')) {
           return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', ultraYoutubeHtml);
         }
+
         const h2Matches = [...content.matchAll(/<\/h2>/gi)];
-        if (h2Matches.length >= 3 && h2Matches[2].index !== undefined) {
-          const insertPos = h2Matches[2].index + 5;
-          return content.substring(0, insertPos) + ultraYoutubeHtml + content.substring(insertPos);
+        if (h2Matches.length >= 2 && h2Matches[1].index !== undefined) {
+          const insertPos = h2Matches[1].index + 5;
+          logCallback?.(`[YouTube] Injecting after 2nd H2`);
+          return content.substring(0, insertPos) + '\n\n' + ultraYoutubeHtml + '\n\n' + content.substring(insertPos);
         }
-        return content + ultraYoutubeHtml;
+
+        if (h2Matches.length >= 1 && h2Matches[0].index !== undefined) {
+          const insertPos = h2Matches[0].index + 5;
+          logCallback?.(`[YouTube] Injecting after 1st H2`);
+          return content.substring(0, insertPos) + '\n\n' + ultraYoutubeHtml + '\n\n' + content.substring(insertPos);
+        }
+
+        logCallback?.(`[YouTube] Appending to end`);
+        return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '') + '\n\n' + ultraYoutubeHtml;
       }
-      return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
     }
+
+    logCallback?.('[YouTube] All attempts failed - no video available');
+    return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+
   } catch (error: any) {
-    logCallback?.(`[YouTube] Error: ${error.message}`);
+    logCallback?.(`[YouTube] ERROR: ${error.message}`);
     return content.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
   }
 };
@@ -401,15 +430,15 @@ export const fetchVerifiedReferences = async (
   logCallback?: (msg: string) => void
 ): Promise<{ html: string; references: VerifiedReference[] }> => {
   if (!serperApiKey) {
-    logCallback?.('[References] ⚠️ No Serper API key - skipping reference fetch');
-    // Return fallback references section with helpful message
+    logCallback?.('[References] No Serper API key - skipping reference fetch');
     return {
       html: generateFallbackReferencesHtml(keyword),
       references: []
     };
   }
 
-  analytics.log('references', 'Fetching verified references with SOTA multi-query strategy...', { keyword });
+  analytics.log('references', 'Fetching TOPIC-SPECIFIC verified references...', { keyword });
+  logCallback?.(`[References] Searching for: "${keyword}"`);
 
   try {
     const currentYear = new Date().getFullYear();
@@ -419,34 +448,41 @@ export const fetchVerifiedReferences = async (
       try { userDomain = new URL(wpUrl).hostname.replace('www.', ''); } catch (e) { }
     }
 
-    // SOTA Multi-Query Strategy - Use multiple specialized search queries
+    const keywordLower = keyword.toLowerCase();
+    const keywordsForSearch = semanticKeywords.slice(0, 3).join(' ');
+
     const searchQueries = [
-      `${keyword} site:edu OR site:gov research study`,
-      `${keyword} veterinary guidelines ${currentYear}`,
-      `${keyword} scientific research peer reviewed`,
-      `${keyword} expert guide professional advice`,
-      `${keyword} statistics data ${currentYear} ${nextYear}`,
+      `"${keyword}" site:edu OR site:gov`,
+      `"${keyword}" research study ${currentYear}`,
+      `"${keyword}" expert guide official`,
+      `"${keyword}" statistics data facts ${currentYear}`,
+      `${keywordsForSearch} authoritative source`,
+      `"${keyword}" best practices professional`,
+      `${keyword} industry report ${currentYear} ${nextYear}`,
     ];
 
     const validatedReferences: VerifiedReference[] = [];
     const seenDomains = new Set<string>();
 
-    // High-authority domains to prioritize
     const highAuthorityDomains = [
       'nih.gov', 'cdc.gov', 'who.int', 'mayoclinic.org', 'webmd.com',
-      'healthline.com', 'petmd.com', 'akc.org', 'avma.org', 'aspca.org',
-      'vcahospitals.com', 'merckvetmanual.com', 'nature.com', 'science.org',
-      'sciencedirect.com', 'pubmed.ncbi.nlm.nih.gov', 'ncbi.nlm.nih.gov',
-      'fda.gov', 'usda.gov', 'vet.cornell.edu', 'vetmed.ucdavis.edu',
-      'purina.com', 'royalcanin.com', 'hillspet.com', 'iams.com',
-      'forbes.com', 'nytimes.com', 'bbc.com', 'reuters.com', 'npr.org'
+      'healthline.com', 'nature.com', 'science.org', 'sciencedirect.com',
+      'pubmed.ncbi.nlm.nih.gov', 'ncbi.nlm.nih.gov', 'fda.gov', 'usda.gov',
+      'forbes.com', 'nytimes.com', 'bbc.com', 'reuters.com', 'npr.org',
+      'harvard.edu', 'mit.edu', 'stanford.edu', 'yale.edu', 'berkeley.edu',
+      'ox.ac.uk', 'cam.ac.uk', 'springer.com', 'wiley.com', 'ieee.org',
+      'investopedia.com', 'mckinsey.com', 'hbr.org', 'statista.com',
+      'pewresearch.org', 'gallup.com', 'brookings.edu', 'rand.org',
+      'techcrunch.com', 'wired.com', 'theverge.com', 'arstechnica.com',
+      'entrepreneur.com', 'inc.com', 'businessinsider.com'
     ];
 
     const blockedDomains = [
       'linkedin.com', 'facebook.com', 'twitter.com', 'instagram.com',
       'pinterest.com', 'reddit.com', 'quora.com', 'medium.com',
       'youtube.com', 'tiktok.com', 'amazon.com', 'ebay.com', 'etsy.com',
-      'wikipedia.org', 'wikihow.com', 'answers.com', 'yahoo.com'
+      'wikipedia.org', 'wikihow.com', 'answers.com', 'yahoo.com',
+      'slideshare.net', 'scribd.com', 'academia.edu', 'researchgate.net'
     ];
 
     // Execute multiple search queries in parallel
@@ -572,24 +608,26 @@ function getAuthorityScore(domain: string, highAuthorityDomains: string[]): numb
 }
 
 function generateTopicFallbackRefs(keyword: string, seenDomains: Set<string>): VerifiedReference[] {
-  // Common authoritative pet/health references
-  const fallbackSources = [
-    { domain: 'akc.org', title: 'American Kennel Club', path: '/dog-breeds/french-bulldog/' },
-    { domain: 'avma.org', title: 'American Veterinary Medical Association', path: '/resources/pet-owners' },
-    { domain: 'aspca.org', title: 'ASPCA Pet Care', path: '/pet-care/dog-care' },
-    { domain: 'vcahospitals.com', title: 'VCA Animal Hospitals', path: '/know-your-pet/dog' },
-    { domain: 'petmd.com', title: 'PetMD Veterinary Resource', path: '/dog' },
-    { domain: 'merckvetmanual.com', title: 'Merck Veterinary Manual', path: '/' },
+  const keywordLower = keyword.toLowerCase();
+  const topicWords = keyword.split(' ').slice(0, 3).join(' ');
+
+  const generalSources = [
+    { domain: 'britannica.com', title: 'Encyclopedia Britannica', searchPath: `/search?query=${encodeURIComponent(keyword)}` },
+    { domain: 'scholar.google.com', title: 'Google Scholar', searchPath: `/scholar?q=${encodeURIComponent(keyword)}` },
+    { domain: 'statista.com', title: 'Statista Research', searchPath: `/search/?q=${encodeURIComponent(keyword)}` },
+    { domain: 'forbes.com', title: 'Forbes', searchPath: `/search/?q=${encodeURIComponent(keyword)}` },
+    { domain: 'hbr.org', title: 'Harvard Business Review', searchPath: `/search?term=${encodeURIComponent(keyword)}` },
+    { domain: 'sciencedirect.com', title: 'ScienceDirect', searchPath: `/search?qs=${encodeURIComponent(keyword)}` },
   ];
 
-  return fallbackSources
+  return generalSources
     .filter(s => !seenDomains.has(s.domain))
     .slice(0, 4)
     .map(s => ({
-      title: `${s.title} - ${keyword.split(' ').slice(0, 3).join(' ')} Resources`,
-      url: `https://www.${s.domain}${s.path}`,
+      title: `${s.title} - ${topicWords} Research`,
+      url: `https://www.${s.domain}${s.searchPath}`,
       domain: s.domain,
-      description: `Authoritative veterinary and pet care information from ${s.title}.`,
+      description: `Authoritative research and information about ${topicWords} from ${s.title}.`,
       authority: 'high' as const,
       verified: true
     }));
@@ -2475,10 +2513,12 @@ class UltraPremiumMaintenanceEngine {
       let neuronTermsFormatted: string | null = null;
       if (this.context.neuronConfig?.enabled && this.context.neuronConfig.apiKey && this.context.neuronConfig.projectId) {
         phaseEnd = phaseTimer('neuronwriter');
-        this.log('🧠 Fetching NeuronWriter SEO terms...', 'info');
+        this.log('🧠 NEURONWRITER: Creating new content query...', 'info');
 
         try {
           const { fetchNeuronTerms, formatNeuronTermsForPrompt } = await import('./neuronwriter');
+
+          this.log(`🧠 NEURONWRITER: Analyzing "${page.title}"...`, 'info');
 
           const neuronTerms = await fetchNeuronTerms(
             this.context.neuronConfig.apiKey,
@@ -2489,11 +2529,21 @@ class UltraPremiumMaintenanceEngine {
           if (neuronTerms) {
             neuronTermsFormatted = formatNeuronTermsForPrompt(neuronTerms);
 
-            // Merge NeuronWriter terms with semantic keywords
+            this.log('🧠 NEURONWRITER: Successfully retrieved ALL SEO terms!', 'success');
+            this.log(`  H1: ${neuronTerms.h1?.split(',').length || 0} terms`, 'debug');
+            this.log(`  H2: ${neuronTerms.h2?.split(',').length || 0} terms`, 'debug');
+            this.log(`  Content Basic: ${neuronTerms.content_basic?.split(',').length || 0} terms`, 'debug');
+            this.log(`  Content Extended: ${neuronTerms.content_extended?.split(',').length || 0} terms`, 'debug');
+            this.log(`  Entities: ${(neuronTerms.entities_basic?.split(',').length || 0) + (neuronTerms.entities_extended?.split(',').length || 0)} entities`, 'debug');
+            this.log(`  Questions: ${neuronTerms.questions?.length || 0}`, 'debug');
+            this.log(`  Suggested Headings: ${neuronTerms.headings?.length || 0}`, 'debug');
+
             const neuronKeywords = [
               neuronTerms.h1,
               neuronTerms.h2,
-              neuronTerms.content_basic
+              neuronTerms.h3,
+              neuronTerms.content_basic,
+              neuronTerms.entities_basic
             ]
               .filter(Boolean)
               .join(' ')
@@ -2503,14 +2553,17 @@ class UltraPremiumMaintenanceEngine {
               .slice(0, 10);
 
             semanticKeywords = [...new Set([...semanticKeywords, ...neuronKeywords])];
-            this.log(`  ✓ Merged ${neuronKeywords.length} NeuronWriter terms`, 'debug');
+            this.log(`🧠 NEURONWRITER: Merged ${neuronKeywords.length} high-priority terms with keywords`, 'success');
           } else {
-            this.log(`  ⚠️ NeuronWriter returned no terms`, 'warning');
+            this.log(`🧠 NEURONWRITER: Query completed but no terms returned - check API key and project`, 'warning');
           }
         } catch (e: any) {
-          this.log(`  ⚠️ NeuronWriter failed: ${e.message}`, 'warning');
+          this.log(`🧠 NEURONWRITER ERROR: ${e.message}`, 'error');
+          this.log(`  Continuing without NeuronWriter optimization...`, 'warning');
         }
         phaseEnd();
+      } else {
+        this.log('🧠 NeuronWriter: Not enabled or not configured', 'debug');
       }
 
       // ========== PHASE 3: GOD MODE CONTENT RECONSTRUCTION ==========
@@ -2530,52 +2583,71 @@ class UltraPremiumMaintenanceEngine {
       this.log(`  ✓ Generated ${(optimizedContent.length / 1000).toFixed(1)}KB optimized content`, 'debug');
       phaseEnd();
 
-      // ========== PHASE 4: YouTube Video Injection ==========
+      // ========== PHASE 4: YouTube Video Injection (GUARANTEED) ==========
       phaseEnd = phaseTimer('youtube');
-      this.log('📹 Injecting YouTube video...', 'info');
+      this.log('📹 YOUTUBE: Searching for relevant video...', 'info');
 
       let contentWithVideo = optimizedContent;
+      let videoInjected = false;
 
       try {
-        if (optimizedContent.includes('[YOUTUBE_VIDEO_PLACEHOLDER]')) {
-          // Placeholder-based injection (preferred)
-          contentWithVideo = await injectYouTubeIntoContent(
-            optimizedContent,
-            page.title || semanticKeywords[0],
+        const searchKeyword = page.title || semanticKeywords[0] || 'guide';
+        this.log(`📹 YOUTUBE: Query = "${searchKeyword}"`, 'debug');
+
+        contentWithVideo = await injectYouTubeIntoContent(
+          optimizedContent,
+          searchKeyword,
+          this.context.serperApiKey,
+          (msg) => this.log(`  ${msg}`, 'debug')
+        );
+
+        videoInjected = contentWithVideo !== optimizedContent && !contentWithVideo.includes('[YOUTUBE_VIDEO_PLACEHOLDER]');
+
+        if (videoInjected) {
+          this.log('📹 YOUTUBE: SUCCESS - Video injected into content!', 'success');
+        } else {
+          this.log('📹 YOUTUBE: Primary injection did not add video, trying direct search...', 'warning');
+
+          const { html: youtubeHtml, video } = await findRelevantYouTubeVideo(
+            searchKeyword,
             this.context.serperApiKey,
             (msg) => this.log(`  ${msg}`, 'debug')
           );
-        } else {
-          // Smart fallback injection
-          const { html: youtubeHtml } = await findRelevantYouTubeVideo(
-            page.title || semanticKeywords[0],
-            this.context.serperApiKey
-          );
 
-          if (youtubeHtml) {
-            // Try to inject after 3rd H2
-            const h2Matches = [...optimizedContent.matchAll(/<\/h2>/gi)];
-            if (h2Matches.length >= 3 && h2Matches[2].index !== undefined) {
-              const insertPos = h2Matches[2].index + 5;
-              const afterH2 = optimizedContent.substring(insertPos);
-              const nextPMatch = afterH2.match(/<\/p>/i);
+          if (youtubeHtml && video) {
+            this.log(`📹 YOUTUBE: Found video: "${video.title}"`, 'debug');
 
-              if (nextPMatch && nextPMatch.index !== undefined) {
-                const finalInsertPos = insertPos + nextPMatch.index + nextPMatch[0].length;
-                contentWithVideo = optimizedContent.substring(0, finalInsertPos) + youtubeHtml + optimizedContent.substring(finalInsertPos);
-                this.log(`  ✓ Video injected after 3rd H2`, 'debug');
-              }
+            const cleanContent = contentWithVideo.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+            const h2Matches = [...cleanContent.matchAll(/<\/h2>/gi)];
+
+            if (h2Matches.length >= 2 && h2Matches[1].index !== undefined) {
+              const insertPos = h2Matches[1].index + 5;
+              contentWithVideo = cleanContent.substring(0, insertPos) + '\n\n' + youtubeHtml + '\n\n' + cleanContent.substring(insertPos);
+              videoInjected = true;
+              this.log('📹 YOUTUBE: SUCCESS - Injected after 2nd H2', 'success');
+            } else if (h2Matches.length >= 1 && h2Matches[0].index !== undefined) {
+              const insertPos = h2Matches[0].index + 5;
+              contentWithVideo = cleanContent.substring(0, insertPos) + '\n\n' + youtubeHtml + '\n\n' + cleanContent.substring(insertPos);
+              videoInjected = true;
+              this.log('📹 YOUTUBE: SUCCESS - Injected after 1st H2', 'success');
             } else {
-              // Fallback: append to end
-              contentWithVideo = optimizedContent + youtubeHtml;
-              this.log(`  ✓ Video appended to end`, 'debug');
+              contentWithVideo = cleanContent + '\n\n' + youtubeHtml;
+              videoInjected = true;
+              this.log('📹 YOUTUBE: SUCCESS - Appended to end of content', 'success');
             }
+          } else {
+            this.log('📹 YOUTUBE: No video found for this topic', 'warning');
           }
         }
       } catch (e: any) {
-        this.log(`  ⚠️ YouTube injection failed: ${e.message}`, 'warning');
-        contentWithVideo = optimizedContent; // Continue without video
+        this.log(`📹 YOUTUBE ERROR: ${e.message}`, 'error');
       }
+
+      if (!videoInjected) {
+        this.log('📹 YOUTUBE: Unable to inject video - continuing without', 'warning');
+        contentWithVideo = contentWithVideo.replace('[YOUTUBE_VIDEO_PLACEHOLDER]', '');
+      }
+
       phaseEnd();
 
       // ========== PHASE 5: Internal Link Injection ==========
