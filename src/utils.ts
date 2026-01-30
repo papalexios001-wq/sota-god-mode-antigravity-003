@@ -87,6 +87,105 @@ export const delay = (ms: number): Promise<void> => {
 };
 
 /**
+ * Debounce utility function
+ */
+export const debounce = <T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  ms: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), ms);
+  };
+};
+
+/**
+ * Fetch from WordPress API with retry logic
+ */
+export const fetchWordPressWithRetry = async (
+  url: string,
+  options: RequestInit = {},
+  maxRetries: number = 3
+): Promise<Response> => {
+  return callAiWithRetry(
+    () => fetch(url, options),
+    maxRetries,
+    1000,
+    'fetchWordPressWithRetry',
+    (error) => error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')
+  );
+};
+
+/**
+ * Generate a unique ID
+ */
+export const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+};
+
+/**
+ * Get item from localStorage with optional default value
+ */
+export const getStorageItem = <T>(key: string, defaultValue: T): T => {
+  try {
+    const item = localStorage.getItem(key);
+    if (item === null) return defaultValue;
+    return JSON.parse(item) as T;
+  } catch {
+    return defaultValue;
+  }
+};
+
+/**
+ * Set item in localStorage
+ */
+export const setStorageItem = <T>(key: string, value: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error('[setStorageItem] Failed to save:', e);
+  }
+};
+
+/**
+ * Parse JSON with AI repair fallback (uses safeParseJSON internally)
+ */
+export const parseJsonWithAiRepair = async <T>(
+  jsonString: string,
+  fallback?: T
+): Promise<T | null> => {
+  return safeParseJSON<T>(jsonString, fallback ?? undefined);
+};
+
+/**
+ * Process items concurrently with a limit
+ */
+export const processConcurrently = async <T, R>(
+  items: T[],
+  processor: (item: T, index: number) => Promise<R>,
+  concurrencyLimit: number = 5
+): Promise<R[]> => {
+  const results: R[] = [];
+  const queue = [...items];
+  let index = 0;
+
+  const workers = Array.from({ length: Math.min(concurrencyLimit, items.length) }, async () => {
+    while (queue.length > 0) {
+      const item = queue.shift();
+      const currentIndex = index++;
+      if (item !== undefined) {
+        const result = await processor(item, currentIndex);
+        results[currentIndex] = result;
+      }
+    }
+  });
+
+  await Promise.all(workers);
+  return results;
+};
+
+/**
  * Safe JSON parsing with multiple fallback strategies
  */
 export const safeParseJSON = <T>(
@@ -144,5 +243,12 @@ export default {
   extractSlugFromUrl,
   sanitizeTitle,
   delay,
+  debounce,
+  fetchWordPressWithRetry,
+  generateId,
+  getStorageItem,
+  setStorageItem,
+  parseJsonWithAiRepair,
+  processConcurrently,
   safeParseJSON
 };
