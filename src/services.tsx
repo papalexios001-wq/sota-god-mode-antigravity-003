@@ -46,6 +46,7 @@ import {
 
 import {
   searchYouTubeVideos,
+  findBestYouTubeVideo,
   guaranteedYouTubeInjection,
   YouTubeSearchResult
 } from './YouTubeService';
@@ -179,219 +180,148 @@ const analytics = new AnalyticsEngine();
 // ==================== NEURONWRITER ENFORCEMENT ENGINE ====================
 
 /**
- * MANDATORY NeuronWriter Term Enforcement
+ * Helper function to create a timeout promise
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${operation} timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+
+    promise
+      .then(result => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch(error => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
+/**
+ * MANDATORY NeuronWriter Term Enforcement - FIXED v2.0
  * Forces AI to incorporate missing NeuronWriter terms into the content
  * Uses a score-check → missing-terms → patch loop until target reached
+ * 
+ * CRITICAL FIXES:
+ * - 30 second timeout per AI call
+ * - 2 minute total timeout for entire enforcement
+ * - Reduced max passes to 2 for faster processing
+ * - Better error handling to prevent hangs
  */
 async function enforceNeuronWriterTerms(
   html: string,
   neuronTerms: NeuronTerms,
   callAiFn: (prompt: string) => Promise<string>,
   targetScore: number = 85,
-  maxPasses: number = 3
+  maxPasses: number = 2 // Reduced from 3 for faster processing
 ): Promise<{ html: string; score: number; passes: number; termsAdded: number }> {
+  const TOTAL_TIMEOUT_MS = 120000; // 2 minutes max for entire enforcement
+  const AI_CALL_TIMEOUT_MS = 30000; // 30 seconds per AI call
+  const startTime = Date.now();
+
   let currentHtml = html;
   let score = calculateNeuronContentScore(currentHtml, neuronTerms);
   let totalTermsAdded = 0;
-  
+  let completedPasses = 0;
+
   console.log(`[NeuronEnforce] Initial score: ${score}% (target: ${targetScore}%)`);
-  
+
   if (score >= targetScore) {
     console.log(`[NeuronEnforce] ✅ Already meets target score`);
     return { html: currentHtml, score, passes: 0, termsAdded: 0 };
   }
-  
+
   for (let pass = 1; pass <= maxPasses && score < targetScore; pass++) {
-    const missingTerms = getMissingNeuronTerms(currentHtml, neuronTerms, 25);
-    
+    // Check total timeout
+    if (Date.now() - startTime > TOTAL_TIMEOUT_MS) {
+      console.warn(`[NeuronEnforce] ⏱️ Total timeout reached after ${pass - 1} passes`);
+      break;
+    }
+
+    const missingTerms = getMissingNeuronTerms(currentHtml, neuronTerms, 15); // Reduced from 25
+
     if (missingTerms.length === 0) {
       console.log(`[NeuronEnforce] No more missing terms after pass ${pass - 1}`);
       break;
     }
-    
+
     console.log(`[NeuronEnforce] Pass ${pass}: Adding ${missingTerms.length} missing terms...`);
-    
-    const enforcementPrompt = `You are an expert SEO content editor. Your MANDATORY task is to integrate specific SEO terms into the existing content.
 
-## CRITICAL INSTRUCTIONS:
-1. You MUST add ALL of the following terms naturally into the content
-2. Do NOT create a keyword list or glossary section
-3. Integrate terms into existing headings, paragraphs, or add new supporting sentences
-4. Keep the overall structure and formatting intact
-5. Terms should read naturally - not forced or awkward
-6. Return ONLY the updated HTML content (no markdown fences, no explanations)
+    const enforcementPrompt = `You are an expert SEO content editor. Integrate these terms naturally into the content.
 
-## MISSING TERMS THAT MUST BE ADDED (${missingTerms.length} terms):
-${missingTerms.map((t, i) => `${i + 1}. "${t}"`).join('\n')}
+CRITICAL: 
+- Add terms to existing paragraphs/headings
+- DO NOT create keyword lists or glossaries
+- Return ONLY the updated HTML (no markdown fences)
 
-## STRATEGIES FOR NATURAL INTEGRATION:
-- Add terms to H2/H3 headings where relevant
-- Include terms in the first sentence of relevant paragraphs
-- Add terms to lists and bullet points
-- Include in expert quotes or pro tips
-- Add to comparison table rows
-- Include in FAQ answers
-- Add to conclusion/summary sections
+TERMS TO ADD:
+${missingTerms.slice(0, 10).map((t, i) => `${i + 1}. "${t}"`).join('\n')}
 
-## CURRENT HTML CONTENT:
-${currentHtml}
+CURRENT HTML:
+${currentHtml.substring(0, 50000)}
 
-Return the updated HTML with ALL missing terms naturally integrated:`;
+Return updated HTML with terms integrated:`;
 
     try {
-      const updatedContent = await callAiFn(enforcementPrompt);
-      
+      // Wrap AI call with timeout
+      const updatedContent = await withTimeout(
+        callAiFn(enforcementPrompt),
+        AI_CALL_TIMEOUT_MS,
+        `NeuronEnforce pass ${pass}`
+      );
+
       // Clean response if wrapped in markdown
       let cleanedContent = updatedContent.trim();
       if (cleanedContent.startsWith('```')) {
         cleanedContent = cleanedContent.replace(/```html?\s*/gi, '').replace(/```\s*$/gi, '').trim();
       }
-      
+
       // Validate we got HTML back
       if (!cleanedContent.includes('<') || cleanedContent.length < 500) {
-        console.warn(`[NeuronEnforce] Invalid response in pass ${pass}, skipping`);
+        console.warn(`[NeuronEnforce] Invalid response in pass ${pass}, using original`);
         continue;
       }
-      
+
       currentHtml = cleanedContent;
       const newScore = calculateNeuronContentScore(currentHtml, neuronTerms);
       const termsAddedThisPass = missingTerms.filter(
         t => currentHtml.toLowerCase().includes(t.toLowerCase())
       ).length;
-      
+
       totalTermsAdded += termsAddedThisPass;
-      
+      completedPasses = pass;
+
       console.log(`[NeuronEnforce] Pass ${pass} complete: Score ${score}% → ${newScore}% (+${termsAddedThisPass} terms)`);
       score = newScore;
-      
+
     } catch (error: any) {
       console.error(`[NeuronEnforce] Pass ${pass} failed:`, error.message);
+      // Don't block on errors - continue with what we have
+      if (error.message.includes('timed out')) {
+        console.warn(`[NeuronEnforce] AI call timed out, skipping remaining passes`);
+        break;
+      }
     }
   }
-  
-  console.log(`[NeuronEnforce] Final score: ${score}% after ${maxPasses} passes (${totalTermsAdded} terms added)`);
-  
+
+  const totalTime = Math.round((Date.now() - startTime) / 1000);
+  console.log(`[NeuronEnforce] Final score: ${score}% after ${completedPasses} passes (${totalTermsAdded} terms added) in ${totalTime}s`);
+
   return {
     html: currentHtml,
     score,
-    passes: maxPasses,
+    passes: completedPasses,
     termsAdded: totalTermsAdded
   };
 }
 
 // ==================== GUARANTEED YOUTUBE INJECTION ====================
 
-/**
- * GUARANTEED YouTube video finder and injector
- * Uses Serper.dev API to find the most relevant video
- * Returns video data for final injection step
- */
-/**
- * GUARANTEED YouTube video finder with multiple fallback strategies
- * Uses Serper.dev API to find the most relevant video
- * Returns video data for final injection step - WILL TRY MULTIPLE APPROACHES
- */
-async function findBestYouTubeVideo(
-  keyword: string,
-  serperApiKey: string,
-  logCallback?: (msg: string) => void
-): Promise<YouTubeSearchResult | null> {
-  // CRITICAL: Check API key first
-  if (!serperApiKey) {
-    console.error('[YouTube] ❌ CRITICAL: No Serper API key provided!');
-    console.error('[YouTube] Please configure serperApiKey in your settings');
-    logCallback?.('[YouTube] ❌ No Serper API key - CANNOT search YouTube');
-    return null;
-  }
-
-  if (serperApiKey.trim().length < 10) {
-    console.error('[YouTube] ❌ CRITICAL: Serper API key appears invalid (too short)');
-    console.error(`[YouTube] Key length: ${serperApiKey.length}`);
-    return null;
-  }
-  
-  console.log(`[YouTube] 🎬 Starting GUARANTEED video search for: "${keyword}"`);
-  console.log(`[YouTube] API Key configured: YES (${serperApiKey.length} chars)`);
-  
-  // Strategy 1: Primary search with exact keyword
-  try {
-    console.log(`[YouTube] Strategy 1: Primary search with "${keyword}"`);
-    const videos = await searchYouTubeVideos(keyword, serperApiKey, 3);
-    
-    if (videos.length > 0) {
-      const bestVideo = videos[0];
-      console.log(`[YouTube] ✅ Strategy 1 SUCCESS: "${bestVideo.title}" by ${bestVideo.channel}`);
-      return bestVideo;
-    }
-    console.log(`[YouTube] Strategy 1 returned 0 videos, trying alternatives...`);
-  } catch (error: any) {
-    console.error(`[YouTube] Strategy 1 failed:`, error.message);
-  }
-
-  // Strategy 2: Simplified keyword (remove special chars, use first 3 words)
-  try {
-    const simplifiedKeyword = keyword
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .slice(0, 3)
-      .join(' ');
-    
-    if (simplifiedKeyword !== keyword) {
-      console.log(`[YouTube] Strategy 2: Simplified keyword "${simplifiedKeyword}"`);
-      const videos = await searchYouTubeVideos(simplifiedKeyword, serperApiKey, 3);
-      
-      if (videos.length > 0) {
-        const bestVideo = videos[0];
-        console.log(`[YouTube] ✅ Strategy 2 SUCCESS: "${bestVideo.title}"`);
-        return bestVideo;
-      }
-    }
-  } catch (error: any) {
-    console.error(`[YouTube] Strategy 2 failed:`, error.message);
-  }
-
-  // Strategy 3: Use only the main topic word
-  try {
-    const mainWord = keyword
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 4)
-      .slice(0, 1)
-      .join('');
-    
-    if (mainWord && mainWord.length > 3) {
-      console.log(`[YouTube] Strategy 3: Main topic word "${mainWord}"`);
-      const videos = await searchYouTubeVideos(`${mainWord} tutorial`, serperApiKey, 3);
-      
-      if (videos.length > 0) {
-        const bestVideo = videos[0];
-        console.log(`[YouTube] ✅ Strategy 3 SUCCESS: "${bestVideo.title}"`);
-        return bestVideo;
-      }
-    }
-  } catch (error: any) {
-    console.error(`[YouTube] Strategy 3 failed:`, error.message);
-  }
-
-  // Strategy 4: Generic topic + "explained" or "guide"
-  try {
-    const firstWord = keyword.split(/\s+/)[0];
-    console.log(`[YouTube] Strategy 4: Generic search "${firstWord} explained"`);
-    const videos = await searchYouTubeVideos(`${firstWord} explained`, serperApiKey, 3);
-    
-    if (videos.length > 0) {
-      const bestVideo = videos[0];
-      console.log(`[YouTube] ✅ Strategy 4 SUCCESS: "${bestVideo.title}"`);
-      return bestVideo;
-    }
-  } catch (error: any) {
-    console.error(`[YouTube] Strategy 4 failed:`, error.message);
-  }
-
-  console.error(`[YouTube] ❌ ALL STRATEGIES FAILED for: "${keyword}"`);
-  console.error(`[YouTube] This is unusual - please check Serper API status`);
-  return null;
-}
+// YouTube video finding is now handled by YouTubeService.ts with proper timeouts
+// The findBestYouTubeVideo function is imported from './YouTubeService'
 
 /**
  * Generate a hardcoded fallback YouTube section when API fails completely
@@ -400,7 +330,7 @@ async function findBestYouTubeVideo(
 function generateFallbackYouTubeSection(keyword: string): string {
   // Create a search-friendly version of the keyword
   const searchQuery = encodeURIComponent(keyword + ' tutorial');
-  
+
   return `
 <div class="sota-youtube-fallback" style="margin: 2.5rem 0; background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%); border-radius: 16px; padding: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
   <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
@@ -1127,14 +1057,14 @@ const REQUIRED_DESCRIPTIVE_WORDS = new Set([
 function isGrammaticallyComplete(phrase: string): boolean {
   const words = phrase.trim().split(/\s+/);
   if (words.length < 4 || words.length > 8) return false;
-  
+
   const firstWord = words[0].toLowerCase().replace(/[^a-z']/g, '');
   const lastWord = words[words.length - 1].toLowerCase().replace(/[^a-z']/g, '');
-  
+
   // Check forbidden start/end words
   if (FORBIDDEN_START_WORDS.has(firstWord)) return false;
   if (FORBIDDEN_END_WORDS.has(lastWord)) return false;
-  
+
   // Check for fragment patterns at end
   const fragmentEndPatterns = [
     /\b(is|are|was|were|been|being)\s*$/i,
@@ -1144,11 +1074,11 @@ function isGrammaticallyComplete(phrase: string): boolean {
     /\b(will|would|could|should|can|may|might|must)\s*$/i,
     /\b(that|which|who|where|when|how|why)\s*$/i,
   ];
-  
+
   for (const pattern of fragmentEndPatterns) {
     if (pattern.test(phrase)) return false;
   }
-  
+
   // Check for fragment patterns at start
   const fragmentStartPatterns = [
     /^(and|or|but|so|yet|nor)\s/i,
@@ -1156,16 +1086,16 @@ function isGrammaticallyComplete(phrase: string): boolean {
     /^(is|are|was|were|been|being)\s/i,
     /^(very|really|quite|rather|totally)\s/i,
   ];
-  
+
   for (const pattern of fragmentStartPatterns) {
     if (pattern.test(phrase)) return false;
   }
-  
+
   // Must contain at least one descriptive word
-  const hasDescriptive = words.some(w => 
+  const hasDescriptive = words.some(w =>
     REQUIRED_DESCRIPTIVE_WORDS.has(w.toLowerCase().replace(/[^a-z]/g, ''))
   );
-  
+
   return hasDescriptive;
 }
 
@@ -1862,7 +1792,7 @@ export const generateContent = {
         if (neuronTerms) {
           dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '🧠 Enforcing NeuronWriter...' } });
           console.log(`[ContentGen] Enforcing NeuronWriter terms for: "${item.title}"`);
-          
+
           const enforceResult = await enforceNeuronWriterTerms(
             contentResponse,
             neuronTerms,
@@ -1870,7 +1800,7 @@ export const generateContent = {
             85, // Target score
             3   // Max passes
           );
-          
+
           contentResponse = enforceResult.html;
           neuronScore = enforceResult.score;
           console.log(`[ContentGen] NeuronWriter enforcement complete: ${neuronScore}% score, ${enforceResult.termsAdded} terms added`);
@@ -1886,7 +1816,7 @@ export const generateContent = {
         // Phase 5: Find YouTube Video (GUARANTEED - search first, inject last)
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Finding Video...' } });
         console.log(`[ContentGen] 🎬 Finding YouTube video for: "${item.title}"`);
-        
+
         // CRITICAL: Validate serperApiKey before YouTube search
         if (!serperApiKey) {
           console.error(`[ContentGen] ❌ CRITICAL: serperApiKey is MISSING or EMPTY!`);
@@ -1897,13 +1827,13 @@ export const generateContent = {
         } else {
           console.log(`[ContentGen] ✅ serperApiKey is present (${serperApiKey.length} chars)`);
         }
-        
+
         let youtubeVideo = await findBestYouTubeVideo(
           item.title,
           serperApiKey,
           (msg) => console.log(msg)
         );
-        
+
         if (youtubeVideo) {
           console.log(`[ContentGen] ✅ YouTube video found: "${youtubeVideo.title}"`);
         } else {
@@ -1920,7 +1850,7 @@ export const generateContent = {
 
         if (existingPages.length > 0) {
           console.log(`[Internal Links] Using AI-powered internal linking for: "${item.title}"`);
-          
+
           // Create AI linking config
           const aiLinkConfig: AILinkingConfig = {
             callAiFn: async (prompt: string) => await callAIFn('dom_content_polisher', [prompt, 'internal_linking'], 'json'),
@@ -1928,16 +1858,16 @@ export const generateContent = {
             minLinks: 4,
             maxLinks: 8
           };
-          
+
           // Convert existing pages to InternalPage format
           const internalPages: InternalPage[] = existingPages.map(p => ({
             title: p.title,
             slug: p.slug,
             url: p.url || `${wpConfig.url}/${p.slug}/`
           }));
-          
+
           const baseUrl = wpConfig.url || '';
-          
+
           // Use hybrid linking (AI-first with deterministic fallback)
           const linkingResult = await processContentWithHybridInternalLinks(
             contentResponse,
@@ -1945,10 +1875,10 @@ export const generateContent = {
             baseUrl,
             aiLinkConfig
           );
-          
+
           contentWithLinks = linkingResult.html;
-          linkResult = { 
-            linkCount: linkingResult.stats.successful, 
+          linkResult = {
+            linkCount: linkingResult.stats.successful,
             links: linkingResult.placements.map(p => ({
               anchorText: p.anchorText,
               targetUrl: p.targetUrl,
@@ -1972,12 +1902,12 @@ export const generateContent = {
         // Phase 7.9: GUARANTEED YouTube Injection (LAST STEP before schema)
         // This ensures YouTube video is ALWAYS present in final content
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Injecting Video...' } });
-        
+
         if (youtubeVideo) {
           console.log(`[ContentGen] GUARANTEED YouTube injection for: "${item.title}"`);
-          
+
           finalContent = guaranteedYouTubeInjection(finalContent, youtubeVideo);
-          
+
           // Verify injection worked
           if (finalContent.includes(youtubeVideo.videoId)) {
             console.log(`[ContentGen] ✅ YouTube video CONFIRMED in final content`);
@@ -1992,7 +1922,7 @@ export const generateContent = {
           // NO VIDEO FOUND - Use guaranteed fallback section
           console.log(`[ContentGen] 📹 No video from API - injecting FALLBACK YouTube section`);
           const fallbackHtml = generateFallbackYouTubeSection(item.title);
-          
+
           // Find best injection point (before references or at end)
           const refMatch = finalContent.match(/<div[^>]*class="[^"]*sota-references[^"]*"[^>]*>/i);
           if (refMatch && refMatch.index !== undefined) {
@@ -2003,11 +1933,11 @@ export const generateContent = {
             console.log(`[ContentGen] ✅ Fallback YouTube section appended at end`);
           }
         }
-        
+
         // FINAL VERIFICATION: Ensure YouTube content exists
-        const hasYouTubeContent = finalContent.includes('youtube.com') || 
-                                   finalContent.includes('youtu.be') || 
-                                   finalContent.includes('sota-youtube');
+        const hasYouTubeContent = finalContent.includes('youtube.com') ||
+          finalContent.includes('youtu.be') ||
+          finalContent.includes('sota-youtube');
         if (hasYouTubeContent) {
           console.log(`[ContentGen] ✅✅ VERIFIED: YouTube content IS present in final output`);
         } else {
@@ -2159,7 +2089,7 @@ export const generateContent = {
       let neuronScore = 0;
       if (neuronTerms) {
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '🧠 Enforcing NeuronWriter...' } });
-        
+
         const enforceResult = await enforceNeuronWriterTerms(
           optimizedContent,
           neuronTerms,
@@ -2167,7 +2097,7 @@ export const generateContent = {
           85,
           3
         );
-        
+
         optimizedContent = enforceResult.html;
         neuronScore = enforceResult.score;
         console.log(`[Refresh] NeuronWriter enforcement: ${neuronScore}% score`);
@@ -2181,14 +2111,14 @@ export const generateContent = {
 
       // Find YouTube video (search first, inject last)
       dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Finding Video...' } });
-      
+
       // CRITICAL: Validate serperApiKey before YouTube search
       if (!serperApiKey) {
         console.error(`[Refresh] ❌ CRITICAL: serperApiKey is MISSING!`);
       } else {
         console.log(`[Refresh] ✅ serperApiKey present (${serperApiKey.length} chars)`);
       }
-      
+
       const youtubeVideo = await findBestYouTubeVideo(item.title, serperApiKey);
 
       // AI-Powered Internal Links (with hybrid fallback)
@@ -2203,20 +2133,20 @@ export const generateContent = {
           minLinks: 4,
           maxLinks: 8
         };
-        
+
         const internalPages: InternalPage[] = existingPages.map(p => ({
           title: p.title,
           slug: p.slug,
           url: p.url || `${wpConfig.url}/${p.slug}/`
         }));
-        
+
         const linkingResult = await processContentWithHybridInternalLinks(
           optimizedContent,
           internalPages,
           wpConfig.url || '',
           aiLinkConfig
         );
-        
+
         finalContent = linkingResult.html;
         linkResult = {
           linkCount: linkingResult.stats.successful,
@@ -2236,7 +2166,7 @@ export const generateContent = {
 
       // GUARANTEED YouTube Injection (LAST STEP)
       dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Injecting Video...' } });
-      
+
       if (youtubeVideo) {
         finalContent = guaranteedYouTubeInjection(finalContent, youtubeVideo);
         console.log(`[Refresh] ✅ YouTube video injected: ${youtubeVideo.videoId}`);
@@ -2244,7 +2174,7 @@ export const generateContent = {
         // NO VIDEO FOUND - Use guaranteed fallback section
         console.log(`[Refresh] 📹 No video from API - injecting FALLBACK YouTube section`);
         const fallbackHtml = generateFallbackYouTubeSection(item.title);
-        
+
         // Find best injection point (before references or at end)
         const refMatch = finalContent.match(/<div[^>]*class="[^"]*sota-references[^"]*"[^>]*>/i);
         if (refMatch && refMatch.index !== undefined) {
@@ -2254,7 +2184,7 @@ export const generateContent = {
         }
         console.log(`[Refresh] ✅ Fallback YouTube section injected`);
       }
-      
+
       // FINAL VERIFICATION
       const hasYouTubeContent = finalContent.includes('youtube.com') || finalContent.includes('sota-youtube');
       if (!hasYouTubeContent) {

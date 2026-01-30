@@ -1,10 +1,12 @@
 // =============================================================================
-// SOTA NEURONWRITER INTEGRATION v14.0 - CLOUDFLARE PAGES OPTIMIZED
-// Auto-detects proxy: Cloudflare Pages Functions or Supabase Edge Functions
+// SOTA NEURONWRITER INTEGRATION v16.0 - ENTERPRISE-GRADE FIXED
+// CRITICAL FIX: Proper API workflow with existing query lookup
+// API Docs: https://neuronwriter.com/faqs/neuronwriter-api-how-to-use/
 // =============================================================================
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Vite environment variables
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 const USE_CLOUDFLARE_PROXY = !SUPABASE_URL || SUPABASE_URL.trim() === '';
 
 // ==================== TYPES ====================
@@ -44,22 +46,41 @@ interface ProxyResponse {
   type?: string;
 }
 
+interface CachedQuery {
+  queryId: string;
+  terms: NeuronTerms;
+  timestamp: number;
+}
+
+// ==================== CACHES ====================
+
+// Cache for query IDs to avoid creating duplicates
+const queryIdCache = new Map<string, { queryId: string; timestamp: number }>();
+
+// Cache for fetched terms
+const neuronTermsCache = new Map<string, CachedQuery>();
+
+// Cache TTLs
+const QUERY_ID_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours for query IDs
+const TERMS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour for terms
+
 // ==================== PROXY HELPER ====================
 
 const callNeuronWriterProxy = async (
   endpoint: string,
   apiKey: string,
-  method: string = 'GET',
-  body?: Record<string, unknown>
+  method: string = 'POST',
+  body?: Record<string, unknown>,
+  timeoutMs: number = 30000
 ): Promise<ProxyResponse> => {
   const proxyUrl = USE_CLOUDFLARE_PROXY
     ? '/api/neuronwriter'
     : `${SUPABASE_URL}/functions/v1/neuronwriter-proxy`;
 
-  console.log(`[NeuronWriter] Using ${USE_CLOUDFLARE_PROXY ? 'Cloudflare Pages' : 'Supabase'} proxy`);
+  console.log(`[NeuronWriter] Calling ${endpoint} via ${USE_CLOUDFLARE_PROXY ? 'Cloudflare' : 'Supabase'} proxy`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const headers: Record<string, string> = {
@@ -87,7 +108,8 @@ const callNeuronWriterProxy = async (
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
-      throw new Error(`Proxy error (${response.status}): ${errorText}`);
+      console.error(`[NeuronWriter] Proxy error (${response.status}): ${errorText}`);
+      return { success: false, status: response.status, error: errorText };
     }
 
     const result: ProxyResponse = await response.json();
@@ -96,21 +118,23 @@ const callNeuronWriterProxy = async (
     clearTimeout(timeoutId);
 
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out. The NeuronWriter API took too long to respond.');
+      console.error('[NeuronWriter] Request timed out');
+      return { success: false, error: 'Request timed out', type: 'timeout' };
     }
 
-    throw error;
+    console.error('[NeuronWriter] Network error:', error.message);
+    return { success: false, error: error.message, type: 'network_error' };
   }
 };
 
-// ==================== API FUNCTIONS ====================
+// ==================== LIST PROJECTS ====================
 
 export const listNeuronProjects = async (apiKey: string): Promise<NeuronProject[]> => {
   if (!apiKey || apiKey.trim().length < 10) {
     throw new Error('Invalid NeuronWriter API key. Please enter a valid key.');
   }
 
-  console.log('[NeuronWriter] Fetching projects via Edge Function...');
+  console.log('[NeuronWriter] Fetching projects...');
 
   try {
     const result = await callNeuronWriterProxy('/list-projects', apiKey, 'POST', {});
@@ -120,7 +144,6 @@ export const listNeuronProjects = async (apiKey: string): Promise<NeuronProject[
     }
 
     const data = result.data;
-
     if (!data) {
       throw new Error('No data returned from NeuronWriter API');
     }
@@ -146,209 +169,357 @@ export const listNeuronProjects = async (apiKey: string): Promise<NeuronProject[
   }
 };
 
+// ==================== FIND EXISTING QUERY ====================
+
 /**
- * SOTA NeuronWriter Integration v15.0 - Enterprise-Grade with Fallback
- * 
- * Features:
- * - Retry logic with exponential backoff
- * - Graceful degradation with synthetic SEO terms
- * - Comprehensive error categorization
- * - Query/Answer caching for performance
+ * Searches for an existing query with the same keyword to avoid duplicates
+ * Uses /list-queries API endpoint
  */
+async function findExistingQuery(
+  apiKey: string,
+  projectId: string,
+  keyword: string
+): Promise<string | null> {
+  const cacheKey = `${projectId}:${keyword.toLowerCase().trim()}`;
 
-// Term cache to avoid redundant API calls
-const neuronTermsCache = new Map<string, { terms: NeuronTerms; timestamp: number }>();
-const NEURON_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour cache
+  // Check query ID cache first
+  const cached = queryIdCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < QUERY_ID_CACHE_TTL_MS) {
+    console.log(`[NeuronWriter] 📦 Found cached query ID: ${cached.queryId}`);
+    return cached.queryId;
+  }
 
+  console.log(`[NeuronWriter] 🔍 Searching for existing query: "${keyword}"`);
+
+  try {
+    const result = await callNeuronWriterProxy('/list-queries', apiKey, 'POST', {
+      project: projectId,
+      status: 'ready',
+      // Only search for recent queries to avoid stale data
+    }, 15000);
+
+    if (!result.success || !result.data) {
+      console.log('[NeuronWriter] Could not fetch existing queries');
+      return null;
+    }
+
+    const queries = Array.isArray(result.data) ? result.data : [];
+    const normalizedKeyword = keyword.toLowerCase().trim();
+
+    // Find a query with matching keyword
+    const match = queries.find((q: any) => {
+      const queryKeyword = (q.keyword || '').toLowerCase().trim();
+      return queryKeyword === normalizedKeyword;
+    });
+
+    if (match) {
+      const queryId = match.query || match.id;
+      console.log(`[NeuronWriter] ✅ Found existing query: ${queryId}`);
+
+      // Cache the query ID
+      queryIdCache.set(cacheKey, { queryId, timestamp: Date.now() });
+
+      return queryId;
+    }
+
+    console.log('[NeuronWriter] No existing query found for this keyword');
+    return null;
+  } catch (error: any) {
+    console.warn('[NeuronWriter] Error searching for existing queries:', error.message);
+    return null;
+  }
+}
+
+// ==================== FETCH TERMS FROM QUERY ====================
+
+/**
+ * Fetches terms from an existing query ID
+ * Uses /get-query API endpoint
+ */
+async function fetchTermsFromQuery(
+  apiKey: string,
+  queryId: string
+): Promise<NeuronTerms | null> {
+  console.log(`[NeuronWriter] 📊 Fetching terms from query: ${queryId}`);
+
+  try {
+    const result = await callNeuronWriterProxy('/get-query', apiKey, 'POST', {
+      query: queryId
+    }, 20000);
+
+    if (!result.success || !result.data) {
+      console.error('[NeuronWriter] Failed to fetch query data');
+      return null;
+    }
+
+    const data = result.data;
+
+    // Check if analysis is ready
+    if (data.status !== 'ready') {
+      console.log(`[NeuronWriter] Query status: ${data.status} (not ready yet)`);
+      return null;
+    }
+
+    // Extract terms using correct API response structure
+    // API returns terms_txt object with title, content_basic, etc.
+    const termsTxt = data.terms_txt || data.terms || {};
+    const ideas = data.ideas || {};
+
+    const terms: NeuronTerms = {
+      h1: extractTermString(termsTxt.h1 || termsTxt.title),
+      title: extractTermString(termsTxt.title),
+      h2: extractTermString(termsTxt.h2),
+      h3: extractTermString(termsTxt.h3),
+      content_basic: extractTermString(termsTxt.content_basic),
+      content_extended: extractTermString(termsTxt.content_extended || termsTxt.content_basic_w_ranges),
+      entities_basic: extractTermString(termsTxt.entities || termsTxt.entities_basic),
+      entities_extended: extractTermString(termsTxt.entities_extended),
+      questions: extractQuestions([
+        ...(ideas.suggest_questions || []),
+        ...(ideas.people_also_ask || []),
+        ...(ideas.content_questions || [])
+      ]),
+      headings: extractHeadings(data.headings || data.suggested_headings || [])
+    };
+
+    const termCount = countTerms(terms);
+    console.log(`[NeuronWriter] ✅ Extracted ${termCount} terms from query`);
+
+    return terms;
+  } catch (error: any) {
+    console.error('[NeuronWriter] Error fetching terms from query:', error.message);
+    return null;
+  }
+}
+
+// ==================== CREATE NEW QUERY ====================
+
+/**
+ * Creates a new query and waits for analysis with REASONABLE timeouts
+ * Uses /new-query API endpoint
+ */
+async function createNewQuery(
+  apiKey: string,
+  projectId: string,
+  keyword: string,
+  engine: string = 'google',
+  language: string = 'en'
+): Promise<{ queryId: string; terms: NeuronTerms } | null> {
+  console.log(`[NeuronWriter] 🆕 Creating new query for: "${keyword}"`);
+
+  try {
+    // Create the query
+    const createResult = await callNeuronWriterProxy('/new-query', apiKey, 'POST', {
+      project: projectId,
+      keyword: keyword,
+      engine: engine,
+      language: language
+    }, 30000);
+
+    if (!createResult.success) {
+      console.error('[NeuronWriter] Failed to create query:', createResult.error);
+      return null;
+    }
+
+    const queryId = createResult.data?.query || createResult.data?.id;
+    if (!queryId) {
+      console.error('[NeuronWriter] No query ID in response');
+      return null;
+    }
+
+    console.log(`[NeuronWriter] ✅ Query created: ${queryId}`);
+    console.log(`[NeuronWriter] ⏳ NeuronWriter analysis typically takes 30-60 seconds...`);
+
+    // Cache the query ID immediately
+    const cacheKey = `${projectId}:${keyword.toLowerCase().trim()}`;
+    queryIdCache.set(cacheKey, { queryId, timestamp: Date.now() });
+
+    // Poll for completion with REASONABLE timeouts
+    // NeuronWriter docs say "usually takes around 60 seconds"
+    const maxWaitTime = 90000; // 90 seconds max total wait
+    const pollInterval = 5000; // Check every 5 seconds
+    const startTime = Date.now();
+    let pollCount = 0;
+
+    while (Date.now() - startTime < maxWaitTime) {
+      pollCount++;
+
+      // Wait before polling
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      console.log(`[NeuronWriter] 🔄 Polling ${pollCount} (${elapsed}s elapsed)...`);
+
+      const terms = await fetchTermsFromQuery(apiKey, queryId);
+
+      if (terms && countTerms(terms) > 0) {
+        console.log(`[NeuronWriter] ✅ Analysis complete after ${elapsed}s`);
+        return { queryId, terms };
+      }
+    }
+
+    console.warn(`[NeuronWriter] ⏱️ Analysis not ready after ${maxWaitTime / 1000}s - using fallback`);
+    return null;
+
+  } catch (error: any) {
+    console.error('[NeuronWriter] Error creating query:', error.message);
+    return null;
+  }
+}
+
+// ==================== MAIN FETCH FUNCTION ====================
+
+/**
+ * SOTA NeuronWriter Integration v16.0 - Enterprise-Grade
+ * 
+ * Workflow:
+ * 1. Check cache for existing terms
+ * 2. Check for existing query using /list-queries (to avoid duplicates)
+ * 3. If existing query found, fetch terms using /get-query
+ * 4. If no existing query, create new one with /new-query and poll
+ * 5. Fallback to synthetic terms if API is slow/unavailable
+ */
 export const fetchNeuronTerms = async (
   apiKey: string,
   projectId: string,
-  query: string,
-  retryCount: number = 2
+  query: string
 ): Promise<NeuronTerms | null> => {
   if (!apiKey || !projectId || !query) {
     console.warn('[NeuronWriter] Missing required parameters');
     return generateFallbackTerms(query, 'Missing required parameters');
   }
 
-  // Check cache first
-  const cacheKey = `${projectId}:${query.toLowerCase().trim()}`;
+  const cacheKey = `terms:${projectId}:${query.toLowerCase().trim()}`;
+
+  // Step 1: Check terms cache
   const cached = neuronTermsCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < NEURON_CACHE_TTL_MS) {
-    console.log(`[NeuronWriter] 📦 Cache hit for: "${query}"`);
+  if (cached && Date.now() - cached.timestamp < TERMS_CACHE_TTL_MS) {
+    console.log(`[NeuronWriter] 📦 Cache hit for terms: "${query}"`);
     return cached.terms;
   }
 
-  console.log(`[NeuronWriter] Creating NEW content query for: "${query}"`);
+  console.log(`[NeuronWriter] 🚀 Starting fetch for: "${query}"`);
+  console.log(`[NeuronWriter] Project ID: ${projectId.substring(0, 8)}...`);
 
-  for (let attempt = 0; attempt <= retryCount; attempt++) {
-    try {
-      if (attempt > 0) {
-        const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff
-        console.log(`[NeuronWriter] ⏳ Retry ${attempt}/${retryCount} after ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
+  try {
+    // Step 2: Try to find existing query
+    const existingQueryId = await findExistingQuery(apiKey, projectId, query);
 
-      const analysisResult = await callNeuronWriterProxy(
-        '/new-query',
-        apiKey,
-        'POST',
-        {
-          project: projectId,
-          keyword: query,
-          engine: 'google',
-          language: 'en'
-        }
-      );
+    if (existingQueryId) {
+      // Step 3: Fetch terms from existing query
+      const terms = await fetchTermsFromQuery(apiKey, existingQueryId);
 
-      if (!analysisResult.success) {
-        console.error(`[NeuronWriter] Query creation FAILED (attempt ${attempt + 1}):`, analysisResult.error);
+      if (terms && countTerms(terms) > 0) {
+        // Cache the terms
+        neuronTermsCache.set(cacheKey, {
+          queryId: existingQueryId,
+          terms,
+          timestamp: Date.now()
+        });
 
-        // If it's an auth error or invalid project, don't retry
-        if (analysisResult.status === 401 || analysisResult.status === 403) {
-          console.error('[NeuronWriter] ⛔ Authentication error - check API key');
-          return generateFallbackTerms(query, 'Authentication failed');
-        }
-        if (analysisResult.status === 404) {
-          console.error('[NeuronWriter] ⛔ Project not found - check project ID');
-          return generateFallbackTerms(query, 'Project not found');
-        }
-
-        continue; // Retry for transient errors
-      }
-
-      const queryId = analysisResult.data?.query || analysisResult.data?.id || analysisResult.data?.query_id;
-
-      if (!queryId) {
-        console.error('[NeuronWriter] No query ID returned from API');
-        continue; // Retry
-      }
-
-      console.log(`[NeuronWriter] ✅ Query created: ${queryId} - Waiting for analysis...`);
-
-      // Polling phase
-      let pollAttempts = 0;
-      const maxPollAttempts = 20; // Increased for reliability
-      let terms: NeuronTerms | null = null;
-
-      while (pollAttempts < maxPollAttempts) {
-        pollAttempts++;
-
-        // Progressive delay (faster at start, slower later)
-        const pollingDelay = pollAttempts < 5 ? 1500 : (pollAttempts < 10 ? 2500 : 3500);
-        await new Promise(resolve => setTimeout(resolve, pollingDelay));
-
-        console.log(`[NeuronWriter] 🔄 Polling for data (attempt ${pollAttempts}/${maxPollAttempts})...`);
-
-        const termsResult = await callNeuronWriterProxy(
-          '/get-query',
-          apiKey,
-          'POST',
-          { query: queryId }
-        );
-
-        if (termsResult.success && termsResult.data) {
-          const data = termsResult.data;
-
-          // Check for ready state with multiple possible data structures
-          const isReady =
-            data.status === 'ready' ||
-            data.status === 'completed' ||
-            data.terms ||
-            data.content_terms ||
-            data.recommendations ||
-            (data.content && Object.keys(data.content).length > 0);
-
-          if (isReady) {
-            // Extract terms from various possible response structures
-            const termsTxt = data.terms || data.content_terms || data.recommendations || data.content || {};
-            const termsObj = typeof termsTxt === 'object' ? termsTxt : {};
-
-            terms = {
-              h1: extractTermString(termsObj.h1 || termsObj.H1 || termsObj.title_terms),
-              title: extractTermString(termsObj.title || termsObj.Title || termsObj.meta_title || termsObj.seo_title),
-              h2: extractTermString(termsObj.h2 || termsObj.H2 || termsObj.subheading_terms),
-              h3: extractTermString(termsObj.h3 || termsObj.H3),
-              content_basic: extractTermString(termsObj.content_basic || termsObj.content || termsObj.basic || termsObj.required_terms),
-              content_extended: extractTermString(termsObj.content_extended || termsObj.extended || termsObj.advanced || termsObj.optional_terms),
-              entities_basic: extractTermString(termsObj.entities_basic || termsObj.entities || termsObj.ner_basic || termsObj.named_entities),
-              entities_extended: extractTermString(termsObj.entities_extended || termsObj.ner_extended || termsObj.ner_advanced),
-              questions: extractQuestions(data.ideas || data.questions || data.paa || data.related_questions || []),
-              headings: extractHeadings(data.headings || data.suggested_headings || data.h2_suggestions || data.outline || [])
-            };
-
-            const termCount = countTerms(terms);
-
-            // Validate we got actual terms
-            if (termCount > 0) {
-              console.log(`[NeuronWriter] ✅ SUCCESS - Fetched ${termCount} total terms/entities`);
-              console.log(`[NeuronWriter] 📊 Breakdown:`);
-              console.log(`   H1: ${terms.h1?.split(',').length || 0} terms`);
-              console.log(`   H2: ${terms.h2?.split(',').length || 0} terms`);
-              console.log(`   Content Basic: ${terms.content_basic?.split(',').length || 0} terms`);
-              console.log(`   Content Extended: ${terms.content_extended?.split(',').length || 0} terms`);
-              console.log(`   Entities Basic: ${terms.entities_basic?.split(',').length || 0} entities`);
-              console.log(`   Entities Extended: ${terms.entities_extended?.split(',').length || 0} entities`);
-              console.log(`   Questions: ${terms.questions?.length || 0}`);
-              console.log(`   Suggested Headings: ${terms.headings?.length || 0}`);
-
-              // Cache the result
-              neuronTermsCache.set(cacheKey, { terms, timestamp: Date.now() });
-
-              return terms;
-            } else {
-              console.warn('[NeuronWriter] ⚠️ Response marked ready but no terms found, continuing to poll...');
-            }
-          }
-
-          if (data.status === 'failed' || data.error) {
-            console.error('[NeuronWriter] ❌ Analysis FAILED:', data.error || 'Unknown error');
-            break; // Exit polling loop, will retry outer loop
-          }
-
-          console.log(`[NeuronWriter] ⏳ Status: ${data.status || 'processing'}...`);
-        }
-      }
-
-      if (terms) {
+        logTermStats(terms);
         return terms;
       }
-
-      console.warn('[NeuronWriter] ⏱️ Polling timeout, retrying query creation...');
-
-    } catch (error: any) {
-      console.error(`[NeuronWriter] ❌ Error (attempt ${attempt + 1}):`, error.message);
-
-      // Check for network/timeout errors
-      if (error.message.includes('timeout') || error.message.includes('abort')) {
-        console.warn('[NeuronWriter] ⏱️ Request timeout, will retry...');
-        continue;
-      }
-
-      // Fatal errors - don't retry
-      if (error.message.includes('Invalid API key') || error.message.includes('Unauthorized')) {
-        console.error('[NeuronWriter] ⛔ Fatal authentication error');
-        return generateFallbackTerms(query, 'Authentication failed');
-      }
     }
-  }
 
-  // All attempts exhausted - generate fallback terms
-  console.warn('[NeuronWriter] ⚠️ All attempts exhausted, generating fallback terms');
-  return generateFallbackTerms(query, 'API unavailable after retries');
+    // Step 4: Create new query if no existing one found
+    console.log('[NeuronWriter] No ready query found - creating new one...');
+
+    const newQueryResult = await createNewQuery(apiKey, projectId, query);
+
+    if (newQueryResult && countTerms(newQueryResult.terms) > 0) {
+      // Cache the terms
+      neuronTermsCache.set(cacheKey, {
+        queryId: newQueryResult.queryId,
+        terms: newQueryResult.terms,
+        timestamp: Date.now()
+      });
+
+      logTermStats(newQueryResult.terms);
+      return newQueryResult.terms;
+    }
+
+    // Step 5: Fallback to synthetic terms
+    console.warn('[NeuronWriter] ⚠️ API unavailable - generating fallback terms');
+    return generateFallbackTerms(query, 'API unavailable or slow');
+
+  } catch (error: any) {
+    console.error('[NeuronWriter] Critical error:', error.message);
+    return generateFallbackTerms(query, error.message);
+  }
 };
 
+// ==================== HELPER FUNCTIONS ====================
+
+function logTermStats(terms: NeuronTerms): void {
+  console.log(`[NeuronWriter] 📊 Term Statistics:`);
+  console.log(`   H1: ${terms.h1?.split(',').length || 0} terms`);
+  console.log(`   H2: ${terms.h2?.split(',').length || 0} terms`);
+  console.log(`   Content Basic: ${terms.content_basic?.split(',').length || 0} terms`);
+  console.log(`   Content Extended: ${terms.content_extended?.split(',').length || 0} terms`);
+  console.log(`   Entities: ${terms.entities_basic?.split(',').length || 0} entities`);
+  console.log(`   Questions: ${terms.questions?.length || 0}`);
+  console.log(`   Headings: ${terms.headings?.length || 0}`);
+}
+
+function extractTermString(value: any): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) {
+    return value.map(v => {
+      if (typeof v === 'string') return v;
+      return v?.term || v?.name || v?.keyword || v?.text || '';
+    }).filter(Boolean).join(', ');
+  }
+  return '';
+}
+
+function extractQuestions(value: any): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(v => {
+      if (typeof v === 'string') return v;
+      return v?.q || v?.question || v?.text || v?.title || '';
+    }).filter(Boolean).slice(0, 15);
+  }
+  return [];
+}
+
+function extractHeadings(value: any): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(v => {
+      if (typeof v === 'string') return v;
+      return v?.heading || v?.text || v?.title || v?.h2 || '';
+    }).filter(Boolean).slice(0, 15);
+  }
+  return [];
+}
+
+function countTerms(terms: NeuronTerms): number {
+  let count = 0;
+  if (terms.h1) count += terms.h1.split(',').length;
+  if (terms.h2) count += terms.h2.split(',').length;
+  if (terms.h3) count += terms.h3.split(',').length;
+  if (terms.content_basic) count += terms.content_basic.split(',').length;
+  if (terms.content_extended) count += terms.content_extended.split(',').length;
+  if (terms.entities_basic) count += terms.entities_basic.split(',').length;
+  if (terms.entities_extended) count += terms.entities_extended.split(',').length;
+  if (terms.questions) count += terms.questions.length;
+  if (terms.headings) count += terms.headings.length;
+  return count;
+}
+
 /**
- * Generate synthetic SEO terms when NeuronWriter API fails
- * This ensures content generation never blocks due to NeuronWriter issues
+ * Generate synthetic SEO terms when NeuronWriter API is unavailable
+ * This ensures content generation never blocks
  */
 function generateFallbackTerms(keyword: string, reason: string): NeuronTerms {
-  console.log(`[NeuronWriter] 🔧 Generating fallback terms for: "${keyword}" (reason: ${reason})`);
+  console.log(`[NeuronWriter] 🔧 Generating fallback terms (reason: ${reason})`);
 
   const words = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 2);
   const baseWord = words[0] || keyword.split(' ')[0];
 
-  // Generate semantically related terms based on the keyword
   const relatedTerms = words.length > 1
     ? words.slice(1).map(w => `${baseWord} ${w}`).join(', ')
     : `${baseWord} guide, ${baseWord} tips, ${baseWord} best practices`;
@@ -381,60 +552,23 @@ function generateFallbackTerms(keyword: string, reason: string): NeuronTerms {
 }
 
 /**
- * Clear NeuronWriter cache (useful for testing or force refresh)
+ * Clear all NeuronWriter caches
  */
 export function clearNeuronWriterCache(): void {
   neuronTermsCache.clear();
-  console.log('[NeuronWriter] 🧹 Cache cleared');
+  queryIdCache.clear();
+  console.log('[NeuronWriter] 🧹 All caches cleared');
 }
 
-function extractTermString(value: any): string {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) {
-    return value.map(v => {
-      if (typeof v === 'string') return v;
-      return v?.term || v?.name || v?.keyword || v?.text || '';
-    }).filter(Boolean).join(', ');
-  }
-  return '';
+/**
+ * Clear only terms cache (keeps query IDs)
+ */
+export function clearTermsCache(): void {
+  neuronTermsCache.clear();
+  console.log('[NeuronWriter] 🧹 Terms cache cleared');
 }
 
-function extractQuestions(value: any): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map(v => {
-      if (typeof v === 'string') return v;
-      return v?.question || v?.text || v?.title || '';
-    }).filter(Boolean).slice(0, 10);
-  }
-  return [];
-}
-
-function extractHeadings(value: any): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map(v => {
-      if (typeof v === 'string') return v;
-      return v?.heading || v?.text || v?.title || v?.h2 || '';
-    }).filter(Boolean).slice(0, 15);
-  }
-  return [];
-}
-
-function countTerms(terms: NeuronTerms): number {
-  let count = 0;
-  if (terms.h1) count += terms.h1.split(',').length;
-  if (terms.h2) count += terms.h2.split(',').length;
-  if (terms.h3) count += terms.h3.split(',').length;
-  if (terms.content_basic) count += terms.content_basic.split(',').length;
-  if (terms.content_extended) count += terms.content_extended.split(',').length;
-  if (terms.entities_basic) count += terms.entities_basic.split(',').length;
-  if (terms.entities_extended) count += terms.entities_extended.split(',').length;
-  if (terms.questions) count += terms.questions.length;
-  if (terms.headings) count += terms.headings.length;
-  return count;
-}
+// ==================== LEGACY COMPATIBILITY ====================
 
 export const getNeuronWriterData = async (
   apiKey: string,
@@ -449,90 +583,28 @@ export const getNeuronWriterData = async (
   console.log(`[NeuronWriter] Fetching content editor data for: "${keyword}"`);
 
   try {
-    const createResult = await callNeuronWriterProxy(
-      '/new-query',
-      apiKey,
-      'POST',
-      {
-        project: projectId,
-        keyword,
-        engine: 'google',
-        language: 'en'
-      }
-    );
+    const terms = await fetchNeuronTerms(apiKey, projectId, keyword);
 
-    if (!createResult.success) {
-      console.warn('[NeuronWriter] Query creation failed:', createResult.error);
+    if (!terms) {
       return null;
     }
 
-    const queryId = createResult.data?.query || createResult.data?.id;
-
-    if (!queryId) {
-      console.warn('[NeuronWriter] No query ID returned');
-      return null;
-    }
-
-    let attempts = 0;
-    const maxAttempts = 12;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      const result = await callNeuronWriterProxy(
-        '/get-query',
-        apiKey,
-        'POST',
-        { query: queryId }
-      );
-
-      if (result.success && result.data) {
-        const data = result.data;
-
-        if (data.status === 'ready') {
-          return {
-            terms: extractTerms(data.terms || data.content_terms || []),
-            competitors: extractCompetitors(data.competitors || data.serp || []),
-            questions: data.ideas || data.questions || data.paa || [],
-            headings: data.headings || data.suggested_headings || [],
-          };
-        }
-
-        if (data.status === 'failed') {
-          console.warn('[NeuronWriter] Analysis failed');
-          return null;
-        }
-      }
-    }
-
-    console.warn('[NeuronWriter] Timed out waiting for analysis');
-    return null;
+    return {
+      terms: [
+        terms.content_basic,
+        terms.content_extended
+      ].filter(Boolean).join(', ').split(',').map(t => t.trim()).filter(Boolean),
+      competitors: [],
+      questions: terms.questions || [],
+      headings: terms.headings || []
+    };
   } catch (error: any) {
     console.error('[NeuronWriter] Error:', error.message);
     return null;
   }
 };
 
-// ==================== HELPER FUNCTIONS ====================
-
-const extractTerms = (terms: any[]): string[] => {
-  if (!Array.isArray(terms)) return [];
-
-  return terms.map((t: any) => {
-    if (typeof t === 'string') return t;
-    return t.term || t.name || t.keyword || t.text || '';
-  }).filter(Boolean);
-};
-
-const extractCompetitors = (competitors: any[]): string[] => {
-  if (!Array.isArray(competitors)) return [];
-
-  return competitors.map((c: any) => {
-    if (typeof c === 'string') return c;
-    return c.url || c.link || c.domain || '';
-  }).filter(Boolean);
-};
+// ==================== PROMPT FORMATTER ====================
 
 export const formatNeuronTermsForPrompt = (terms: NeuronTerms | null): string => {
   if (!terms) return '';
@@ -587,6 +659,8 @@ export const formatNeuronTermsForPrompt = (terms: NeuronTerms | null): string =>
 
   return sections.join('\n');
 };
+
+// ==================== SCORING ====================
 
 export const calculateNeuronContentScore = (
   content: string,
@@ -664,5 +738,7 @@ export default {
   formatNeuronTermsForPrompt,
   calculateNeuronContentScore,
   getMissingNeuronTerms,
-  getNeuronWriterData
+  getNeuronWriterData,
+  clearNeuronWriterCache,
+  clearTermsCache
 };

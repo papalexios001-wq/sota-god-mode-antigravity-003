@@ -1,5 +1,6 @@
 // =============================================================================
-// YOUTUBE SERVICE v1.0 - Enterprise YouTube Integration via Serper API
+// YOUTUBE SERVICE v2.0 - SOTA Enterprise YouTube Integration via Serper API
+// CRITICAL FIX: Proper timeouts to prevent 30+ minute hangs
 // =============================================================================
 
 import { fetchWithProxies } from './contentUtils';
@@ -29,9 +30,45 @@ const DEFAULT_EMBED_OPTIONS: YouTubeEmbedOptions = {
   showInfo: true
 };
 
+// Cache for YouTube search results
+const youtubeCache = new Map<string, { results: YouTubeSearchResult[]; timestamp: number }>();
+const YOUTUBE_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Helper function to add timeout to fetch requests
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
+    }
+    throw error;
+  }
+}
+
 /**
  * Search for YouTube videos via Serper API
- * SOTA v2.0 - Enhanced with multiple fallback strategies to GUARANTEE video results
+ * SOTA v2.0 - FAST with proper timeouts
+ * 
+ * CRITICAL FIXES:
+ * - Single API call per search (not 25!)
+ * - 10 second timeout per request
+ * - Caching to avoid redundant API calls
  */
 export async function searchYouTubeVideos(
   keyword: string,
@@ -39,198 +76,174 @@ export async function searchYouTubeVideos(
   maxResults: number = 5
 ): Promise<YouTubeSearchResult[]> {
   if (!serperApiKey) {
-    console.error('[YouTubeService] ❌ CRITICAL: No Serper API key provided - YouTube search SKIPPED');
-    console.error('[YouTubeService] Please ensure serperApiKey is set in your configuration');
+    console.error('[YouTubeService] ❌ No Serper API key provided');
     return [];
   }
 
   if (!keyword || keyword.trim() === '') {
-    console.error('[YouTubeService] ❌ No keyword provided for YouTube search');
+    console.error('[YouTubeService] ❌ No keyword provided');
     return [];
   }
 
-  console.log(`[YouTubeService] 🎬 Starting YouTube search for: "${keyword}"`);
-  console.log(`[YouTubeService] API Key present: YES (length: ${serperApiKey.length})`);
+  // Check cache first
+  const cacheKey = `yt:${keyword.toLowerCase().trim()}`;
+  const cached = youtubeCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < YOUTUBE_CACHE_TTL_MS) {
+    console.log(`[YouTubeService] 📦 Cache hit for: "${keyword}"`);
+    return cached.results.slice(0, maxResults);
+  }
+
+  console.log(`[YouTubeService] 🎬 Searching YouTube for: "${keyword}"`);
 
   try {
+    // Create optimal search query
     const currentYear = new Date().getFullYear();
+    const searchQuery = `${keyword} tutorial ${currentYear}`;
 
-    // Extract core keywords for broader searches
-    const coreKeywords = keyword
-      .toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 3)
-      .slice(0, 3)
-      .join(' ');
+    // Single API call with timeout
+    const response = await fetchWithTimeout(
+      'https://google.serper.dev/videos',
+      {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': serperApiKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ q: searchQuery, num: 20 })
+      },
+      10000 // 10 second timeout
+    );
 
-    // TIER 1: HIGHLY SPECIFIC (Best relevance)
-    const tier1Queries = [
-      `"${keyword}" complete tutorial ${currentYear}`,
-      `"${keyword}" step by step guide ${currentYear}`,
-      `"${keyword}" explained ${currentYear}`,
-      `how to ${keyword} ${currentYear}`,
-    ];
-
-    // TIER 2: SPECIFIC (Good relevance)
-    const tier2Queries = [
-      `${keyword} tutorial ${currentYear}`,
-      `${keyword} full guide ${currentYear}`,
-      `${keyword} for beginners ${currentYear}`,
-      `${keyword} masterclass`,
-      `learn ${keyword} ${currentYear}`,
-    ];
-
-    // TIER 3: BROAD (Acceptable relevance)
-    const tier3Queries = [
-      `${keyword} tutorial`,
-      `${keyword} guide`,
-      `${keyword} explained`,
-      `how to ${keyword}`,
-      `${keyword} tips and tricks`,
-      `best ${keyword} tips`,
-    ];
-
-    // TIER 4: ULTRA BROAD (Fallback)
-    const tier4Queries = [
-      `${coreKeywords} tutorial`,
-      `${coreKeywords} guide ${currentYear}`,
-      `${coreKeywords} explained`,
-      `understand ${coreKeywords}`,
-      `${keyword.split(' ')[0]} tutorial ${currentYear}`,
-    ];
-
-    // TIER 5: EMERGENCY FALLBACK (Just get something relevant)
-    const firstKeyword = keyword.split(' ')[0];
-    const tier5Queries = [
-      `${firstKeyword} tutorial`,
-      `${firstKeyword} how to`,
-      `${firstKeyword} guide`,
-    ];
-
-    const allTiers = [
-      { name: 'TIER1-SPECIFIC', queries: tier1Queries },
-      { name: 'TIER2-GOOD', queries: tier2Queries },
-      { name: 'TIER3-BROAD', queries: tier3Queries },
-      { name: 'TIER4-FALLBACK', queries: tier4Queries },
-      { name: 'TIER5-EMERGENCY', queries: tier5Queries },
-    ];
-
-    const allResults: YouTubeSearchResult[] = [];
-    let successfulQueries = 0;
-    let failedQueries = 0;
-    let currentTier = 0;
-
-    // Process each tier until we have enough results
-    for (const tier of allTiers) {
-      currentTier++;
-
-      // If we have enough high-quality results, stop
-      if (allResults.length >= maxResults * 2 && currentTier > 2) {
-        console.log(`[YouTubeService] ✅ Sufficient results (${allResults.length}), stopping at ${tier.name}`);
-        break;
-      }
-
-      console.log(`[YouTubeService] 📊 Processing ${tier.name} (${tier.queries.length} queries)...`);
-
-      for (const query of tier.queries) {
-        // Skip if we already have enough results
-        if (allResults.length >= maxResults * 3) break;
-
-        try {
-          console.log(`[YouTubeService] [${tier.name}] Searching: "${query.substring(0, 50)}..."`);
-
-          const response = await fetchWithProxies('https://google.serper.dev/videos', {
-            method: 'POST',
-            headers: {
-              'X-API-KEY': serperApiKey,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ q: query, num: 15 })
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            console.error(`[YouTubeService] [${tier.name}] API error (${response.status}): ${errorText.substring(0, 100)}`);
-            failedQueries++;
-            continue;
-          }
-
-          const data = await response.json();
-          const videos = data.videos || [];
-
-          console.log(`[YouTubeService] [${tier.name}] Query returned ${videos.length} videos`);
-
-          for (const video of videos) {
-            if (!video.link?.includes('youtube.com') && !video.link?.includes('youtu.be')) {
-              continue;
-            }
-
-            const videoId = extractVideoId(video.link);
-            if (!videoId) continue;
-
-            // Check for duplicates
-            if (allResults.some(r => r.videoId === videoId)) continue;
-
-            allResults.push({
-              title: video.title || '',
-              videoId,
-              channel: video.channel || 'YouTube',
-              description: video.snippet || video.description || '',
-              thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-              duration: video.duration,
-              publishedAt: video.date
-            });
-          }
-
-          successfulQueries++;
-
-          // Add small delay between requests to avoid rate limiting
-          await new Promise(r => setTimeout(r, 200));
-
-        } catch (e: any) {
-          console.error(`[YouTubeService] [${tier.name}] Query failed:`, e.message || e);
-          failedQueries++;
-        }
-      }
-
-      // If we found results in this tier, give preference to them
-      if (allResults.length > 0 && currentTier <= 3) {
-        console.log(`[YouTubeService] ✅ Found ${allResults.length} videos in ${tier.name}`);
-      }
-    }
-
-    console.log(`[YouTubeService] 📊 Search complete: ${allResults.length} total videos found`);
-    console.log(`[YouTubeService]    Successful queries: ${successfulQueries}, Failed: ${failedQueries}`);
-
-    if (allResults.length === 0) {
-      console.error(`[YouTubeService] ❌ CRITICAL: No YouTube videos found after all query attempts`);
-      console.error(`[YouTubeService] Keyword: "${keyword}"`);
-      console.error(`[YouTubeService] This may indicate an API issue or extremely niche topic`);
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[YouTubeService] API error (${response.status}): ${errorText.substring(0, 100)}`);
       return [];
     }
 
-    // Score and sort results by relevance
-    const scored = allResults.map(video => ({
+    const data = await response.json();
+    const videos = data.videos || [];
+
+    console.log(`[YouTubeService] Found ${videos.length} videos`);
+
+    // Process and filter results
+    const results: YouTubeSearchResult[] = [];
+
+    for (const video of videos) {
+      if (!video.link?.includes('youtube.com') && !video.link?.includes('youtu.be')) {
+        continue;
+      }
+
+      const videoId = extractVideoId(video.link);
+      if (!videoId) continue;
+
+      // Skip duplicates
+      if (results.some(r => r.videoId === videoId)) continue;
+
+      results.push({
+        title: video.title || '',
+        videoId,
+        channel: video.channel || 'YouTube',
+        description: video.snippet || video.description || '',
+        thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        duration: video.duration,
+        publishedAt: video.date
+      });
+    }
+
+    // Score and sort by relevance
+    const scored = results.map(video => ({
       ...video,
       score: calculateRelevanceScore(video, keyword)
     }));
 
     scored.sort((a, b) => b.score - a.score);
-
     const finalResults = scored.slice(0, maxResults);
 
-    console.log(`[YouTubeService] ✅ Returning top ${finalResults.length} videos:`);
-    finalResults.forEach((v, i) => {
-      console.log(`[YouTubeService]   ${i + 1}. "${v.title.substring(0, 60)}..." (score: ${v.score})`);
+    // Cache results
+    youtubeCache.set(cacheKey, {
+      results: finalResults,
+      timestamp: Date.now()
     });
 
+    console.log(`[YouTubeService] ✅ Returning ${finalResults.length} videos`);
+    if (finalResults.length > 0) {
+      console.log(`[YouTubeService] Best: "${finalResults[0].title.substring(0, 50)}..."`);
+    }
+
     return finalResults;
+
   } catch (error: any) {
-    console.error('[YouTubeService] ❌ CRITICAL: Search failed with error:', error.message || error);
-    console.error('[YouTubeService] Stack:', error.stack);
+    console.error('[YouTubeService] ❌ Search failed:', error.message);
     return [];
   }
+}
+
+/**
+ * FAST YouTube video finder - single attempt with fallback query
+ * 
+ * CRITICAL FIXES:
+ * - Max 2 API calls (primary + fallback)
+ * - 15 second total timeout
+ * - Returns immediately on first success
+ */
+export async function findBestYouTubeVideo(
+  keyword: string,
+  serperApiKey: string,
+  logCallback?: (msg: string) => void
+): Promise<YouTubeSearchResult | null> {
+  const TOTAL_TIMEOUT_MS = 15000; // 15 seconds max total
+  const startTime = Date.now();
+
+  // CRITICAL: Check API key first
+  if (!serperApiKey || serperApiKey.trim().length < 10) {
+    console.error('[YouTube] ❌ No valid Serper API key provided');
+    logCallback?.('[YouTube] ❌ No Serper API key - CANNOT search YouTube');
+    return null;
+  }
+
+  console.log(`[YouTube] 🎬 Finding video for: "${keyword}"`);
+
+  // Strategy 1: Primary search with exact keyword
+  try {
+    const videos = await searchYouTubeVideos(keyword, serperApiKey, 3);
+
+    if (videos.length > 0) {
+      console.log(`[YouTube] ✅ Found: "${videos[0].title.substring(0, 50)}..."`);
+      return videos[0];
+    }
+  } catch (error: any) {
+    console.error(`[YouTube] Primary search failed:`, error.message);
+  }
+
+  // Check timeout before fallback
+  if (Date.now() - startTime > TOTAL_TIMEOUT_MS) {
+    console.warn(`[YouTube] ⏱️ Timeout reached, skipping fallback`);
+    return null;
+  }
+
+  // Strategy 2: Simplified fallback (only if primary failed)
+  try {
+    const simplifiedKeyword = keyword
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .slice(0, 2)
+      .join(' ');
+
+    if (simplifiedKeyword && simplifiedKeyword !== keyword) {
+      console.log(`[YouTube] Fallback search: "${simplifiedKeyword}"`);
+      const videos = await searchYouTubeVideos(`${simplifiedKeyword} guide`, serperApiKey, 3);
+
+      if (videos.length > 0) {
+        console.log(`[YouTube] ✅ Fallback found: "${videos[0].title.substring(0, 50)}..."`);
+        return videos[0];
+      }
+    }
+  } catch (error: any) {
+    console.error(`[YouTube] Fallback search failed:`, error.message);
+  }
+
+  console.warn(`[YouTube] ⚠️ No videos found for: "${keyword}"`);
+  return null;
 }
 
 /**
@@ -269,7 +282,6 @@ function extractVideoId(url: string): string | null {
  */
 function calculateRelevanceScore(video: YouTubeSearchResult, keyword: string): number {
   const titleLower = video.title.toLowerCase();
-  const descriptionLower = (video.description || '').toLowerCase();
   const keywordLower = keyword.toLowerCase();
   const keywordWords = keywordLower.split(/\s+/).filter(w => w.length > 2);
 
@@ -281,7 +293,6 @@ function calculateRelevanceScore(video: YouTubeSearchResult, keyword: string): n
   // Individual keyword word matches
   for (const word of keywordWords) {
     if (titleLower.includes(word)) score += 15;
-    if (descriptionLower.includes(word)) score += 5;
   }
 
   // Educational quality indicators
@@ -290,62 +301,23 @@ function calculateRelevanceScore(video: YouTubeSearchResult, keyword: string): n
   if (titleLower.includes('step by step') || titleLower.includes('step-by-step')) score += 25;
   if (titleLower.includes('how to')) score += 20;
   if (titleLower.includes('explained')) score += 15;
-  if (titleLower.includes('beginner')) score += 12;
-  if (titleLower.includes('ultimate')) score += 10;
-  if (titleLower.includes('comprehensive')) score += 10;
 
-  // Authority indicators
-  const authorityChannels = ['official', 'academy', 'institute', 'university', 'professional'];
-  const channelLower = video.channel.toLowerCase();
-  if (authorityChannels.some(term => channelLower.includes(term))) score += 20;
-
-  // Freshness bonus (recent = more relevant)
+  // Freshness bonus
   const currentYear = new Date().getFullYear();
   if (titleLower.includes(String(currentYear))) score += 40;
   if (titleLower.includes(String(currentYear - 1))) score += 25;
-  if (titleLower.includes('2024') || titleLower.includes('2025') || titleLower.includes('2026')) {
-    score += 20;
-  }
 
-  // Duration indicators (longer = more comprehensive)
-  if (video.duration) {
-    const durationLower = video.duration.toLowerCase();
-    // Prefer 10-30 minute videos (sweet spot for tutorials)
-    if (durationLower.match(/1[0-9]:|2[0-9]:/)) score += 15;
-    // Very short videos might be low quality
-    if (durationLower.match(/^[0-2]:/)) score -= 10;
-  }
-
-  // STRONG penalties for irrelevant content
+  // Penalties for irrelevant content
   const badIndicators = [
-    'reaction', 'reacting', 'react to',
-    'unboxing', 'haul',
-    'vlog', 'daily vlog',
-    'drama', 'exposed',
-    'clickbait', 'shocking',
-    'prank', 'challenge',
-    'review only', 'first look',
-    'livestream', 'stream',
-    'compilation', 'funny moments'
+    'reaction', 'unboxing', 'haul', 'vlog', 'drama', 'exposed',
+    'prank', 'challenge', 'compilation', 'funny moments'
   ];
 
   for (const bad of badIndicators) {
     if (titleLower.includes(bad)) score -= 50;
   }
 
-  // Penalty for very short titles (often low quality)
-  if (video.title.length < 20) score -= 15;
-
-  // Penalty for ALL CAPS titles (often clickbait)
-  if (video.title === video.title.toUpperCase() && video.title.length > 5) {
-    score -= 25;
-  }
-
-  // Penalty for excessive punctuation (clickbait indicator)
-  const punctuationCount = (video.title.match(/[!?]{2,}/g) || []).length;
-  if (punctuationCount > 0) score -= (punctuationCount * 15);
-
-  return Math.max(0, score); // Never return negative scores
+  return Math.max(0, score);
 }
 
 /**
@@ -440,21 +412,18 @@ export async function findAndEmbedYouTubeVideo(
   serperApiKey: string,
   options?: Partial<YouTubeEmbedOptions>
 ): Promise<{ html: string; video: YouTubeSearchResult | null }> {
-  const videos = await searchYouTubeVideos(topic, serperApiKey, 1);
+  const video = await findBestYouTubeVideo(topic, serperApiKey);
 
-  if (videos.length === 0) {
+  if (!video) {
     return { html: '', video: null };
   }
 
-  const video = videos[0];
   const html = generateYouTubeEmbed(video, options);
-
   return { html, video };
 }
 
 /**
  * Generate WordPress Gutenberg-safe YouTube embed block
- * This format survives WP sanitization and auto-renders
  */
 export function generateWordPressYouTubeEmbed(videoId: string, videoTitle: string = ''): string {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
@@ -516,7 +485,6 @@ function generateUltraPremiumYouTubeHtml(video: YouTubeSearchResult): string {
 
 /**
  * GUARANTEED YouTube video injection at the FINAL stage
- * Uses multiple fallback strategies to ensure video is always present
  */
 export function guaranteedYouTubeInjection(
   html: string,
@@ -534,7 +502,6 @@ export function guaranteedYouTubeInjection(
   const wpEmbed = generateWordPressYouTubeEmbed(videoId, video.title);
   const styledEmbed = generateUltraPremiumYouTubeHtml(video);
 
-  // Use WordPress embed as primary (survives sanitization)
   const embedHtml = `
 <div class="sota-youtube-guaranteed" data-video-id="${videoId}">
   ${styledEmbed}
@@ -552,7 +519,6 @@ export function guaranteedYouTubeInjection(
   const h2Matches = [...html.matchAll(/<\/h2>/gi)];
   if (h2Matches.length >= 2) {
     const insertIdx = h2Matches[1].index! + h2Matches[1][0].length;
-    // Find next paragraph end
     const afterH2 = html.substring(insertIdx);
     const nextP = afterH2.match(/<\/p>/i);
     if (nextP && nextP.index !== undefined) {
@@ -569,21 +535,7 @@ export function guaranteedYouTubeInjection(
     return html.substring(0, refMatch.index) + embedHtml + '\n\n' + html.substring(refMatch.index);
   }
 
-  // Strategy 4: Insert before FAQ section
-  const faqMatch = html.match(/<div[^>]*class="[^"]*sota-faq[^"]*"[^>]*>/i);
-  if (faqMatch && faqMatch.index !== undefined) {
-    console.log('[YouTubeGuaranteed] ✅ Inserted before FAQ');
-    return html.substring(0, faqMatch.index) + embedHtml + '\n\n' + html.substring(faqMatch.index);
-  }
-
-  // Strategy 5: Insert before conclusion
-  const conclusionMatch = html.match(/<div[^>]*class="[^"]*sota-conclusion[^"]*"[^>]*>/i);
-  if (conclusionMatch && conclusionMatch.index !== undefined) {
-    console.log('[YouTubeGuaranteed] ✅ Inserted before conclusion');
-    return html.substring(0, conclusionMatch.index) + embedHtml + '\n\n' + html.substring(conclusionMatch.index);
-  }
-
-  // Strategy 6: Insert at content midpoint (find a paragraph ending near 50%)
+  // Strategy 4: Insert at content midpoint
   const midPoint = Math.floor(html.length * 0.5);
   const searchStart = Math.max(0, midPoint - 500);
   const searchEnd = Math.min(html.length, midPoint + 500);
@@ -595,16 +547,25 @@ export function guaranteedYouTubeInjection(
     return html.substring(0, insertPos) + '\n\n' + embedHtml + '\n\n' + html.substring(insertPos);
   }
 
-  // Strategy 7: ABSOLUTE FALLBACK - Append at end
-  console.log('[YouTubeGuaranteed] ✅ Appended at end (fallback)');
+  // Strategy 5: Append at end (fallback)
+  console.log('[YouTubeGuaranteed] ✅ Appended at end');
   return html + '\n\n' + embedHtml;
+}
+
+/**
+ * Clear YouTube cache
+ */
+export function clearYouTubeCache(): void {
+  youtubeCache.clear();
+  console.log('[YouTubeService] 🧹 Cache cleared');
 }
 
 export default {
   searchYouTubeVideos,
+  findBestYouTubeVideo,
   generateYouTubeEmbed,
   findAndEmbedYouTubeVideo,
   generateWordPressYouTubeEmbed,
-  guaranteedYouTubeInjection
+  guaranteedYouTubeInjection,
+  clearYouTubeCache
 };
-
