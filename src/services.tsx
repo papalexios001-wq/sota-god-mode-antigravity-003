@@ -1875,26 +1875,32 @@ export const generateContent = {
         }
 
         // Phase 7.9: GUARANTEED YouTube Injection (LAST STEP before schema)
-        // This ensures YouTube video is ALWAYS present in final content
+        // CRITICAL FIX: Only inject ONE YouTube video - no duplicates!
         dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Injecting Video...' } });
 
-        if (youtubeVideo) {
+        // Check if YouTube already exists in content (prevent duplicates)
+        const existingYouTubeCheck = [
+          /youtube\.com\/embed\//i,
+          /class="[^"]*sota-youtube[^"]*"/i,
+          /class="[^"]*youtube-embed[^"]*"/i,
+          /wp-block-embed-youtube/i
+        ];
+        
+        const youtubeAlreadyExists = existingYouTubeCheck.some(pattern => pattern.test(finalContent));
+        
+        if (youtubeAlreadyExists) {
+          console.log(`[ContentGen] ✅ YouTube video already exists in content - skipping injection to prevent duplicate`);
+        } else if (youtubeVideo) {
           console.log(`[ContentGen] GUARANTEED YouTube injection for: "${item.title}"`);
-
           finalContent = guaranteedYouTubeInjection(finalContent, youtubeVideo);
-
-          // Verify injection worked
+          
           if (finalContent.includes(youtubeVideo.videoId)) {
             console.log(`[ContentGen] ✅ YouTube video CONFIRMED in final content`);
           } else {
-            console.error(`[ContentGen] ❌ YouTube video NOT FOUND in final content after injection!`);
-            // Force append if injection somehow failed
-            const fallbackHtml = generateFallbackYouTubeSection(item.title);
-            finalContent = finalContent + '\n\n' + fallbackHtml;
-            console.log(`[ContentGen] 🔄 Fallback YouTube section appended`);
+            console.warn(`[ContentGen] ⚠️ YouTube injection may have failed, but not adding duplicate`);
           }
         } else {
-          // NO VIDEO FOUND - Use guaranteed fallback section
+          // NO VIDEO FOUND - inject fallback ONLY if no YouTube content exists
           console.log(`[ContentGen] 📹 No video from API - injecting FALLBACK YouTube section`);
           const fallbackHtml = generateFallbackYouTubeSection(item.title);
 
@@ -1902,23 +1908,20 @@ export const generateContent = {
           const refMatch = finalContent.match(/<div[^>]*class="[^"]*sota-references[^"]*"[^>]*>/i);
           if (refMatch && refMatch.index !== undefined) {
             finalContent = finalContent.substring(0, refMatch.index) + fallbackHtml + '\n\n' + finalContent.substring(refMatch.index);
-            console.log(`[ContentGen] ✅ Fallback YouTube section injected before references`);
           } else {
             finalContent = finalContent + '\n\n' + fallbackHtml;
-            console.log(`[ContentGen] ✅ Fallback YouTube section appended at end`);
           }
+          console.log(`[ContentGen] ✅ Fallback YouTube section injected`);
         }
 
-        // FINAL VERIFICATION: Ensure YouTube content exists
+        // FINAL VERIFICATION: Log YouTube status (no more emergency fallbacks that cause duplicates)
         const hasYouTubeContent = finalContent.includes('youtube.com') ||
           finalContent.includes('youtu.be') ||
           finalContent.includes('sota-youtube');
         if (hasYouTubeContent) {
           console.log(`[ContentGen] ✅✅ VERIFIED: YouTube content IS present in final output`);
         } else {
-          console.error(`[ContentGen] ❌❌ CRITICAL: NO YouTube content found! Forcing final fallback...`);
-          const emergencyFallback = generateFallbackYouTubeSection(item.title);
-          finalContent = finalContent + '\n\n' + emergencyFallback;
+          console.warn(`[ContentGen] ⚠️ No YouTube content in output - Serper API key may be missing`);
         }
 
         // Phase 8: Schema
@@ -2140,17 +2143,29 @@ export const generateContent = {
       }
 
       // GUARANTEED YouTube Injection (LAST STEP)
+      // CRITICAL FIX: Only inject ONE YouTube video - no duplicates!
       dispatch({ type: 'UPDATE_STATUS', payload: { id: item.id, status: 'generating', statusText: '📹 Injecting Video...' } });
 
-      if (youtubeVideo) {
+      // Check if YouTube already exists in content (prevent duplicates)
+      const existingYouTubeCheck = [
+        /youtube\.com\/embed\//i,
+        /class="[^"]*sota-youtube[^"]*"/i,
+        /class="[^"]*youtube-embed[^"]*"/i,
+        /wp-block-embed-youtube/i
+      ];
+      
+      const youtubeAlreadyExists = existingYouTubeCheck.some(pattern => pattern.test(finalContent));
+      
+      if (youtubeAlreadyExists) {
+        console.log(`[Refresh] ✅ YouTube video already exists - skipping to prevent duplicate`);
+      } else if (youtubeVideo) {
         finalContent = guaranteedYouTubeInjection(finalContent, youtubeVideo);
         console.log(`[Refresh] ✅ YouTube video injected: ${youtubeVideo.videoId}`);
       } else {
-        // NO VIDEO FOUND - Use guaranteed fallback section
+        // NO VIDEO FOUND - inject fallback ONLY if no YouTube exists
         console.log(`[Refresh] 📹 No video from API - injecting FALLBACK YouTube section`);
         const fallbackHtml = generateFallbackYouTubeSection(item.title);
 
-        // Find best injection point (before references or at end)
         const refMatch = finalContent.match(/<div[^>]*class="[^"]*sota-references[^"]*"[^>]*>/i);
         if (refMatch && refMatch.index !== undefined) {
           finalContent = finalContent.substring(0, refMatch.index) + fallbackHtml + '\n\n' + finalContent.substring(refMatch.index);
@@ -2160,11 +2175,12 @@ export const generateContent = {
         console.log(`[Refresh] ✅ Fallback YouTube section injected`);
       }
 
-      // FINAL VERIFICATION
+      // FINAL VERIFICATION (no emergency fallback to prevent duplicates)
       const hasYouTubeContent = finalContent.includes('youtube.com') || finalContent.includes('sota-youtube');
-      if (!hasYouTubeContent) {
-        console.error(`[Refresh] ❌ CRITICAL: NO YouTube content! Forcing emergency fallback...`);
-        finalContent = finalContent + '\n\n' + generateFallbackYouTubeSection(item.title);
+      if (hasYouTubeContent) {
+        console.log(`[Refresh] ✅✅ YouTube content verified in output`);
+      } else {
+        console.warn(`[Refresh] ⚠️ No YouTube content - Serper API key may be missing`);
       }
 
       const generatedContent: GeneratedContent = {

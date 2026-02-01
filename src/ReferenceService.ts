@@ -400,13 +400,16 @@ export async function fetchVerifiedReferences(
 /**
  * FALLBACK: Generate a minimal references section when API fails
  * NOTE: This should only be used when Serper API key is missing or API completely fails
- * Returns empty string to encourage proper API key configuration
+ * Returns empty string - we DO NOT show fake/placeholder references
+ * User MUST configure a valid Serper API key for real references
  */
 function generateFallbackReferencesSection(keyword: string): string {
-  console.warn('[ReferenceService] Using fallback - no Serper API key or API failure. Configure Serper API key for real references.');
+  console.error('[ReferenceService] ❌ CRITICAL: No references available!');
+  console.error('[ReferenceService] ❌ Please configure your Serper.dev API key in Settings → API Keys');
+  console.error('[ReferenceService] ❌ Get your API key from: https://serper.dev');
   
-  // Return empty string - don't show fake references
-  // The app should be configured with a proper Serper API key
+  // Return empty string - DO NOT show fake references
+  // This ensures the app only shows REAL, verified references from Serper API
   return '';
 }
 

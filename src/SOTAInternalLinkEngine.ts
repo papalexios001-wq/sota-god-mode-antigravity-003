@@ -321,21 +321,35 @@ const FORBIDDEN_ANCHOR_ENDS = new Set([
 const TOXIC_ANCHORS = new Set([
   'click here', 'read more', 'learn more', 'find out', 'check out',
   'this article', 'this guide', 'this post', 'more info', 'see more',
-  'here', 'link', 'click', 'read', 'learn', 'check', 'see', 'view'
+  'here', 'link', 'click', 'read', 'learn', 'check', 'see', 'view',
+  'check this out', 'visit here', 'go here', 'our website', 'our blog',
+  'this link', 'this page', 'related post', 'related article', 'more details',
+  'full details', 'more information', 'additional information', 'click below',
+  'discover more', 'explore more', 'get more', 'find more', 'see also'
 ]);
 
 const REQUIRED_DESCRIPTIVE_WORDS = new Set([
+  // Content types
   'guide', 'tutorial', 'tips', 'strategies', 'techniques', 'methods', 'steps',
   'practices', 'approach', 'framework', 'system', 'process', 'checklist',
   'resources', 'tools', 'benefits', 'solutions', 'recommendations', 'insights',
   'overview', 'basics', 'fundamentals', 'essentials', 'introduction', 'advanced',
+  // Quality descriptors
   'best', 'complete', 'comprehensive', 'ultimate', 'proven', 'effective',
-  'essential', 'professional', 'expert', 'beginner', 'training', 'health',
-  'nutrition', 'grooming', 'behavior', 'care', 'wellness', 'diet', 'exercise',
+  'essential', 'professional', 'expert', 'beginner', 'training', 'detailed',
+  'important', 'critical', 'key', 'top', 'leading', 'premium', 'quality',
+  // Domain-specific nouns
+  'health', 'nutrition', 'grooming', 'behavior', 'care', 'wellness', 'diet', 'exercise',
   'marketing', 'seo', 'content', 'strategy', 'optimization', 'conversion',
   'growth', 'revenue', 'sales', 'business', 'advice', 'secrets', 'mistakes',
   'problems', 'issues', 'ways', 'reasons', 'facts', 'myths', 'signs',
-  'examples', 'templates', 'ideas', 'inspiration', 'planning', 'management'
+  'examples', 'templates', 'ideas', 'inspiration', 'planning', 'management',
+  // Additional high-value words
+  'services', 'products', 'reviews', 'comparison', 'analysis', 'research',
+  'studies', 'statistics', 'data', 'report', 'trends', 'updates', 'news',
+  'features', 'pricing', 'costs', 'budget', 'savings', 'investment', 'roi',
+  'beginners', 'experts', 'professionals', 'homeowners', 'parents', 'owners',
+  'schedule', 'routine', 'maintenance', 'prevention', 'treatment', 'recovery'
 ]);
 
 function escapeRegExp(string: string): string {
